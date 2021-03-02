@@ -889,34 +889,52 @@
 049C : 72                       ld      (hl),d          ;2ND BYTE OF FIXUP
 049D : 18 EA                    jr      CHEAD           ;KEEP CHAINING TIL DONE
 
-049F                            FNDLIN:
-049F : 2A 4F 38         "*O8"           ld      hl,(TXTTAB)
-04A2                            LOOP:
-04A2 : 44               "D"             ld      b,h
-04A3 : 4D               "M"             ld      c,l
-04A4 : 7E               "~"             ld      a,(hl)
-04A5 : 23               "#"             inc     hl
-04A6 : B6               " "             or      (hl)
-04A7 : 2B               "+"             dec     hl
-04A8 : C8               " "             ret     z
-04A9 : 23               "#"             inc     hl
-04AA : 23               "#"             inc     hl
-04AB : 7E               "~"             ld      a,(hl)
-04AC : 23               "#"             inc     hl
-04AD : 66               "f"             ld      h,(hl)
-04AE : 6F               "o"             ld      l,a
-04AF : E7               " "             rst     COMPAR
-04B0 : 60               "`"             ld      h,b
-04B1 : 69               "i"             ld      l,c
-04B2 : 7E               "~"             ld      a,(hl)
-04B3 : 23               "#"             inc     hl
-04B4 : 66               "f"             ld      h,(hl)
-04B5 : 6F               "o"             ld      l,a
-04B6 : 3F               "?"             ccf
-04B7 : C8               " "             ret     z
-04B8 : 3F               "?"             ccf
-04B9 : D0               " "             ret     nc
-04BA : 18 E6            "  "            jr      LOOP
+                        ;
+                        ;[m80] FNDLIN SEARCHES THE PROGRAM TEXT FOR THE LINE
+                        ;[m80] WHOSE LINE # IS PASSED IN [D,E]. [D,E] IS PRESERVED.
+                        ;[m80] THERE ARE THREE POSSIBLE RETURNS:
+                        ;[m80]
+                        ;[m80]	1) ZERO FLAG SET. CARRY NOT SET.  LINE NOT FOUND.
+                        ;[m80]	   NO LINE IN PROGRAM GREATER THAN ONE SOUGHT.
+                        ;[m80]	   [B,C] POINTS TO TWO ZERO BYTES AT END OF PROGRAM.
+                        ;[m80]	   [H,L]=[B,C]
+                        ;[m80]
+                        ;[m80]	2) ZERO, CARRY SET. 
+                        ;[m80]	   [B,C] POINTS TO THE LINK FIELD IN THE LINE
+                        ;[m80]	   WHICH IS THE LINE SEARCHED FOR.
+                        ;[m80]	   [H,L] POINTS TO THE LINK FIELD IN THE NEXT LINE.
+                        ;[m80]
+                        ;[m80]	3) NON-ZERO, CARRY NOT SET.
+                        ;[m80]	   LINE NOT FOUND, [B,C]  POINTS TO LINE IN PROGRAM
+                        ;[m80]	   GREATER THAN ONE SEARCHED FOR.
+                        ;[m80]	   [H,L] POINTS TO THE LINK FIELD IN THE NEXT LINE.
+                        ;
+049F : 2A 4F 38         FNDLIN: ld      hl,(TXTTAB)     ;[M80] GET POINTER TO START OF TEXT
+04A2 : 44               LOOP:   ld      b,h             ;[M80] IF EXITING BECAUSE OF END OF PROGRAM,
+04A3 : 4D                       ld      c,l             ;[M80] SET [B,C] TO POINT TO DOUBLE ZEROES.
+04A4 : 7E                       ld      a,(hl)          ;[M80] GET WORD POINTER TO
+04A5 : 23                       inc     hl              ;[M80] BUMP POINTER
+04A6 : B6                       or      (hl)            ;[M80] GET 2ND BYTE
+04A7 : 2B                       dec     hl              ;[M80] GO BACK
+04A8 : C8                       ret     z               ;[M80] IF ZERO THEN DONE
+04A9 : 23                       inc     hl              ;[M80] SKIP PAST AND GET THE LINE #
+04AA : 23                       inc     hl              
+04AB : 7E                       ld      a,(hl)          ;[M80] INTO [H,L] FOR COMPARISON WITH
+04AC : 23                       inc     hl              ;[M80] THE LINE # BEING SEARCHED FOR
+04AD : 66                       ld      h,(hl)          ;[M80] WHICH IS IN [D,E]
+04AE : 6F                       ld      l,a
+04AF : E7                       rst     COMPAR          ;[M80] SEE IF IT MATCHES OR IF WE'VE GONE TOO FAR
+04B0 : 60                       ld      h,b             ;[M80] MAKE [H,L] POINT TO THE START OF THE
+04B1 : 69                       ld      l,c             ;[M80] LINE BEYOND THIS ONE, BY PICKING
+04B2 : 7E                       ld      a,(hl)          ;[M80] UP THE LINK THAT [B,C] POINTS AT
+04B3 : 23                       inc     hl
+04B4 : 66                       ld      h,(hl)
+04B5 : 6F                       ld      l,a
+04B6 : 3F                       ccf                     ;[M80] TURN CARRY OFF
+04B7 : C8                       ret     z               ;[M80] EQUAL RETURN
+04B8 : 3F                       ccf                     ;[M80] MAKE CARRY ZERO
+04B9 : D0                       ret     nc              ;[M80] NO MATCH RETURN (GREATER)
+04BA : 18 E6                    jr      LOOP            ;[M80] KEEP LOOPING
                         ;
                         ;[M80] ALL "RESERVED" WORDS ARE TRANSLATED INTO SINGLE
                         ;[M80] ONE OR TWO (IF TWO, FIRST IS ALWAYS 377 OCTAL)
