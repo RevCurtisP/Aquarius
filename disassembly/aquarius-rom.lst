@@ -1463,11 +1463,11 @@
 0764 : E7               " "             rst     COMPAR
 0765 : 30 09            "0 "            jr      nc,L0770
 0767 : 3E D1            "> "            ld      a,0D1H
-0769 : CD E4 0F         "   "           call    L0FE4
+0769 : CD E4 0F         "   "           call    FRETMS
 076C : EB               " "             ex      de,hl
 076D : CD 39 0E         " 9 "           call    L0E39
 0770                            L0770:
-0770 : CD E4 0F         "   "           call    L0FE4
+0770 : CD E4 0F         "   "           call    FRETMS
 0773 : E1               " "             pop     hl
 0774 : CD 3D 15         " = "           call    VMOVE
 0777 : E1               " "             pop     hl
@@ -2008,7 +2008,7 @@
 0A71 : CD 83 09         "   "           call    FRMPRN
 0A74 : CF               " "             rst     SYNCHK
 0A75 : 2C                               .byte   ','
-0A76 : CD 76 09         " v "           call    L0976
+0A76 : CD 76 09         " v "           call    CHKSTR
 0A79 : EB               " "             ex      de,hl
 0A7A : 2A E4 38         "* 8"           ld      hl,(FACLO)
 0A7D : E3               " "             ex      (sp),hl
@@ -2652,7 +2652,7 @@
 0E06 : D1               " "             pop     de
 0E07 : C5               " "             push    bc
 0E08 : F5               " "             push    af
-0E09 : CD CD 0F         "   "           call    L0FCD
+0E09 : CD CD 0F         "   "           call    FRETMP
 0E0C : CD 31 15         " 1 "           call    MOVRM
 0E0F : F1               " "             pop     af
 0E10 : 57               "W"             ld      d,a
@@ -2945,7 +2945,7 @@
 0F81 : E3               " "             ex      (sp),hl
 0F82 : CD FD 09         "   "           call    EVAL
 0F85 : E3               " "             ex      (sp),hl
-0F86 : CD 76 09         " v "           call    L0976
+0F86 : CD 76 09         " v "           call    CHKSTR
 0F89 : 7E               "~"             ld      a,(hl)
 0F8A : E5               " "             push    hl
 0F8B : 2A E4 38         "* 8"           ld      hl,(FACLO)
@@ -2955,9 +2955,9 @@
 0F93 : DA DB 03         "   "           jp      c,ERROR
 0F96 : CD 50 0E         " P "           call    L0E50
 0F99 : D1               " "             pop     de
-0F9A : CD CD 0F         "   "           call    L0FCD
+0F9A : CD CD 0F         "   "           call    FRETMP
 0F9D : E3               " "             ex      (sp),hl
-0F9E : CD CC 0F         "   "           call    L0FCC
+0F9E : CD CC 0F         "   "           call    FRETM2
 0FA1 : E5               " "             push    hl
 0FA2 : 2A BF 38         "* 8"           ld      hl,(X38BF)
 0FA5 : EB               " "             ex      de,hl
@@ -2989,59 +2989,53 @@
 0FC3 : 13               " "             inc     de
 0FC4 : 18 F8            "  "            jr      L0FBE
                                 ;
-0FC6                    FRESTR:
-0FC6 : CD 76 09                 call    L0976
-0FC9                    FREFAC:
-0FC9 : 2A E4 38                 ld      hl,(FACLO)
-0FCC                    L0FCC:
-0FCC : EB                       ex      de,hl
-0FCD                    L0FCD:
-0FCD : CD E4 0F                 call    L0FE4
-0FD0 : EB                       ex      de,hl
+0FC6 : CD 76 09   [M80] FRESTR: call    CHKSTR          ;[M80] MAKE SURE ITS A STRING
+0FC9 : 2A E4 38   [M80] FREFAC: ld      hl,(FACLO)
+0FCC : EB         [M80] FRETM2: ex      de,hl           ;[M80] FREE UP THE TEMP IN THE FACLO
+0FCD : CD E4 0F   [M80] FRETMP: call    FRETMS          ;[M80] FREE UP THE TEMPORARY
+0FD0 : EB                       ex      de,hl           ;[M80] PUT THE STRING POINTER INTO [H,L]
 0FD1 : C0                       ret     nz
-0FD2 : D5                       push    de
-0FD3 : 50                       ld      d,b
-0FD4 : 59                       ld      e,c
-0FD5 : 1B                       dec     de
-0FD6 : 4E                       ld      c,(hl)
-0FD7 : 2A C1 38                 ld      hl,(FRETOP)
+0FD2 : D5                       push    de              ;[M80] SAVE [D,E] TO RETURN IN [H,L]
+0FD3 : 50                       ld      d,b             ;[M80] [D,E]=POINTER AT STRING
+0FD4 : 59                       ld      e,c             
+0FD5 : 1B                       dec     de              ;[M80] SUBTRACT ONE
+0FD6 : 4E                       ld      c,(hl)          ;[M80] [C]=LENGTH OF THE STRING FREED UP
+0FD7 : 2A C1 38                 ld      hl,(FRETOP)     ;[M80] SEE IF ITS THE FIRST ONE IN STRING SPACE
 0FDA : E7                       rst     COMPAR
-0FDB : 20 05                    jr      nz,L0FE2
-0FDD : 47                       ld      b,a
-0FDE : 09                       add     hl,bc
-0FDF : 22 C1 38                 ld      (FRETOP),hl
-0FE2                    L0FE2:
-0FE2 : E1                       pop     hl
+0FDB : 20 05                    jr      nz,NOTLST       ;[M80] NO SO DON'T ADD
+0FDD : 47                       ld      b,a             ;[M80] MAKE [B]=0
+0FDE : 09                       add     hl,bc           ;[M80] ADD
+0FDF : 22 C1 38                 ld      (FRETOP),hl     ;[M80] AND UPDATE FRETOP
+0FE2 : E1         [M80] NOTLST: pop     hl              ;[M80] GET POINTER AT CURRENT DESCRIPTOR
 0FE3 : C9                       ret
-                                ;
-0FE4                            L0FE4:
-0FE4 : 2A AF 38         "* 8"           ld      hl,(TEMPPT)
-0FE7 : 2B               "+"             dec     hl
-0FE8 : 46               "F"             ld      b,(hl)
-0FE9 : 2B               "+"             dec     hl
-0FEA : 4E               "N"             ld      c,(hl)
-0FEB : 2B               "+"             dec     hl
-0FEC : 2B               "+"             dec     hl
-0FED : E7               " "             rst     COMPAR
-0FEE : C0               " "             ret     nz
-0FEF : 22 AF 38         "" 8"           ld      (TEMPPT),hl
-0FF2 : C9               " "             ret
-                                ;
-0FF3 : 01 36 0B       ? LEN:    ld      bc,00B36H
-0FF6 : C5                       push    bc
-0FF7                    L0FF7:
-0FF7 : CD C6 0F                 call    FRESTR
-0FFA : AF                       xor     a
-0FFB : 57                       ld      d,a
-0FFC : 32 AB 38                 ld      (VALTYP),a
-0FFF : 7E                       ld      a,(hl)
-1000 : B7                       or      a
+
+0FE4                    ;;Free up Temporary String Descriptor
+0FE4 : 2A AF 38   [M80] FRETMS: ld      hl,(TEMPPT)     ;GET TEMP POINTER
+0FE7 : 2B                       dec     hl              ;LOOK AT WHAT IS IN THE LAST TEMP
+0FE8 : 46                       ld      b,(hl)          ;[B,C]=POINTER AT STRING
+0FE9 : 2B                       dec     hl              ;DECREMENT TEMPPT BY STRSIZ
+0FEA : 4E                       ld      c,(hl)          
+0FEB : 2B                       dec     hl              
+0FEC : 2B                       dec     hl               
+0FED : E7                       rst     COMPAR          ;SEE IF [D,E] POINT AT THE LAST
+0FEE : C0                       ret     nz              ;RETURN NOW IF NOW FREEING DONE
+0FEF : 22 AF 38                 ld      (TEMPPT),hl     ;UPDATE THE TEMP POINTER SINCE
+0FF2 : C9                       ret
+
+0FF3 : 01 36 0B   [M80] LEN:    ld      bc,SNGFLT       ;CALL SNGFLT WHEN DONE
+0FF6 : C5                       push    bc              ;LIKE SO
+0FF7 : CD C6 0F   [M80] LEN1:   call    FRESTR          ;FREE UP TEMP POINTED TO BY FACLO
+0FFA : AF                       xor     a               ;FORCE NUMERIC FLAG
+0FFB : 57                       ld      d,a             ;SET HIGH OF [D,E] TO ZERO FOR VAL
+0FFC : 32 AB 38                 ld      (VALTYP),a      
+0FFF : 7E                       ld      a,(hl)          ;SET CONDITION CODES ON LENGTH
+1000 : B7                       or      a               ;RETURN
 1001 : C9                       ret
                                 ;
 1002 : 01 36 0B       ? LEN:    ld      bc,00B36H
 1005 : C5                       push    bc
 1006                    L1006:
-1006 : CD F7 0F                 call    L0FF7
+1006 : CD F7 0F                 call    LEN1
 1009 : CA 97 06                 jp      z,FCERR
 100C : 23                       inc     hl
 100D : 23                       inc     hl
@@ -3089,7 +3083,7 @@
 1045 : 6F                       ld      l,a
 1046 : CD BD 0F                 call    L0FBD
 1049 : D1                       pop     de
-104A : CD CD 0F                 call    L0FCD
+104A : CD CD 0F                 call    FRETMP
 104D : C3 7E 0E                 jp      PUTNEW
                         ;
 1050 : CD A0 10       ? RIGHT:  call    L10A0
@@ -3132,7 +3126,7 @@
 1082 : 43                       ld      b,e
 1083 : C9                       ret
                                 ;
-1084 : CD F7 0F       ? VAL:       call    L0FF7
+1084 : CD F7 0F       ? VAL:       call    LEN1
 1087 : CA C3 12                    jp      z,L12C3
 108A : 5F                          ld      e,a
 108B : 23                          inc     hl
@@ -6120,7 +6114,7 @@ Value           Type    Name
 096A            Code    L096A
 0972            Code    FRMNUM
 0975            Code    CHKNUM
-0976            Code    L0976
+0976            Code    CHKSTR
 0977            Code    CHKSTR
 0983            Code    FRMPRN
 0985            Code    FRMEVL
@@ -6229,11 +6223,11 @@ Value           Type    Name
 0FBE            Code    L0FBE
 0FC6            Code    FRESTR
 0FC9            Code    FREFAC
-0FCC            Code    L0FCC
-0FCD            Code    L0FCD
-0FE2            Code    L0FE2
-0FE4            Code    L0FE4
-0FF7            Code    L0FF7
+0FCC            Code    FRETM2
+0FCD            Code    FRETMP
+0FE2            Code    NOTLST
+0FE4            Code    FRETMS
+0FF7            Code    LEN1
 1006            Code    L1006
 1019            Code    L1019
 1025            Code    L1025
