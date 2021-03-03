@@ -1072,7 +1072,7 @@
 0565 : 12                          ld      (de),a
 0566 : C9                          ret
 
-0567 : 3E 01      [M80] LLIST:  ld      a,1             ;[M80] GET NON ZERO VALUE
+0567 : 3E 01      [M80] LLIST:  ld      a,1             ;[M80] PRTFLG=1 FOR REGULAR LIST
 0569 : 32 47 38                 ld      (PRTFLG),a      ;[M80] SAVE IN I/O FLAG (END OF LPT)
 
 056C : 3E 17      [M80] LIST:   ld      a,23
@@ -1298,11 +1298,15 @@
 0697 : 1E 08      [M80] FCERR:  ld      e,ERRFC         ;[M65] "FUNCTION CALL" ERROR
 0699 : C3 DB 03                 jp      ERROR
 
-069C                    
+;
+; SCNLIN SCANS A LINE RANGE O
+; THE FORM  #-# OR # OR #- OR -# OR BLANK
+; AND THEN FINDS THE FIRST LINE IN THE RANGE
+;
 069C : 2B         [M80] SCNLIN: dec     hl
-069D : 11 00 00   [M65] LINGET: ld      de,0            ;[M65] INITIALIZE LINE NUMBER TO ZERO
-06A0 : D7         [M65] MORGET: rst     CHRGET
-06A1 : D0                       ret     nc
+069D : 11 00 00   [M65] LINGET: ld      de,0            ;[M80] ASSUME START LIST AT ZERO
+06A0 : D7         [M65] MORGET: rst     CHRGET          ;;Get next character
+06A1 : D0                       ret     nc              ;[M65] IT IS NOT A DIGIT
 06A2 : E5                       push    hl
 06A3 : F5                       push    af
 06A4 : 21 98 19                 ld      hl,01998H
@@ -1331,7 +1335,7 @@
 06BE : F7         [M80] RUN:    rst     HOOKDO          ;Call Hook Routine
 06BF : 18                       .byte   24
 06C0 : CA CB 0B                 jp      z,RUNC          ;[M80] NO LINE # ARGUMENT
-06C3 : CD CF 0B                 call    CLEARC
+06C3 : CD CF 0B   [M80] CONRUN: call    CLEARC          ;RESET THE STACK,DATPTR,VARIABLES ...
 06C6 : 01 2C 06                 ld      bc,NEWSTT
 06C9 : 18 10                    jr      RUNC2           ;[M80] PUT "NEWSTT" ON AND FALL INTO "GOTO"
 
@@ -1386,7 +1390,7 @@
 06F9 : 16 FF                    ld      d,255           ;[M80] MAKE SURE VARIABLE POINTER IN [D,E] NEVER GETS MATCHED
 06FB : CD 9F 03                 call    FNDFOR          ;[M80] GO PAST ALL THE "FOR" ENTRIES
 06FE : F9                       ld      sp,hl           ;[M80] UPDATE THE STACK
-06FF : FE 8C                    cp      $8C
+06FF : FE 8C                    cp      GOSUTK
 0701 : 1E 04                    ld      e,ERRRG         ;[M80] ERROR ERRRG IS "RETURN WITHOUT GOSUB"
 0703 : C2 DB 03                 jp      nz,ERROR
 0706 : E1                       pop     hl              ;GET LINE # "GOSUB" WAS FROM
@@ -1400,15 +1404,15 @@
 0713 : C2 01 04                 jp      nz,L0401
 
 0716                    L0716:
-0716 : 21 2C 06                 ld      hl,NEWSTT
-0719 : E3                       ex      (sp),hl
-071A : 3E E1                    ld      a,0E1H
+0716 : 21 2C 06                 ld      hl,NEWSTT       ;[M80] PUT RETURN ADDRESS OF "NEWSTT" BACK ON STACK
+0719 : E3                       ex      (sp),hl         ;[M80] GET TEXT POINTER FROM "GOSUB"
+071A : 3E E1                    ld      a,$E1
 
 071C : 01         [M80] DATA:   .byte   $01             ;[M80] "LD BC," TO PICK UP ":" INTO C AND SKIP
 071D : 3A                       .byte   ':'             
 017E : 0E         [M80] REM:    .byte   $0E             ;[M80] "LD C,"   THE ONLY TERMINATOR IS ZERO
 017F : 00                       .byte   0                 
-0720 : 06 00                    ld      b,              ;[M80] INSIDE QUOTES THE ONLY TERMINATOR IS ZERO
+0720 : 06 00                    ld      b,0             ;[M80] INSIDE QUOTES THE ONLY TERMINATOR IS ZERO
 0722 : 79         [M80] EXCHQT: ld      a,c             ;[M80] WHEN A QUOTE IS SEEN THE SECOND
 0723 : 48                       ld      c,b             ;[M80] TERMINATOR IS TRADED, SO IN "DATA"
 0724 : 47                       ld      b,a             ;[M80] COLONS INSIDE QUOTATIONS WILL HAVE NO EFFECT
@@ -2552,13 +2556,13 @@
 0D76 : 28 09            "( "            jr      z,L0D81
 0D78 : 7E               "~"             ld      a,(hl)
 0D79 : DF               " "             rst     CHROUT
-0D7A : 18 12            "  "            jr      L0D8E
+0D7A : 18 12            "  "            jr      INLINC
                                 ;
 0D7C                            L0D7C:
 0D7C : 05               " "             dec     b
 0D7D : 2B               "+"             dec     hl
 0D7E : DF               " "             rst     CHROUT
-0D7F : 20 0D            "  "            jr      nz,L0D8E
+0D7F : 20 0D            "  "            jr      nz,INLINC
 0D81                            L0D81:
 0D81 : DF               " "             rst     CHROUT
 0D82                            L0D82:
@@ -2566,12 +2570,11 @@
 0D85                    
 0D85 : 21 60 38   [M80] INLIN:  ld      hl,KBUF
 0D88 : 06 01                    ld      b,1
-0D8A : AF                       xor     a
-0D8B : 32 4A 38                 ld      (CHARC),a
-0D8E                    L0D8E:
-0D8E : CD DA 19                 call    L19DA
+0D8A : AF                       xor     a               ;CLEAR TYPE AHEAD CHAR
+0D8B : 32 4A 38                 ld      (CHARC),a       ;LIKE SO
+0D8E : CD DA 19   [M65] INLINC: call    INCHR           GET A CHARACTER.
 0D91 : 4F                       ld      c,a
-0D92 : FE 7F                    cp      07FH
+0D92 : FE 7F                    cp      $7F
 0D94 : 28 CE                    jr      z,L0D64
 0D96 : 3A 4A 38                 ld      a,(CHARC)
 0D99 : B7                       or      a
@@ -2617,11 +2620,11 @@
 0DDE : E1               " "             pop     hl
 0DDF : D1               " "             pop     de
 0DE0 : C1               " "             pop     bc
-0DE1 : C3 8E 0D         "   "           jp      L0D8E
+0DE1 : C3 8E 0D         "   "           jp      INLINC
                                 ;
 0DE4                            L0DE4:
 0DE4 : FE 20            "  "            cp      020H
-0DE6 : DA 8E 0D         "   "           jp      c,L0D8E
+0DE6 : DA 8E 0D         "   "           jp      c,INLINC
 0DE9                            L0DE9:
 0DE9 : 78               "x"             ld      a,b
 0DEA : FE 49            " I"            cp      049H
@@ -2634,7 +2637,7 @@
 0DF7 : 04               " "             inc     b
 0DF8                            L0DF8:
 0DF8 : DF               " "             rst     CHROUT
-0DF9 : C3 8E 0D         "   "           jp      L0D8E
+0DF9 : C3 8E 0D         "   "           jp      INLINC
                                 ;
 0DFC                            L0DFC:
 0DFC : D5               " "             push    de
@@ -4801,7 +4804,7 @@
 19D6 : F1         [M80] TTYPOP: pop     af              ;Print character on stack to screen
 19D7 : C3 72 1D                 jp      TTYCHR
 
-19DA                    L19DA:
+19DA                    INCHR:
 19DA : CD 2F 1A                 call    L1A2F
 19DD : C9                       ret
                                 ;
@@ -6178,7 +6181,7 @@ Value           Type    Name
 0D81            Code    L0D81
 0D82            Code    L0D82
 0D85            Code    INLIN
-0D8E            Code    L0D8E
+0D8E            Code    INLINC
 0DA3            Code    L0DA3
 0DCC            Code    L0DCC
 0DE4            Code    L0DE4
@@ -6383,7 +6386,7 @@ Value           Type    Name
 19BE            Code    FINLPT
 19C7            Code    PRINTW
 19D6            Code    TTYPOP
-19DA            Code    L19DA
+19DA            Code    INCHR
 19DE            Code    CRDONZ
 19E5            Code    L19E5
 19EA            Code    CRDO
