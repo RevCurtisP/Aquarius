@@ -1482,7 +1482,7 @@
                                 ;
 0780 : F7               ON:     rst     HOOKDO
 0781 : 19                       .byte   25
-0782 : CD 54 0B                 call    L0B54
+0782 : CD 54 0B                 call    GETBYT
 0785 : 7E                       ld      a,(hl)
 0786 : 47                       ld      b,a
 0787 : FE 8C                    cp      08CH
@@ -2014,7 +2014,7 @@
 0A7D : E3               " "             ex      (sp),hl
 0A7E : E5               " "             push    hl
 0A7F : EB               " "             ex      de,hl
-0A80 : CD 54 0B         " T "           call    L0B54
+0A80 : CD 54 0B         " T "           call    GETBYT
 0A83 : EB               " "             ex      de,hl
 0A84 : E3               " "             ex      (sp),hl
 0A85 : 18 08            "  "            jr      L0A8F
@@ -2172,9 +2172,9 @@
                                 ;
 0B53                            L0B53:
 0B53 : D7               " "             rst     CHRGET
-0B54                            L0B54:
+0B54                            GETBYT:
 0B54 : CD 72 09         " r "           call    FRMNUM
-0B57                            L0B57:
+0B57                            CONINT:
 0B57 : CD 7E 06         " ~ "           call    L067E
 0B5A : 7A               "z"             ld      a,d
 0B5B : B7               " "             or      a
@@ -2195,7 +2195,7 @@
 0B76 : D5                       push    de
 0B77 : CF                       rst     SYNCHK
 0B78 : 2C                       .byte   ','
-0B79 : CD 54 0B                 call    L0B54
+0B79 : CD 54 0B                 call    GETBYT
 0B7C : D1                       pop     de
 0B7D : 12                       ld      (de),a
 0B7E : C9                       ret
@@ -2689,7 +2689,7 @@
 0E3A : 23                       inc     hl
 0E3B : 23                       inc     hl
 0E3C : E5                       push    hl
-0E3D : CD B3 0E                 call    L0EB3
+0E3D : CD B3 0E                 call    GETSPA
 0E40 : E1                       pop     hl
 0E41 : 4E                       ld      c,(hl)
 0E42 : 23                       inc     hl
@@ -2701,10 +2701,10 @@
 0E4C : D1                       pop     de
 0E4D : C9                       ret
 
-0E4E                            L0E4E:
+0E4E                            STRIN1:
 0E4E : 3E 01            "> "            ld      a,001H
 0E50                            L0E50:
-0E50 : CD B3 0E         "   "           call    L0EB3
+0E50 : CD B3 0E         "   "           call    GETSPA
 0E53                            STRAD2:
 0E53 : 21 BD 38         "! 8"           ld      hl,DSCTMP
 0E56 : E5               " "             push    hl
@@ -2791,7 +2791,7 @@
 0EB0 : 03                       inc     bc              ;[M80] POINT TO THE NEXT CHARACTER
 0EB1 : 18 F4                    jr      STRPR2          ;[M80] AND PRINT IT...
 
-0EB3                    L0EB3:
+0EB3                    GETSPA:
 0EB3 : B7                       or      a
 0EB4 : 0E F1                    ld      c,0F1H
 0EB6 : F5                       push    af
@@ -3021,7 +3021,10 @@
 0FEE : C0                       ret     nz              ;RETURN NOW IF NOW FREEING DONE
 0FEF : 22 AF 38                 ld      (TEMPPT),hl     ;UPDATE THE TEMP POINTER SINCE
 0FF2 : C9                       ret
-
+                        ;[M80]
+                        ;[M80] THE FUNCTION LEN($) RETURNS THE LENGTH OF THE
+                        ;[M80] STRING PASSED AS AN ARGUMENT
+                        ;[M80]
 0FF3 : 01 36 0B   [M80] LEN:    ld      bc,SNGFLT       ;CALL SNGFLT WHEN DONE
 0FF6 : C5                       push    bc              ;LIKE SO
 0FF7 : CD C6 0F   [M80] LEN1:   call    FRESTR          ;FREE UP TEMP POINTED TO BY FACLO
@@ -3031,100 +3034,114 @@
 0FFF : 7E                       ld      a,(hl)          ;SET CONDITION CODES ON LENGTH
 1000 : B7                       or      a               ;RETURN
 1001 : C9                       ret
-                                ;
-1002 : 01 36 0B       ? LEN:    ld      bc,00B36H
-1005 : C5                       push    bc
-1006                    L1006:
-1006 : CD F7 0F                 call    LEN1
-1009 : CA 97 06                 jp      z,FCERR
-100C : 23                       inc     hl
-100D : 23                       inc     hl
-100E : 5E                       ld      e,(hl)
-100F : 23                       inc     hl
-1010 : 56                       ld      d,(hl)
-1011 : 1A                       ld      a,(de)
-1012 : C9                       ret
-                                ;
-1013 : CD 4E 0E       ? CHR:    call    L0E4E
-1016 : CD 57 0B                 call    L0B57
-1019                    L1019:
-1019 : 2A BF 38                 ld      hl,(X38BF)
-101C : 73                       ld      (hl),e
-101D : C1                       pop     bc
-101E : C3 7E 0E                 jp      PUTNEW
-                                ;
-1021 : CD A0 10       ? LEFT:   call    L10A0
-1024 : AF                       xor     a
-1025                    L1025:
-1025 : E3                       ex      (sp),hl
-1026 : 4F                       ld      c,a
-1027 : E5                       push    hl
-1028 : 7E                       ld      a,(hl)
-1029 : B8                       cp      b
-102A : 38 02                    jr      c,L102E
-102C : 78                       ld      a,b
-102D : 11 0E 00                 ld      de,0000EH
-1030 : C5                       push    bc
-1031 : CD B3 0E                 call    L0EB3
-1034 : C1                       pop     bc
-1035 : E1                       pop     hl
-1036 : E5                       push    hl
-1037 : 23                       inc     hl
-1038 : 23                       inc     hl
-1039 : 46                       ld      b,(hl)
-103A : 23                       inc     hl
-103B : 66                       ld      h,(hl)
-103C : 68                       ld      l,b
-103D : 06 00                    ld      b,000H
-103F : 09                       add     hl,bc
-1040 : 44                       ld      b,h
-1041 : 4D                       ld      c,l
-1042 : CD 53 0E                 call    STRAD2
-1045 : 6F                       ld      l,a
-1046 : CD BD 0F                 call    L0FBD
-1049 : D1                       pop     de
-104A : CD CD 0F                 call    FRETMP
-104D : C3 7E 0E                 jp      PUTNEW
                         ;
-1050 : CD A0 10       ? RIGHT:  call    L10A0
-1053 : D1                       pop     de
-1054 : D5                       push    de
-1055 : 1A                       ld      a,(de)
-1056 : 90                       sub     b
-1057 : 18 CC                    jr      L1025
+                        ;[M80] THE FOLLOWING IS THE ASC($) FUNCTION. IT RETURNS AN INTEGER
+                        ;[M80] WHICH IS THE DECIMAL ASCII EQUIVALENT
+                        ;
+1002 : 01 36 0B   [M80] ASC:    ld      bc,00B36H       ;WHERE TO GO WHEN DONE
+1005 : C5                       push    bc              ;SAVE RETURN ADDR ON STACK
+1006 : CD F7 0F   [M80] ASC2:   call    LEN1            ;SET UP ORIGINAL STR
+1009 : CA 97 06                 jp      z,FCERR         ;NULL STR, BAD ARG.
+100C : 23                       inc     hl              ;BUMP POINTER
+100D : 23                       inc     hl              
+100E : 5E                       ld      e,(hl)          ;[D,E]=POINTER AT STRING DATA
+100F : 23                       inc     hl              
+1010 : 56                       ld      d,(hl)          
+1011 : 1A                       ld      a,(de)          ;[A]=FIRST CHARACTER
+1012 : C9                       ret
+                        ;
+                        ;[M80] CHR$(#) CREATES A STRING WHICH CONTAINS AS ITS ONLY
+                        ;[M80] CHARACTER THE ASCII EQUIVALENT OF THE INTEGER ARG (#)
+                        ;[M80] WHICH MUST BE .LE. 255.
+                        ;
+1013 : CD 4E 0E   [M80] CHR:    call    STRIN1          ;[M80] GET STRING IN DSCTMP
+1016 : CD 57 0B                 call    CONINT          ;[M80] GET INTEGER IN RANGE
+1019 : 2A BF 38   [M80] SETSTR: ld      hl,(X38BF)      ;[M80] GET ADDR OF STR
+101C : 73                       ld      (hl),e          ;[M80] SAVE ASCII BYTE
+101D : C1         {M80} FINBCK: pop     bc              ;[M80] RETURN TO HIGHER LEVEL & SKIP THE CHKNUM CALL
+101E : C3 7E 0E                 jp      PUTNEW          ;[M80] GO CALL PUTNEW
+                        ;
+                        ;[M80] THE FOLLOWING IS THE LEFT$($,#) FUNCTION.
+                        ;[M80] IT TAKES THE LEFTMOST # CHARS OF THE STR.
+                        ;[M80] IF # IS .GT. THAN THE LEN OF THE STR, IT RETURNS THE WHOLE STR.
+                        ;
+1021 : CD A0 10   [M65] LEFT:   call    PREAM           ;[M80] TEST THE PARAMETERS
+1024 : AF                       xor     a               ;[M80] LEFT NEVER CHANGES STRING POINTER
+1025 : E3         [M80] LEFT3:  ex      (sp),hl         ;[M80] SAVE TEXT POINTER
+1026 : 4F                       ld      c,a             ;[M80] OFFSET NOW IN [C]
+1027 : E5         {M80} LEFT2:  push    hl              ;[M80] SAVE DESC. FOR  FRETMP
+1028 : 7E                       ld      a,(hl)          ;[M80] GET STRING LENGTH
+1029 : B8                       cp      b               ;[M80] ENTIRE STRING WANTED?
+102A : 38 02                    jr      c,ALLSTR        ;[M80] IF #CHARS ASKED FOR.GE.LENGTH,YES
+102C : 78                       ld      a,b             ;[M80] GET TRUNCATED LENGTH OF STRING
+102D : 11                       .byte   $11             ;[M80] SKIP OVER MVI USING "LD D,"
+102E : 0E 00                    ld      c,0             ;[M80] MAKE OFFSET ZERO
+1030 : C5                       push    bc              ;[M80] SAVE OFFSET ON STACK
+1031 : CD B3 0E                 call    GETSPA          ;[M80] GET SPACE FOR NEW STRING
+1034 : C1                       pop     bc              ;[M80] GET BACK OFFSET
+1035 : E1                       pop     hl              ;[M80] GET BACK DESC POINTER.
+1036 : E5                       push    hl              ;[M80] BUT KEEP ON STACK
+1037 : 23                       inc     hl              ;[M80] MOVE TO STRING POINTER FIELD
+1038 : 23                       inc     hl              
+1039 : 46                       ld      b,(hl)          ;GET POINTER LOW
+103A : 23                       inc     hl
+103B : 66                       ld      h,(hl)          ;[M90] POINTER HIGH
+103C : 68                       ld      l,b             ;[M90] GET LOW IN  L
+103D : 06 00                    ld      b,000H          ;[M90] GET READY TO ADD OFFSET TO POINTER
+103F : 09                       add     hl,bc           ;[M90] ADD  IT
+1040 : 44                       ld      b,h             ;[M90] GET OFFSET POINTER IN [B,C]
+1041 : 4D                       ld      c,l             
+1042 : CD 53 0E                 call    STRAD2          ;[M80] SAVE INFO IN DSCTMP
+1045 : 6F                       ld      l,a             ;[M80] GET#  OF CHARS TO  MOVE IN L
+1046 : CD BD 0F                 call    L0FBD           ;[M80] MOVE THEM IN
+1049 : D1                       pop     de              ;[M80] GET BACK DESC. POINTER
+104A : CD CD 0F                 call    FRETMP          ;[M80] FREE IT UP.
+104D : C3 7E 0E                 jp      PUTNEW          ;[M80] PUT TEMP IN TEMP LIST
+                        ;
+1050 : CD A0 10   [M80] RIGHT:  call    PREAM           ;[M80] CHECK ARG
+1053 : D1                       pop     de              ;[M80] GET DESC. POINTER
+1054 : D5                       push    de              ;[M80] SAVE BACK FOR LEFT
+1055 : 1A                       ld      a,(de)          ;[M80] GET PRESENT LEN OF STR
+1056 : 90                       sub     b               ;[M80] SUBTRACT 2ND PARM
+1057 : 18 CC                    jr      LEFT3           ;[M80] CONTINUE WITH LEFT CODE
                                 ;
-1059 : EB             ? MID:    ex      de,hl
-105A : 7E                       ld      a,(hl)
-105B : CD A3 10                 call    L10A3
-105E : 04                       inc     b
-105F : 05                       dec     b
-1060 : CA 97 06                 jp      z,FCERR
-1063 : C5                       push    bc
-1064 : 1E FF                    ld      e,$FF
-1066 : FE 29                    cp      029H
-1068 : 28 05                    jr      z,L106F
-106A : CF                       rst     SYNCHK
-106B : 2C                       .byte   ','
-106C : CD 54 0B                 call    L0B54
-106F                    L106F:
-106F : CF                       rst     SYNCHK
-1070 : 29                       .byte   ')'
-1071 : F1                       pop     af
-1072 : E3                       ex      (sp),hl
-1073 : 01 27 10                 ld      bc,01027H
-1076 : C5                       push    bc
-1077 : 3D                       dec     a
-1078 : BE                       cp      (hl)
-1079 : 06 00                    ld      b,000H
-107B : D0                       ret     nc
-107C : 4F                       ld      c,a
-107D : 7E                       ld      a,(hl)
-107E : 91                       sub     c
-107F : BB                       cp      e
-1080 : 47                       ld      b,a
-1081 : D8                       ret     c
-1082 : 43                       ld      b,e
-1083 : C9                       ret
+                                ;[M80] MID ($,#) RETURNS STR WITH CHARS FROM # POSITION
+                                ;[M80] ONWARD. IF # IS GT LEN($) THEN RETURN NULL STRING.
+                                ;[M80] MID ($,#,#) RETURNS STR WITH CHARS FROM # POSITION
+                                ;[M80] FOR #2 CHARS. IF #2 GOES PAST END OF STRING, RETURN
+                                ;[M80] AS MUCH AS POSSIBLE.
+                                ;
+1059 : EB         [M80] MID:    ex      de,hl           ;[M80] PUT THE TEXT POINTER IN [H,L]
+105A : 7E                       ld      a,(hl)          ;[M80] GET THE FIRST CHARACTER
+105B : CD A3 10                 call    PREAM2          ;[M80] GET OFFSET OFF STACK AND MAKE
+105E : 04                       inc     b               
+105F : 05                       dec     b               ;[M80] SEE IF EQUAL TO ZERO
+1060 : CA 97 06                 jp      z,FCERR         ;[M80] IT MUST NOT BE 0
+1063 : C5                       push    bc              
+1064 : 1E FF      [M80] MIDRST: ld      e,$FF           ;[M80] IF TWO ARG GUY, TRUNCATE
+1066 : FE 29                    cp      ')'             ;[M80] [E] SAYS USE ALL CHARS
+1068 : 28 05                    jr      z,MID2          ;[M80] IF ONE ARGUMENT THIS IS CORRECT
+106A : CF                       rst     SYNCHK          
+106B : 2C                       .byte   ','             ;[M80] COMMA? MUST DELINEATE 3RD ARG
+106C : CD 54 0B                 call    GETBYT          ;[M80] GET ARGUMENT  IN  [E]
+106F : CF         [M80] MID2:   rst     SYNCHK          
+1070 : 29                       .byte   ')'             ;[M80] MUST BE FOLLOWED BY )
+1071 : F1                       pop     af              ;[M80] GET OFFSET BACK IN A
+1072 : E3                       ex      (sp),hl         ;[M80] SAVE TEXT POINTER, GET DESC.
+1073 : 01 27 10                 ld      bc,LEFT2        ;[M80] WHERE TO RETURN TO.
+1076 : C5                       push    bc              ;[M80] GOES ON STACK
+1077 : 3D                       dec     a               ;[M80] SUB ONE FROM OFFSET
+1078 : BE                       cp      (hl)            ;[M80] POINTER PAST END OF STR?
+1079 : 06 00                    ld      b,0             ;[M80] ASSUME NULL LENGTH STR
+107B : D0                       ret     nc              ;[M80] YES, JUST USE NULL STR
+107C : 4F                       ld      c,a             ;[M80] SAVE OFFSET OF CHARACTER POINTER
+107D : 7E                       ld      a,(hl)          ;[M80] GET PRESENT LEN OF STR
+107E : 91                       sub     c               ;[M80] SUBTRACT INDEX (2ND ARG)
+107F : BB                       cp      e               ;[M80] IS IT TRUNCATION
+1080 : 47                       ld      b,a             ;[M80] GET CALCED LENGTH IN B
+1081 : D8                       ret     c               ;[M80] IF NOT USE PARTIAL STR
+1082 : 43                       ld      b,e             ;[M80] USE TRUNCATED LENGTH
+1083 : C9                       ret                     ;[M80] RETURN TO LEFT2
                                 ;
 1084 : CD F7 0F       ? VAL:       call    LEN1
 1087 : CA C3 12                    jp      z,L12C3
@@ -3149,11 +3166,11 @@
 109E : 70                          ld      (hl),b
 109F : C9                          ret
                                 ;
-10A0                            L10A0:
+10A0                            PREAM:
 10A0 : EB               " "             ex      de,hl
 10A1 : CF               " "             rst     SYNCHK
 10A2 : 29               "               .byte   ')'
-10A3                            L10A3:
+10A3                            PREAM2:
 10A3 : C1               " "             pop     bc
 10A4 : D1               " "             pop     de
 10A5 : C5               " "             push    bc
@@ -4847,10 +4864,10 @@
 19FD : CD 18 1A         "   "           call    L1A18
 1A00 : 28 09            "( "            jr      z,L1A0B
 1A02 : F5               " "             push    af
-1A03 : CD 4E 0E         " N "           call    L0E4E
+1A03 : CD 4E 0E         " N "           call    STRIN1
 1A06 : F1               " "             pop     af
 1A07 : 5F               "_"             ld      e,a
-1A08 : CD 19 10         "   "           call    L1019
+1A08 : CD 19 10         "   "           call    SETSTR
 1A0B                            L1A0B:
 1A0B : 21 6D 03         "!m "           ld      hl,0036DH
 1A0E : 22 E4 38         "" 8"           ld      (FACLO),hl
@@ -5338,7 +5355,7 @@
 1CB8                            L1CB8:
 1CB8 : CD 85 09         "   "           call    FRMEVL
 1CBB : E5               " "             push    hl
-1CBC : CD 06 10         "   "           call    L1006
+1CBC : CD 06 10         "   "           call    ASC2
 1CBF : 2B               "+"             dec     hl
 1CC0 : 2B               "+"             dec     hl
 1CC1 : 2B               "+"             dec     hl
@@ -6145,8 +6162,8 @@ Value           Type    Name
 0B40            Code    L0B40
 0B45            Code    L0B45
 0B53            Code    L0B53
-0B54            Code    L0B54
-0B57            Code    L0B57
+0B54            Code    GETBYT
+0B57            Code    CONINT
 0B88            Code    L0B88
 0B92            Code    BLTU
 0B95            Code    L0B95
@@ -6195,7 +6212,7 @@ Value           Type    Name
 0DFC            Code    L0DFC
 0E12            Code    L0E12
 0E39            Code    L0E39
-0E4E            Code    L0E4E
+0E4E            Code    STRIN1
 0E50            Code    L0E50
 0E53            Code    STRAD2
 0E5F            Code    STRLIT
@@ -6207,7 +6224,7 @@ Value           Type    Name
 0E9D            Code    STROUT
 0EA0            Code    STRPRT
 0EA7            Code    STRPR2
-0EB3            Code    L0EB3
+0EB3            Code    GETSPA
 0ECE            Code    L0ECE
 0EDB            Code    L0EDB
 0EDE            Code    L0EDE
@@ -6228,13 +6245,13 @@ Value           Type    Name
 0FE2            Code    NOTLST
 0FE4            Code    FRETMS
 0FF7            Code    LEN1
-1006            Code    L1006
-1019            Code    L1019
-1025            Code    L1025
-102E            Code    L102E
-106F            Code    L106F
-10A0            Code    L10A0
-10A3            Code    L10A3
+1006            Code    ASC2
+1019            Code    SETSTR
+1025            Code    LEFT3
+102E            Code    ALLSTR
+106F            Code    MID2
+10A0            Code    PREAM
+10A3            Code    PREAM2
 10D1            Code    PTRGET
 10E9            Code    L10E9
 10EA            Code    L10EA
