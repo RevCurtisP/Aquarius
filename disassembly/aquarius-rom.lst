@@ -557,6 +557,7 @@
 02D2 : D3 50 43 28              .byte   'S'+$80,"PC("   ;;$A3
                         TK      .equ    TK+1  
 02D  : C9 4E 4B 45 59 24        .byte   'I'+$80,"NKEY$" ;;$A4
+02E3 :            [M65] THENTK  .equ    TK
                         TK      .equ    TK+1  
 02DC : D4 48 45 4E              .byte   'T'+$80,"HEN"   ;;$A5
                         TK      .equ    TK+1  
@@ -1008,7 +1009,7 @@
 0519 : FA 32 05                 jp      m,L0532
 051C : 4F                       ld      c,a
 051D : 78                       ld      a,b
-051E : FE 88                    cp      $88
+051E : FE 88                    cp      GOTOTK
 0520 : 20 02                    jr      nz,L0524
 0522 : D7                       rst     CHRGET
 0523 : 2B                       dec     hl
@@ -1487,7 +1488,7 @@
 0787 : FE 8C                    cp      08CH
 0789 : 28 03                    jr      z,L078E
 078B : CF                       rst     SYNCHK
-078C : 88                       adc     a,b
+078C : 88                       .byte   GOTOTK
 078D : 2B                       dec     hl
 078E                    L078E:
 078E : 4B                       ld      c,e
@@ -1505,7 +1506,7 @@
 07A0 : FE 88                    cp      088H
 07A2 : 28 03                    jr      z,L07A7
 07A4 : CF                       rst     SYNCHK
-07A5 : A5                       and     l
+07A5 : A5                       .byte   THENTK
 07A6 : 2B                       dec     hl
 07A7                    L07A7:
 07A7 : CD 75 09                 call    CHKNUM
@@ -1598,7 +1599,7 @@
 083A : F5               " "             push    af
 083B : CD 53 0B         " S "           call    L0B53
 083E : CF               " "             rst     SYNCHK
-083F : 29               ")"             add     hl,hl
+083F : 29                               .byte   ')'
 0840 : 2B               "+"             dec     hl
 0841 : F1               " "             pop     af
 0842 : D6 A3            "  "            sub     0A3H
@@ -1671,7 +1672,7 @@
 089D : C2 AA 08                 jp      nz,L08AA
 08A0 : CD 60 0E                 call    L0E60
 08A3 : CF                       rst     SYNCHK
-08A4 : 3B                       dec     sp
+08A4 : 3B                       .byte   ';'
 08A5 : E5                       push    hl
 08A6 : CD A0 0E                 call    L0EA0
 08A9 : 3E E5                    ld      a,0E5H
@@ -1846,7 +1847,7 @@
                         ;[M80] TOTAL 10 BYTES
                         ;
 0980 : CF         [M80] FRMEQL: rst     SYNCHK
-0981 : B0                       .byte   ???TK           ;[M80] CHECK FOR EQUAL SIGN
+0981 : B0                       .byte   EQUATK           ;[M80] CHECK FOR EQUAL SIGN
 0982 : 01                       .byte   $01             ;[M80] "LD BC," OVER THE NEXT 2
 0983 : CF         [M80] FRMPRN:  rst     SYNCHK         ;[M80] GET PAREN BEFORE FORMULA
 0984 : 28                       .byte   '('
@@ -1967,7 +1968,7 @@
 0A37                            L0A37:
 0A37 : CD 83 09         "   "           call    FRMPRN
 0A3A : CF               " "             rst     SYNCHK
-0A3B : 29               ")"             add     hl,hl
+0A3B : 29                               .byte   ')'
 0A3C : C9               " "             ret
                                 ;
 0A3D                            L0A3D:
@@ -2006,7 +2007,7 @@
 0A6F : 38 16            "8 "            jr      c,L0A87
 0A71 : CD 83 09         "   "           call    FRMPRN
 0A74 : CF               " "             rst     SYNCHK
-0A75 : 2C               ","             inc     l
+0A75 : 2C                               .byte   ','
 0A76 : CD 76 09         " v "           call    L0976
 0A79 : EB               " "             ex      de,hl
 0A7A : 2A E4 38         "* 8"           ld      hl,(FACLO)
@@ -2193,7 +2194,7 @@
 0B73 : CD 88 0B                 call    L0B88
 0B76 : D5                       push    de
 0B77 : CF                       rst     SYNCHK
-0B78 : 2C                       inc     l
+0B78 : 2C                       .byte   ','
 0B79 : CD 54 0B                 call    L0B54
 0B7C : D1                       pop     de
 0B7D : 12                       ld      (de),a
@@ -2455,7 +2456,7 @@
 0CDB : 28 0E                    jr      z,L0CEB
 0CDD : E1                       pop     hl
 0CDE : CF                       rst     SYNCHK
-0CDF : 2C                       inc     l
+0CDF : 2C                       .byte   ','
 0CE0 : D5                       push    de
 0CE1 : CD 7B 06                 call    L067B
 0CE4 : 2B                       dec     hl
@@ -3093,11 +3094,11 @@
 1066 : FE 29                    cp      029H
 1068 : 28 05                    jr      z,L106F
 106A : CF                       rst     SYNCHK
-106B : 2C                       inc     l
+106B : 2C                       .byte   ','
 106C : CD 54 0B                 call    L0B54
 106F                    L106F:
 106F : CF                       rst     SYNCHK
-1070 : 29                       add     hl,hl
+1070 : 29                       .byte   ')'
 1071 : F1                       pop     af
 1072 : E3                       ex      (sp),hl
 1073 : 01 27 10                 ld      bc,01027H
@@ -3141,7 +3142,7 @@
 10A0                            L10A0:
 10A0 : EB               " "             ex      de,hl
 10A1 : CF               " "             rst     SYNCHK
-10A2 : 29               ")"             add     hl,hl
+10A2 : 29               "               .byte   ')'
 10A3                            L10A3:
 10A3 : C1               " "             pop     bc
 10A4 : D1               " "             pop     de
@@ -3166,7 +3167,7 @@
 10C8 : D7               " "             rst     CHRGET
 10C9 : C8               " "             ret     z
 10CA : CF               " "             rst     SYNCHK
-10CB : 2C               ","             inc     l
+10CB : 2C               ","             .byte   ','
 
 10CC : 01 C7 10       ? DIM:    ld      bc,010C7H
 10CF : C5                       push    bc
@@ -3304,7 +3305,7 @@
 118E : FE 2C            " ,"            cp      02CH
 1190 : CA 80 11         "   "           jp      z,L1180
 1193 : CF               " "             rst     SYNCHK
-1194 : 29               ")"             add     hl,hl
+1194 : 29               "               .byte   ')'
 1195 : 22 D0 38         "" 8"           ld      (TENP2),hl
 1198 : E1               " "             pop     hl
 1199 : 22 AA 38         "" 8"           ld      (X38AA),hl
@@ -4930,15 +4931,14 @@
                                 ;
 1A7F                            L1A7F:
 1A7F : CF               " "             rst     SYNCHK
-1A80 : 28 CD            "( "            jr      z,PSET
-1A82 : D0               " "             ret     nc
-1A83 : 1A               " "             ld      a,(de)
+1A80 : 28                               .byte   '('
+1A81 : CD D0 1A         " "             call    $1AD0
 1A84 : D5               " "             push    de
 1A85 : CF               " "             rst     SYNCHK
-1A86 : 2C               ","             inc     l
+1A86 : 2C                               ,byte   ','
 1A87 : CD D0 1A         "   "           call    L1AD0
 1A8A : CF               " "             rst     SYNCHK
-1A8B : 29               ")"             add     hl,hl
+1A8B : 29                               .byte   ')'
 1A8C : C1               " "             pop     bc
 1A8D : C9               " "             ret
                                 ;
