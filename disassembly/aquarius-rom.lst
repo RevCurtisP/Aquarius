@@ -521,6 +521,7 @@
 0290 : C4 45 46                 .byte   'D'+$80,"EF"    ;;$93
                         TK      .equ    TK+1  
 0293 : D0 4F 4B 45              .byte   'P'+$80,"OKE"   ;;$94
+                  [M65] PRINTK  .equ    TK
                         TK      .equ    TK+1  
 0297 : D0 52 49 4E 54           .byte   'P'+$80,"RINT"  ;;$95
                         TK      .equ    TK+1  
@@ -944,131 +945,132 @@
                         ;[M80] RESERVED WORD LIST IN THE SAME
                         ;[M80] ORDER THEY APPEAR IN IN STMDSP.
                         ;
-04BC : AF         [M80] CRUNCH: xor     a
-04BD : 32 AC 38                 ld      (X38AC),a
-04C0 : 0E 05                    ld      c,005H
-04C2 : 11 60 38                 ld      de,KBUF
-04C5                    L04C5:
-04C5 : 7E                       ld      a,(hl)
-04C6 : FE 20                    cp      020H
-04C8 : CA 3C 05                 jp      z,L053C
-04CB : 47                       ld      b,a
-04CC : FE 22                    cp      022H
-04CE : CA 58 05                 jp      z,L0558
-04D1 : B7                       or      a
-04D2 : CA 5E 05                 jp      z,L055E
-04D5 : 3A AC 38                 ld      a,(X38AC)
-04D8 : B7                       or      a
-04D9 : 7E                       ld      a,(hl)
-04DA : C2 3C 05                 jp      nz,L053C
-04DD : FE 3F                    cp      03FH
-04DF : 3E 95                    ld      a,095H
-04E1 : CA 3C 05                 jp      z,L053C
+04BC : AF         [M80] CRUNCH: xor     a               ;SAY EXPECTING FLOATING NUMBERS
+04BD : 32 AC 38                 ld      (DORES),a       ;ALLOW CRUNCHING
+04C0 : 0E 05                    ld      c,5             ;LENGTH OF KRUNCH BUFFER
+04C2 : 11 60 38                 ld      de,KBUF         ;SETUP DESTINATION POINTER
+04C5 : 7E         [M80] KLOOP:  ld      a,(hl)          ;GET CHARACTER FROM BUF
+04C6 : FE 20                    cp      ' '             ;SPACE?
+04C8 : CA 3C 05                 jp      z,STUFFH        ;JUST STUFF AWAY
+04CB : 47                       ld      b,a             ;SETUP B WITH A QUOTE IF IT IS A STRING
+04CC : FE 22                    cp      '"'             ;QUOTE SIGN? 
+04CE : CA 58 05                 jp      z,STRNG         ;YES, GO TO SPECIAL STRING HANDLING
+04D1 : B7                       or      a               ;END OF LINE?
+04D2 : CA 5E 05                 jp      z,CRDONE        ;YES, DONE CRUNCHING
+04D5 : 3A AC 38                 ld      a,(DORES)       ;IN DATA STATEMENT AND NO CRUNCH?
+04D8 : B7                       or      a               
+04D9 : 7E                       ld      a,(hl)          ;GET THE CHARACTER AGAIN
+04DA : C2 3C 05                 jp      nz,STUFFH       ;IF NO CRUNCHING JUST STORE THE CHARACTER
+04DD : FE 3F                    cp      '?'             ;A QMARK?
+04DF : 3E 95                    ld      a,PRINTK
+04E1 : CA 3C 05                 jp      z,STUFFH        ;THEN USE A "PRINT" TOKEN
 04E4 : 7E                       ld      a,(hl)
-04E5 : FE 30                    cp      030H
-04E7 : 38 05                    jr      c,L04EE
-04E9 : FE 3C                    cp      03CH
-04EB : DA 3C 05                 jp      c,L053C
-04EE                            L04EE:
-04EE : D5               " "             push    de
-04EF : 11 44 02         " D "           ld      de,00244H
-04F2 : C5               " "             push    bc
-04F3 : 01 36 05         " 6 "           ld      bc,00536H
-04F6 : C5               " "             push    bc
-04F7 : 06 7F            "  "            ld      b,07FH
-04F9 : 7E               "~"             ld      a,(hl)
-04FA : FE 61            " a"            cp      061H
-04FC : 38 07            "8 "            jr      c,L0505
-04FE : FE 7B            " {"            cp      07BH
-0500 : 30 03            "0 "            jr      nc,L0505
-0502 : E6 5F            " _"            and     05FH
-0504 : 77               "w"             ld      (hl),a
-0505                            L0505:
-0505 : 4E               "N"             ld      c,(hl)
-0506 : EB               " "             ex      de,hl
-0507                            L0507:
-0507 : 23               "#"             inc     hl
-0508 : B6               " "             or      (hl)
-0509 : F2 07 05         "   "           jp      p,L0507
-050C : 04               " "             inc     b
-050D : 7E               "~"             ld      a,(hl)
-050E : E6 7F            "  "            and     07FH
-0510 : C8               " "             ret     z
-0511 : B9               " "             cp      c
-0512 : 20 F3            "  "            jr      nz,L0507
-0514 : EB               " "             ex      de,hl
-0515 : E5               " "             push    hl
-0516                            L0516:
-0516 : 13               " "             inc     de
-0517 : 1A               " "             ld      a,(de)
-0518 : B7               " "             or      a
-0519 : FA 32 05         " 2 "           jp      m,L0532
-051C : 4F               "O"             ld      c,a
-051D : 78               "x"             ld      a,b
-051E : FE 88            "  "            cp      088H
-0520 : 20 02            "  "            jr      nz,L0524
-0522 : D7               " "             rst     CHRGET
-0523 : 2B               "+"             dec     hl
-0524                            L0524:
-0524 : 23               "#"             inc     hl
-0525 : 7E               "~"             ld      a,(hl)
-0526 : FE 61            " a"            cp      061H
-0528 : 38 02            "8 "            jr      c,L052C
-052A : E6 5F            " _"            and     05FH
-052C                            L052C:
-052C : B9               " "             cp      c
-052D : 28 E7            "( "            jr      z,L0516
-052F : E1               " "             pop     hl
-0530 : 18 D3            "  "            jr      L0505
+04E5 : FE 30                    cp      ' '             ;[M65] SKIP NUMERICS.
+04E7 : 38 05                    jr      c,MUSTCR
+04E9 : FE 3C                    cp      '<'             ;[M65] ":" AND ";" ARE ENTERED STRAIGHTAWAY.
+04EB : DA 3C 05                 jp      c,STUFFH
+04EE : D5         [M65] MUSTCR: push    de              ;[M65] SAVE BUFFER POINTER.
+04EF : 11 44 02                 ld      de,RESLST       ;[M65] LOAD RESLST POINTER.
+04F2 : C5                       push    bc              ;[M65] SAVE TEXT POINTER FOR LATER USE.
+04F3 : 01 36 05                 ld      bc,NOTGOS       ;[M80] PLACE TO RETURN IF NOT FUNNY GO
+04F6 : C5                       push    bc
+04F7 : 06 7F                    ld      b,$7F
+04F9 : 7E         [M80] MAKUPL: ld      a,(hl)          ;[M80] GET CHAR FROM MEMORY
+04FA : FE 61            MAKUPS: cp      'a'             ;[M80] IS IT LOWER CASE RANGE
+04FC : 38 07                    jr      c,RESCON        ;[M80] LESS
+04FE : FE 7B                    cp      '{'             ;[M80] GREATER
+0500 : 30 03                    jr      nc,RESCON       ;[M80] TEST
+0502 : E6 5F                    and     $5F             ;[M80] MAKE UPPER CASE
+0504 : 77                       ld      (hl),a          ;;and put it back
+
+;;; *** The following code differs completely from any of the official source code
+;;; *** I'll need to compare to unofficial 8080/Z80 disassemblies, particularly
+;;; *** Altair and TRS-80, and possibly 6800 and/or 6809
+
+0505 : 4E         [N65] RESCON: ld      c,(hl)          ;[M80 SAVE CHAR IN [C]
+                        ;;Find next Reserved Word that starts with this character
+0506 : EB                       ex      de,hl           ;;HL=RESLST Pointer, DE=Text Pointer 
+0507 : 23         [M80] LOPPSI: inc     hl              ;[M80] BUMP RESLST POINTER
+0508 : B6                       or      (hl)            ;[M80] SET CC'S
+0509 : F2 07 05                 jp      p,LOPPSI        ;[M80] SEE IF REST OF CHARS MATCH
+050C : 04                       inc     b
+050D : 7E                       ld      a,(hl)          ;[M80] GET BYTE FROM RESERVED WORD LIST
+050E : E6 7F                    and     $7F             ;[M80] GET RID OF HIGH BIT
+0510 : C8                       ret     z               ;[M80] IF=0 THEN END OF THIS CHARS RESLT
+0511 : B9                       cp      c               ;[M80] COMPARE TO CHAR FROM SOURCE LINE
+0512 : 20 F3                    jr      nz,LOPPSI       ;[M80] IF NO MATCH, SEARCH FOR NEXT RESWRD
+0514 : EB                       ex      de,hl           ;;DE=RESLST Pointer, HL=Text Pointer
+0515 : E5                       push    hl              ;;Save Text Pointer
+0516                    L0516:
+0516 : 13                       inc     de              
+0517 : 1A                       ld      a,(de)
+0518 : B7                       or      a
+0519 : FA 32 05                 jp      m,L0532
+051C : 4F                       ld      c,a
+051D : 78                       ld      a,b
+051E : FE 88                    cp      $88
+0520 : 20 02                    jr      nz,L0524
+0522 : D7                       rst     CHRGET
+0523 : 2B                       dec     hl
+0524                    L0524:
+0524 : 23                       inc     hl
+0525 : 7E                       ld      a,(hl)
+0526 : FE 61                    cp      061H
+0528 : 38 02                    jr      c,L052C
+052A : E6 5F                    and     05FH
+052C                    L052C:
+052C : B9                       cp      c
+052D : 28 E7                    jr      z,L0516
+052F : E1                       pop     hl
+0530 : 18 D3                    jr      RESCON
                                 ;
-0532                            L0532:
-0532 : 48               "H"             ld      c,b
-0533 : F1               " "             pop     af
-0534 : EB               " "             ex      de,hl
-0535 : C9               " "             ret
-                                ;
-0536 : F7               " "             rst     HOOKDO
-0537 : 0A               " "             ld      a,(bc)
-0538 : EB               " "             ex      de,hl
-0539 : 79               "y"             ld      a,c
-053A : C1               " "             pop     bc
-053B : D1               " "             pop     de
-053C                            L053C:
-053C : 23               "#"             inc     hl
-053D : 12               " "             ld      (de),a
-053E : 13               " "             inc     de
-053F : 0C               " "             inc     c
-0540 : D6 3A            " :"            sub     03AH
-0542 : 28 04            "( "            jr      z,L0548
-0544 : FE 49            " I"            cp      049H
-0546 : 20 03            "  "            jr      nz,L054B
-0548                            L0548:
-0548 : 32 AC 38         "2 8"           ld      (X38AC),a
-054B                            L054B:
-054B : D6 54            " T"            sub     054H
-054D : C2 C5 04         "   "           jp      nz,L04C5
-0550 : 47               "G"             ld      b,a
-0551                            L0551:
-0551 : 7E               "~"             ld      a,(hl)
-0552 : B7               " "             or      a
-0553 : 28 09            "( "            jr      z,L055E
-0555 : B8               " "             cp      b
-0556 : 28 E4            "( "            jr      z,L053C
-0558                            L0558:
-0558 : 23               "#"             inc     hl
-0559 : 12               " "             ld      (de),a
-055A : 0C               " "             inc     c
-055B : 13               " "             inc     de
-055C : 18 F3            "  "            jr      L0551
-                                ;
-055E                            L055E:
-055E : 21 5F 38         "!_8"           ld      hl,0385FH
-0561 : 12               " "             ld      (de),a
-0562 : 13               " "             inc     de
-0563 : 12               " "             ld      (de),a
-0564 : 13               " "             inc     de
-0565 : 12               " "             ld      (de),a
-0566 : C9               " "             ret
+0532                    L0532:
+0532 : 48                       ld      c,b
+0533 : F1                       pop     af
+0534 : EB                       ex      de,hl
+0535 : C9                       ret
+                        ;
+0536 : F7         [M80] NOTGOS: rst     HOOKDO
+0537 : 0A                       ld      a,(bc)
+0538 : EB                       ex      de,hl
+0539 : 79                       ld      a,c
+053A : C1                       pop     bc
+053B : D1                       pop     de
+
+                        ;;Copy character to crunch buffer
+053C : 23         [M80] STUFFH: inc     hl              ;[M80] ENTRY TO BUMP [H,L]
+053D : 12         [M80] KRNSAV: ld      (de),a          ;[M80] SAVE BYTE IN KRUNCH BUFFER
+053E : 13                       inc     de              ;[M80] BUMP POINTER
+053F : 0C                       inc     c               ;;Increment buffer count
+0540 : D6 3A                    sub     ':'             ;[M65] IS IT A ":"?`
+0542 : 28 04                    jr      z,COLIS         ;[M65] YES, ALLOW CRUNCHING AGAIN.
+0544 : FE 49                    cp      DATATK-':'      ;[M65] IS IT A DATATK?
+0546 : 20 03                    jr      nz,NODATT       ;[M65] NO, SEE IF IT IS REM TOKEN.
+0548 : 32 AC 38   [M65] COLIS:  ld      (DORES),a       ;SETUP FLAG.
+054B : D6 54      [M65] NODATT: sub     REMTK-":"       ;REM ONLY STOPS ON NULL.
+054D : C2 C5 04                 jp      nz,KLOOP        ;NO, CONTINUE CRUNCHING.
+
+0550 : 47                       ld      b,a             
+0551                    
+0551 : 7E         [M80] STR1:   ld      a,(hl)          ;[M80] GET A CHAR
+0552 : B7                       or      a               ;[M80] SET CONDITION CODES
+0553 : 28 09                    jr      z,CRDONE        ;[M80] IF END OF LINE THEN DONE
+0555 : B8                       cp      b               ;[M80] COMPARE CHAR WITH THIS TERMINATOR
+0556 : 28 E4                    jr      z,STUFFH        ;[M80] IF YES, DONE WITH STRING
+0558 : 23         [m80] STRNG:	inc     hl              ;[M80] INCREMENT TEXT POINTER
+0559 : 12                       ld      (de),a          ;[M80] SAVE CHAR IN KRUNCH BUFFER
+055A : 0C                       inc     c               ;;Increment buffer count
+055B : 13                       inc     de              ;[M65] INCREMENT BUFFER POINTER.
+055C : 18 F3                    jr      STR1            ;[M80] KEEP LOOPING
+
+055E                       CRDONE:
+055E : 21 5F 38                    ld      hl,0385FH
+0561 : 12                          ld      (de),a
+0562 : 13                          inc     de
+0563 : 12                          ld      (de),a
+0564 : 13                          inc     de
+0565 : 12                          ld      (de),a
+0566 : C9                          ret
 
 0567 : 3E 01      [M80] LLIST:  ld      a,1             ;[M80] GET NON ZERO VALUE
 0569 : 32 47 38                 ld      (PRTFLG),a      ;[M80] SAVE IN I/O FLAG (END OF LPT)
@@ -1940,7 +1942,7 @@
 0A03 : D7               " "             rst     CHRGET
 0A04 : CA D6 03         "   "           jp      z,MOERR
 0A07 : DA E5 15         "   "           jp      c,L15E5
-0A0A : CD C6 0C         "   "           call    L0CC6
+0A0A : CD C6 0C         "   "           call    ISLETC
 0A0D : D2 4E 0A         " N "           jp      nc,L0A4E
 0A10 : FE A8            "  "            cp      0A8H
 0A12 : 28 E9            "( "            jr      z,EVAL
@@ -2427,15 +2429,17 @@
 0CC1 : E1               " "             pop     hl
 0CC2 : C3 7E 1B         " ~ "           jp      L1B7E
                                 ;
-0CC5                            L0CC5:
-0CC5 : 7E               "~"             ld      a,(hl)
-0CC6                            L0CC6:
-0CC6 : FE 41            " A"            cp      041H
-0CC8 : D8               " "             ret     c
-0CC9 : FE 5B            " ["            cp      05BH
-0CCB : 3F               "?"             ccf
-0CCC : C9               " "             ret
-                                ;
+                        ;
+                        ;[M80] TEST FOR A LETTER / CARRY ON=NOT A LETTER
+                        ;[M80] 		     CARRY OFF=A LETTER
+                        ;
+0CC5 : 7E         [M80] ISLET:  ld      a,(hl)
+0CC6 : FE 41      [M65] ISLETC: cp      'A'
+0CC8 : D8                       ret     c               ;[M80] IF LESS THAN "A", RETURN EARLY
+0CC9 : FE 5B                    cp      'Z'+1            
+0CCB : 3F                       ccf
+0CCC : C9                       ret
+
 0CCD : F7               CLEAR:  rst     HOOKDO
 0CCE : 0B                       dec     bc
 0CCF : CA CF 0B                 jp      z,CLEARC
@@ -3167,21 +3171,21 @@
 10D1 : AF             ? PTRGET: xor      a
 10D2 : 32 AA 38                 ld      (X38AA),a
 10D5 : 4E                       ld      c,(hl)
-10D6 : CD C5 0C                 call    L0CC5
+10D6 : CD C5 0C                 call    ISLET
 10D9 : DA C4 03                 jp      c,SNERR
 10DC : AF                       xor     a
 10DD : 47                       ld      b,a
 10DE : 32 AB 38                 ld      (VALTYP),a
 10E1 : D7                       rst     CHRGET
 10E2 : 38 05                    jr      c,L10E9
-10E4 : CD C6 0C                 call    L0CC6
+10E4 : CD C6 0C                 call    ISLETC
 10E7 : 38 09                    jr      c,L10F2
 10E9                    L10E9:
 10E9 : 47                       ld      b,a
 10EA                    L10EA:
 10EA : D7                       rst     CHRGET
 10EB : 38 FD                    jr      c,L10EA
-10ED : CD C6 0C                 call    L0CC6
+10ED : CD C6 0C                 call    ISLETC
 10F0 : 30 F8                    jr      nc,L10EA
 10F2                    L10F2:
 10F2 : D6 24                    sub     024H
@@ -6016,20 +6020,20 @@ Value           Type    Name
 049F            Code    FNDLIN
 04A2            Code    LOOP
 04BC            Code    CRUNCH
-04C5            Code    L04C5
-04EE            Code    L04EE
-0505            Code    L0505
-0507            Code    L0507
+04C5            Code    KLOOP
+04EE            Code    MUSTCR
+0505            Code    RESCON
+0507            Code    LOPPSI
 0516            Code    L0516
 0524            Code    L0524
 052C            Code    L052C
 0532            Code    L0532
-053C            Code    L053C
-0548            Code    L0548
-054B            Code    L054B
-0551            Code    L0551
-0558            Code    L0558
-055E            Code    L055E
+053C            Code    STUFFH
+0548            Code    COLIS
+054B            Code    NODATT
+0551            Code    STR1
+0558            Code    STRNG
+055E            Code    CRDONE
 057A            Code    LIST4
 0597            Code    L0597
 0598            Code    L0598
@@ -6162,8 +6166,8 @@ Value           Type    Name
 0CA3            Code    L0CA3
 0CAD            Code    L0CAD
 0CBD            Code    L0CBD
-0CC5            Code    L0CC5
-0CC6            Code    L0CC6
+0CC5            Code    ISLET
+0CC6            Code    ISLETC
 0CEB            Code    L0CEB
 0D16            Code    L0D16
 0D4D            Code    L0D4D
@@ -6563,7 +6567,7 @@ Value           Type    Name
 38A9            Data    X38A9
 38AA            Data    X38AA
 38AB            Data    VALTYP
-38AC            Data    X38AC
+38AC            Data    DORES
 38AD            Data    MEMSIZ
 38AF            Data    X38AF
 38BF            Data    X38BF
