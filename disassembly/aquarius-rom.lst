@@ -2988,7 +2988,18 @@
 0FC2 : 03               " "             inc     bc
 0FC3 : 13               " "             inc     de
 0FC4 : 18 F8            "  "            jr      L0FBE
-                                ;
+                        ;                
+                        ;[M80] FRETMP IS PASSED A POINTER TO A STRING DESCRIPTOR IN [D,E]
+                        ;[M80] THIS VALUE IS RETURNED IN [H,L]. ALL THE OTHER REGISTERS ARE MODIFIED.
+                        ;[M80] A CHECK TO IS MADE TO SEE IF THE STRING DESCRIPTOR [D,E] POINTS
+                        ;[M80] TO IS THE LAST TEMPORARY DESCRIPTOR ALLOCATED BY PUTNEW.
+                        ;[M80] IF SO, THE TEMPORARY IS FREED UP BY THE UPDATING OF TEMPPT.
+                        ;[M80] IF A TEMPORARY IS FREED UP, A FURTHER CHECK IS MADE TO SEE IF THE
+                        ;[M80] STRING DATA THAT THAT STRING TEMPORARY POINTED TO IS THE
+                        ;[M80] THE LOWEST PART OF STRING SPACE IN USE.
+                        ;[M80] IF SO, FRETMP IS UPDATED TO REFLECT THE FACT THAT THAT SPACE IS NO
+                        ;[M80] LONGER IN USE.
+                        ;
 0FC6 : CD 76 09   [M80] FRESTR: call    CHKSTR          ;[M80] MAKE SURE ITS A STRING
 0FC9 : 2A E4 38   [M80] FREFAC: ld      hl,(FACLO)
 0FCC : EB         [M80] FRETM2: ex      de,hl           ;[M80] FREE UP THE TEMP IN THE FACLO
@@ -3142,53 +3153,62 @@
 1081 : D8                       ret     c               ;[M80] IF NOT USE PARTIAL STR
 1082 : 43                       ld      b,e             ;[M80] USE TRUNCATED LENGTH
 1083 : C9                       ret                     ;[M80] RETURN TO LEFT2
+                        ;
+                        ;[M80] THE VAL FUNCTION TAKES A STRING AND TURN IT INTO
+                        ;[M80] A NUMBER BY INTERPRETING THE ASCII DIGITS. ETC..
+                        ;[M80] EXCEPT FOR THE PROBLEM THAT A TERMINATOR MUST BE SUPPLIED
+                        ;[M80] BY REPLACING THE CHARACTER BEYOND THE STRING, VAL
+                        ;[M80] IS MERELY A CALL TO FLOATING INPUT (FIN).
+                        ;
+1084 : CD F7 0F   [M80] VAL:    call    LEN1            ;DO SETUP, SET RESULT=REAL
+1087 : CA C3 12                 jp      z,SNGFLT        ;MAKE SURE TYPE SET UP OK IN EXTENDED
+108A : 5F                       ld      e,a             ;GET LENGTH OF STR
+108B : 23                       inc     hl              ;TO HANDLE THE FACT THE IF
+108C : 23                       inc     hl
+108D : 7E                       ld      a,(hl)
+108E : 23                       inc     hl
+108F : 66                       ld      h,(hl)          ;TWO STRINGS "1" AND "2"
+1090 : 6F                       ld      l,a             ;ARE STORED NEXT TO EACH OTHER
+1091 : E5                       push    hl              ;AND FIN IS CALLED POINTING TO
+1092 : 19                       add     hl,de           ;THE FIRST TWELVE WILL BE RETURNED
+1093 : 46                       ld      b,(hl)          ;THE IDEA IS TO STORE 0 IN THE
+1094 : 72                       ld      (hl),d          ;STRING BEYOND THE ONE VAL
+1095 : E3                       ex      (sp),hl         ;IS BEING CALLED ON
+1096 : C5                       push    bc              ;THE FIRST CHARACTER OF THE NEXT STRING
+1097 : 2B                       dec     hl              ;***CALL CHRGET TO MAKE SURE
+1098 : D7                       rst     CHRGET          ;VAL(" -3")=-3
+1099 : CD E5 15                 call    FIN             ;IN EXTENDED, GET ALL THE PRECISION WE CAN
+109C : C1                       pop     bc              ;GET THE MODIFIED CHARACTER OF THE NEXT STRING INTO [B]
+109D : E1                       pop     hl              GET THE POINTER TO THE MODIFIED CHARACTER
+109E : 70                       ld      (hl),b          RESTORE THE CHARACTER
+                                ;IF STRING IS HIGHEST IN STRING SPACE WE ARE MODIFYING [MEMSIZ] AND
+                                ;THIS IS WHY [MEMSIZ] CAN'T BE USED TO STORE STRING DATA BECAUSE WHAT IF THE
+                                    ;USER TOOK VAL OFF THAT HIGH STRING
+109F : C9                       ret
+
+                        ;[M80] USED BY RIGHT$ AND LEFT$ FOR PARAMETER CHECKING AND SETUP
+10A0 : EB         [M80] PREAM:  ex      de,hl           ;[M80] PUT THE TEXT POINTER IN [H,L]
+10A1 : CF                       rst     SYNCHK          
+10A2 : 29                       .byte   ')'             ;[M80] PARAM LIST SHOULD END
+                        ;[M80] USED BY MID$ FOR PARAMETER CHECKING AND SETUP
+10A3 : C1         [M80] PREAM2: pop     bc              ;[M80] GET RETURN ADDR OFF STACK
+10A4 : D1                       pop     de              ;[M80] GET LENGTH OF ARG OFF STACK
+10A5 : C5                       push    bc              ;[M80] SAVE RETURN ADDR BACK ON
+10A6 : 43                       ld      b,e             ;[M80] SAVE INIT LENGTH
+10A7 : C9                       ret
                                 ;
-1084 : CD F7 0F       ? VAL:       call    LEN1
-1087 : CA C3 12                    jp      z,L12C3
-108A : 5F                          ld      e,a
-108B : 23                          inc     hl
-108C : 23                          inc     hl
-108D : 7E                          ld      a,(hl)
-108E : 23                          inc     hl
-108F : 66                          ld      h,(hl)
-1090 : 6F                          ld      l,a
-1091 : E5                          push    hl
-1092 : 19                          add     hl,de
-1093 : 46                          ld      b,(hl)
-1094 : 72                          ld      (hl),d
-1095 : E3                          ex      (sp),hl
-1096 : C5                          push    bc
-1097 : 2B                          dec     hl
-1098 : D7                          rst     CHRGET
-1099 : CD E5 15                    call    FIN
-109C : C1                          pop     bc
-109D : E1                          pop     hl
-109E : 70                          ld      (hl),b
-109F : C9                          ret
-                                ;
-10A0                            PREAM:
-10A0 : EB               " "             ex      de,hl
-10A1 : CF               " "             rst     SYNCHK
-10A2 : 29               "               .byte   ')'
-10A3                            PREAM2:
-10A3 : C1               " "             pop     bc
-10A4 : D1               " "             pop     de
-10A5 : C5               " "             push    bc
-10A6 : 43               "C"             ld      b,e
-10A7 : C9               " "             ret
-                                ;
-10A8 : 2A DA 38         "* 8"           ld      hl,(STREND)
-10AB : EB               " "             ex      de,hl
-10AC : 21 00 00         "!  "           ld      hl,00000H
-10AF : 39               "9"             add     hl,sp
-10B0 : 3A AB 38         ": 8"           ld      a,(VALTYP)
-10B3 : B7               " "             or      a
-10B4 : CA 1C 0B         "   "           jp      z,L0B1C
-10B7 : CD C9 0F         "   "           call    FREFAC
-10BA : CD DB 0E         "   "           call    L0EDB
-10BD : ED 5B 4B 38      " [K8"          ld      de,(TOPMEM)
-10C1 : 2A C1 38         "* 8"           ld      hl,(FRETOP)
-10C4 : C3 1C 0B         "   "           jp      L0B1C
+10A8 : 2A DA 38   [M80] FRE:    ld      hl,(STREND)
+10AB : EB                       ex      de,hl
+10AC : 21 00 00                 ld      hl,00000H
+10AF : 39                       add     hl,sp
+10B0 : 3A AB 38                 ld      a,(VALTYP)
+10B3 : B7                       or      a
+10B4 : CA 1C 0B                 jp      z,L0B1C
+10B7 : CD C9 0F                 call    FREFAC
+10BA : CD DB 0E                 call    L0EDB
+10BD : ED 5B 4B 38              ld      de,(TOPMEM)
+10C1 : 2A C1 38                 ld      hl,(FRETOP)
+10C4 : C3 1C 0B                 jp      L0B1C
                                 ;
 10C7 : 2B               "+"             dec     hl
 10C8 : D7               " "             rst     CHRGET
@@ -3550,7 +3570,7 @@
 12BD : D6 08            "  "            sub     008H
 12BF : FE E0            "  "            cp      0E0H
 12C1 : 20 F0            "  "            jr      nz,L12B3
-12C3                            L12C3:
+12C3                            SNGFLT:
 12C3 : AF               " "             xor     a
 12C4                            L12C4:
 12C4 : 32 E7 38         "2 8"           ld      (FACHO),a
@@ -3591,8 +3611,8 @@
 12E8 : 21 E7 38         "! 8"           ld      hl,FACHO
 12EB : 86               " "             add     a,(hl)
 12EC : 77               "w"             ld      (hl),a
-12ED : 30 D4            "0 "            jr      nc,L12C3
-12EF : 28 D2            "( "            jr      z,L12C3
+12ED : 30 D4            "0 "            jr      nc,SNGFLT
+12EF : 28 D2            "( "            jr      z,SNGFLT
 12F1                            L12F1:
 12F1 : 78               "x"             ld      a,b
 12F2                            L12F2:
@@ -3936,7 +3956,7 @@
 14A5 : 35                       dec     (hl)
 14A6 : E1                       pop     hl
 14A7 : 20 AF                    jr      nz,L1458
-14A9 : C3 C3 12                 jp      L12C3
+14A9 : C3 C3 12                 jp      SNGFLT
                         ;
 14AC : 78         [M80] MULDIV: ld      a,b
 14AD : B7                       or      a
@@ -3965,7 +3985,7 @@
 14CC : B7               " "             or      a
 14CD                            L14CD:
 14CD : E1               " "             pop     hl
-14CE : F2 C3 12         "   "           jp      p,L12C3
+14CE : F2 C3 12         "   "           jp      p,SNGFLT
 14D1 : C3 D3 03         "   "           jp      L03D3
                                 ;
 14D4                            L14D4:
@@ -4195,7 +4215,7 @@
 15EC : 28 01            "( "            jr      z,L15EF
 15EE : 2B               "+"             dec     hl
 15EF                            L15EF:
-15EF : CD C3 12         "   "           call    L12C3
+15EF : CD C3 12         "   "           call    SNGFLT
 15F2 : 47               "G"             ld      b,a
 15F3 : 57               "W"             ld      d,a
 15F4 : 5F               "_"             ld      e,a
@@ -4556,7 +4576,7 @@
 1806 : F2 0E 18         "   "           jp      p,L180E
 1809 : F1               " "             pop     af
 180A : F1               " "             pop     af
-180B : C3 C3 12         "   "           jp      L12C3
+180B : C3 C3 12         "   "           jp      SNGFLT
 180E                            L180E:
 180E : C3 D3 03         "   "           jp      L03D3
                                 ;
@@ -6286,7 +6306,7 @@ Value           Type    Name
 12AD            Code    L12AD
 12B0            Code    NORMAL
 12B3            Code    L12B3
-12C3            Code    L12C3
+12C3            Code    SNGFLT
 12C4            Code    L12C4
 12C8            Code    L12C8
 12CE            Code    L12CE
