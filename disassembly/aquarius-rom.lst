@@ -1566,10 +1566,10 @@
 080A                            L080A:
 080A : D4 EA 19         "   "           call    nc,CRDO
 080D                            L080D:
-080D : CD A0 0E         "   "           call    L0EA0
+080D : CD A0 0E         "   "           call    STRPRT
 0810 : AF               " "             xor     a
 0811                            L0811:
-0811 : C4 A0 0E         "   "           call    nz,L0EA0
+0811 : C4 A0 0E         "   "           call    nz,STRPRT
 0814 : E1               " "             pop     hl
 0815 : 18 A3            "  "            jr      L07BA
                                 ;
@@ -1674,7 +1674,7 @@
 08A3 : CF                       rst     SYNCHK
 08A4 : 3B                       .byte   ';'
 08A5 : E5                       push    hl
-08A6 : CD A0 0E                 call    L0EA0
+08A6 : CD A0 0E                 call    STRPRT
 08A9 : 3E E5                    ld      a,0E5H
 08AB : CD 5B 0D                 call    L0D5B
 08AE : C1                       pop     bc
@@ -2642,7 +2642,7 @@
                                 ;
 0DFC                            L0DFC:
 0DFC : D5               " "             push    de
-0DFD : CD C9 0F         "   "           call    L0FC9
+0DFD : CD C9 0F         "   "           call    FREFAC
 0E00 : 7E               "~"             ld      a,(hl)
 0E01 : 23               "#"             inc     hl
 0E02 : 23               "#"             inc     hl
@@ -2681,7 +2681,7 @@
 0E29 : CD 75 09         STR:    call    CHKNUM
 0E2C : CD 80 16                 call    L1680
 0E2F : CD 5F 0E                 call    STRLIT
-0E32 : CD C9 0F                 call    L0FC9
+0E32 : CD C9 0F                 call    FREFAC
 0E35 : 01 1D 10                 ld      bc,0101DH
 0E38 : C5                       push    bc
 0E39                    L0E39:
@@ -2770,45 +2770,46 @@
 0E95 : C0                       ret     nz              
 0E96 : 11 1E 00                 ld      de,ERRST        ;[M80] "STRING TEMPORARY" ERROR
 0E99 : C3 DB 03                 jp      ERROR           ;[M80] GO TELL HIM
-;
-; PRINT THE STRING POINTED TO BY [H,L] WHICH ENDS WITH A ZERO
-; IF THE STRING IS BELOW DSCTMP IT WILL BE COPIED INTO STRING SPACE
-;
-0E9C : 23                       inc     hl
-0E9D : CD 5F 0E   [M80] STROUT: call    STRLIT
-0EA0                    L0EA0:
-0EA0 : CD C9 0F                 call    L0FC9
-0EA3 : CD 31 15                 call    MOVRM
-0EA6 : 1C                       inc     e
-0EA7                    L0EA7:
-0EA7 : 1D                       dec     e
-0EA8 : C8                       ret     z
-0EA9 : 0A                       ld      a,(bc)
-0EAA : DF                       rst     CHROUT
-0EAB : FE 0D                    cp      00DH
-0EAD : CC F0 19                 call    z,L19F0
-0EB0 : 03                       inc     bc
-0EB1 : 18 F4                    jr      L0EA7
                                 ;
-0EB3                            L0EB3:
-0EB3 : B7               " "             or      a
-0EB4 : 0E F1            "  "            ld      c,0F1H
-0EB6 : F5               " "             push    af
-0EB7 : 2A 4B 38         "*K8"           ld      hl,(TOPMEM)
-0EBA : EB               " "             ex      de,hl
-0EBB : 2A C1 38         "* 8"           ld      hl,(FRETOP)
-0EBE : 2F               "/"             cpl
-0EBF : 4F               "O"             ld      c,a
-0EC0 : 06 FF            "  "            ld      b,$FF
-0EC2 : 09               " "             add     hl,bc
-0EC3 : 23               "#"             inc     hl
-0EC4 : E7               " "             rst     COMPAR
-0EC5 : 38 07            "8 "            jr      c,L0ECE
-0EC7 : 22 C1 38         "" 8"           ld      (FRETOP),hl
-0ECA : 23               "#"             inc     hl
-0ECB : EB               " "             ex      de,hl
-0ECC : F1               " "             pop     af
-0ECD : C9               " "             ret
+                                ;[M80] PRINT THE STRING POINTED TO BY [H,L] WHICH ENDS WITH A ZERO
+                                ;[M80] IF THE STRING IS BELOW DSCTMP IT WILL BE COPIED INTO STRING SPACE
+                                ;
+0E9C : 23               STROUI: inc     hl              ;[M80] POINT AT NEXT CHARACTER
+0E9D : CD 5F 0E   [M80] STROUT: call    STRLIT          ;[M80] GET A STRING LITERAL
+                                ;
+                                ; PRINT THE STRING WHOSE DESCRIPTOR IS POINTED TO BY FACLO.
+                                ;
+0EA0 : CD C9 0F   [M80] STRPRT: call    FREFAC          ;[M80] RETURN TEMP POINTER BY FACLO
+0EA3 : CD 31 15                 call    MOVRM           ;[M80] [D]=LENGTH [B,C]=POINTER AT DATA
+0EA6 : 1C                       inc     e               ;[M80] CHECK FOR NULL STRING
+0EA7 : 1D         [M80' STRPR2: dec     e               ;[M80] DECREMENT THE LENGTH
+0EA8 : C8                       ret     z               ;[M80] ALL DONE
+0EA9 : 0A                       ld      a,(bc)          ;[M80] GET CHARACTER TO PRINT
+0EAA : DF                       rst     CHROUT
+0EAB : FE 0D                    cp      CR
+0EAD : CC F0 19                 call    z,CRFIN         ;[M65] TYPE REST OF CARRIAGE RETURN
+0EB0 : 03                       inc     bc              ;[M80] POINT TO THE NEXT CHARACTER
+0EB1 : 18 F4                    jr      STRPR2          ;[M80] AND PRINT IT...
+
+0EB3                    L0EB3:
+0EB3 : B7                       or      a
+0EB4 : 0E F1                    ld      c,0F1H
+0EB6 : F5                       push    af
+0EB7 : 2A 4B 38                 ld      hl,(TOPMEM)
+0EBA : EB                       ex      de,hl
+0EBB : 2A C1 38                 ld      hl,(FRETOP)
+0EBE : 2F                       cpl
+0EBF : 4F                       ld      c,a
+0EC0 : 06 FF                    ld      b,$FF
+0EC2 : 09                       add     hl,bc
+0EC3 : 23                       inc     hl
+0EC4 : E7                       rst     COMPAR
+0EC5 : 38 07                    jr      c,L0ECE
+0EC7 : 22 C1 38                 ld      (FRETOP),hl
+0ECA : 23                       inc     hl
+0ECB : EB                       ex      de,hl
+0ECC : F1                       pop     af
+0ECD : C9                       ret
                                 ;
 0ECE                            L0ECE:
 0ECE : F1               " "             pop     af
@@ -2988,30 +2989,30 @@
 0FC3 : 13               " "             inc     de
 0FC4 : 18 F8            "  "            jr      L0FBE
                                 ;
-0FC6                            L0FC6:
-0FC6 : CD 76 09         " v "           call    L0976
-0FC9                            L0FC9:
-0FC9 : 2A E4 38         "* 8"           ld      hl,(FACLO)
-0FCC                            L0FCC:
-0FCC : EB               " "             ex      de,hl
-0FCD                            L0FCD:
-0FCD : CD E4 0F         "   "           call    L0FE4
-0FD0 : EB               " "             ex      de,hl
-0FD1 : C0               " "             ret     nz
-0FD2 : D5               " "             push    de
-0FD3 : 50               "P"             ld      d,b
-0FD4 : 59               "Y"             ld      e,c
-0FD5 : 1B               " "             dec     de
-0FD6 : 4E               "N"             ld      c,(hl)
-0FD7 : 2A C1 38         "* 8"           ld      hl,(FRETOP)
-0FDA : E7               " "             rst     COMPAR
-0FDB : 20 05            "  "            jr      nz,L0FE2
-0FDD : 47               "G"             ld      b,a
-0FDE : 09               " "             add     hl,bc
-0FDF : 22 C1 38         "" 8"           ld      (FRETOP),hl
-0FE2                            L0FE2:
-0FE2 : E1               " "             pop     hl
-0FE3 : C9               " "             ret
+0FC6                    FRESTR:
+0FC6 : CD 76 09                 call    L0976
+0FC9                    FREFAC:
+0FC9 : 2A E4 38                 ld      hl,(FACLO)
+0FCC                    L0FCC:
+0FCC : EB                       ex      de,hl
+0FCD                    L0FCD:
+0FCD : CD E4 0F                 call    L0FE4
+0FD0 : EB                       ex      de,hl
+0FD1 : C0                       ret     nz
+0FD2 : D5                       push    de
+0FD3 : 50                       ld      d,b
+0FD4 : 59                       ld      e,c
+0FD5 : 1B                       dec     de
+0FD6 : 4E                       ld      c,(hl)
+0FD7 : 2A C1 38                 ld      hl,(FRETOP)
+0FDA : E7                       rst     COMPAR
+0FDB : 20 05                    jr      nz,L0FE2
+0FDD : 47                       ld      b,a
+0FDE : 09                       add     hl,bc
+0FDF : 22 C1 38                 ld      (FRETOP),hl
+0FE2                    L0FE2:
+0FE2 : E1                       pop     hl
+0FE3 : C9                       ret
                                 ;
 0FE4                            L0FE4:
 0FE4 : 2A AF 38         "* 8"           ld      hl,(TEMPPT)
@@ -3029,7 +3030,7 @@
 0FF3 : 01 36 0B       ? LEN:    ld      bc,00B36H
 0FF6 : C5                       push    bc
 0FF7                    L0FF7:
-0FF7 : CD C6 0F                 call    L0FC6
+0FF7 : CD C6 0F                 call    FRESTR
 0FFA : AF                       xor     a
 0FFB : 57                       ld      d,a
 0FFC : 32 AB 38                 ld      (VALTYP),a
@@ -3172,7 +3173,7 @@
 10B0 : 3A AB 38         ": 8"           ld      a,(VALTYP)
 10B3 : B7               " "             or      a
 10B4 : CA 1C 0B         "   "           jp      z,L0B1C
-10B7 : CD C9 0F         "   "           call    L0FC9
+10B7 : CD C9 0F         "   "           call    FREFAC
 10BA : CD DB 0E         "   "           call    L0EDB
 10BD : ED 5B 4B 38      " [K8"          ld      de,(TOPMEM)
 10C1 : 2A C1 38         "* 8"           ld      hl,(FRETOP)
@@ -4284,7 +4285,7 @@
 1671 : CD 9D 0E                 call    STROUT
 1674 : E1                       pop     hl
 1675                            L1675:
-1675 : 11 9C 0E         "   "           ld      de,00E9CH
+1675 : 11 9C 0E         "   "           ld      de,STROUI
 1678 : D5               " "             push    de
 1679 : EB               " "             ex      de,hl
 167A : AF               " "             xor     a
@@ -4834,20 +4835,18 @@
 19E5                            L19E5:
 19E5 : 36 00            "6 "            ld      (hl),000H
 19E7 : 21 5F 38         "!_8"           ld      hl,0385FH
-19EA              [M80] CRDO:
-19EA : 3E 0D                    ld      a,00DH
+19EA              
+19EA : 3E 0D      [M80] CRDO:   ld      a,CR
 19EC : DF                       rst     CHROUT
-19ED : 3E 0A                    ld      a,00AH
-19EF : DF                       rst     CHROUT
-19F0                            L19F0:
-19F0 : 3A 47 38         ":G8"           ld      a,(PRTFLG)
-19F3 : B7               " "             or      a
-19F4 : 28 04            "( "            jr      z,L19FA
-19F6 : AF               " "             xor     a
-19F7 : 32 46 38         "2F8"           ld      (LPTPOS),a
-19FA                            L19FA:
-19FA : C9               " "             ret
-                                ;
+19ED : 3E 0A                    ld      a,LF
+19EF : DF         {M80} CRFINO: rst     CHROUT
+19F0 : 3A 47 38   [M80] CRFIN:  ld      a,(PRTFLG)      ;[M80] SEE IF OUTPUTTING TO PRINTER
+19F3 : B7                       or      a
+19F4 : 28 04                    jr      z,CRCONT        ;[M80] NOT PRINTER, CONTINUE
+19F6 : AF                       xor     a               ;[M80] CRFIN MUST ALWAYS RETURN WITH A=0
+19F7 : 32 46 38                 ld      (LPTPOS),a      ;;Set Print Head position to 0
+19FA : C9               CRCONT: ret
+
 19FB                            L19FB:
 19FB : D7               " "             rst     CHRGET
 19FC : E5               " "             push    hl
@@ -6212,8 +6211,8 @@ Value           Type    Name
 0E72            Code    STRFIN
 0E7E            Code    PUTNEW
 0E9D            Code    STROUT
-0EA0            Code    L0EA0
-0EA7            Code    L0EA7
+0EA0            Code    STRPRT
+0EA7            Code    STRPR2
 0EB3            Code    L0EB3
 0ECE            Code    L0ECE
 0EDB            Code    L0EDB
@@ -6228,8 +6227,8 @@ Value           Type    Name
 0FB4            Code    L0FB4
 0FBD            Code    L0FBD
 0FBE            Code    L0FBE
-0FC6            Code    L0FC6
-0FC9            Code    L0FC9
+0FC6            Code    FRESTR
+0FC9            Code    FREFAC
 0FCC            Code    L0FCC
 0FCD            Code    L0FCD
 0FE2            Code    L0FE2
@@ -6402,8 +6401,8 @@ Value           Type    Name
 19DE            Code    CRDONZ
 19E5            Code    L19E5
 19EA            Code    CRDO
-19F0            Code    L19F0
-19FA            Code    L19FA
+19F0            Code    CRFIN
+19FA            Code    CRCONT
 19FB            Code    L19FB
 1A0B            Code    L1A0B
 1A18            Code    L1A18
