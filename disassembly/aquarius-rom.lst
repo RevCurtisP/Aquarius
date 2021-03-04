@@ -2127,7 +2127,7 @@
 0B18 : C1               " "             pop     bc
 0B19 : C3 94 09         "   "           jp      RETAOP
                                 ;
-0B1C                            L0B1C:
+0B1C                            GIVDBL:
 0B1C : 7D               "}"             ld      a,l
 0B1D : 93               " "             sub     e
 0B1E : 4F               "O"             ld      c,a
@@ -3196,70 +3196,90 @@
 10A5 : C5                       push    bc              ;[M80] SAVE RETURN ADDR BACK ON
 10A6 : 43                       ld      b,e             ;[M80] SAVE INIT LENGTH
 10A7 : C9                       ret
-                                ;
-10A8 : 2A DA 38   [M80] FRE:    ld      hl,(STREND)
+                        ;
+                        ;[M80] FRE FUNCTION AND INTEGER TO FLOATING  ROUTINES
+                        ;
+10A8 : 2A DA 38   [M80] FRE:    ld      hl,(STREND)     ;;Label CLCDIF in [M80]
 10AB : EB                       ex      de,hl
 10AC : 21 00 00                 ld      hl,00000H
 10AF : 39                       add     hl,sp
 10B0 : 3A AB 38                 ld      a,(VALTYP)
 10B3 : B7                       or      a
-10B4 : CA 1C 0B                 jp      z,L0B1C
+10B4 : CA 1C 0B                 jp      z,GIVDBL
 10B7 : CD C9 0F                 call    FREFAC
 10BA : CD DB 0E                 call    L0EDB
 10BD : ED 5B 4B 38              ld      de,(TOPMEM)
-10C1 : 2A C1 38                 ld      hl,(FRETOP)
-10C4 : C3 1C 0B                 jp      L0B1C
+10C1 : 2A C1 38                 ld      hl,(FRETOP)     ;TOP OF FREE AREA     
+10C4 : C3 1C 0B                 jp      GIVDBL          ;RETURN [H,L]-[D,E]
                                 ;
-10C7 : 2B               "+"             dec     hl
-10C8 : D7               " "             rst     CHRGET
-10C9 : C8               " "             ret     z
-10CA : CF               " "             rst     SYNCHK
-10CB : 2C               ","             .byte   ','
-
-10CC : 01 C7 10       ? DIM:    ld      bc,010C7H
+10C7 : 2B         [M80] DIMCON: dec     hl              ;[M80] SEE IF COMMA ENDED THIS VARIABLE
+10C8 : D7                       rst     CHRGET          
+10C9 : C8                       ret     z               ;[M80] IF TERMINATOR, GOOD BYE
+10CA : CF                       rst     SYNCHK          
+10CB : 2C                       .byte   ','             ;[M80] MUST BE COMMA
+                        ;
+                        ;[M80] THE "DIM" CODE SETS DIMFLG AND THEN FALLS INTO THE VARIABLE
+                        ;[M80] SEARCH ROUTINE. THE VARIABLE SEARCH ROUTINE LOOKS AT
+                        ;[M80] DIMFLG AT THREE DIFFERENT POINTS:
+                        ;[M80]
+                        ;[M80]	1) IF AN ENTRY IS FOUND, DIMFLG BEING ON INDICATES
+                        ;[M80]		A "DOUBLY DIMENSIONED" VARIABLE
+                        ;[M80]	2) WHEN A NEW ENTRY IS BEING BUILT DIMFLG'S BEING ON
+                        ;[M80]		INDICATES THE INDICES SHOULD BE USED FOR
+                        ;[M80]		THE SIZE OF EACH INDICE. OTHERWISE THE DEFAULT
+                        ;[M80]		OF TEN IS USED.
+                        ;[M80]	3) WHEN THE BUILD ENTRY CODE FINISHES, ONLY IF DIMFLG IS
+                        ;[M80]		OFF WILL INDEXING BE DONE
+                        ;
+10CC : 01 C7 10   [M80] DIM:    ld      bc,DIMCON       ;[M80] PLACE TO COME BACK TO
 10CF : C5                       push    bc
-10D0 : F6                       ,byte   $F6
-10D1 : AF             ? PTRGET: xor      a
-10D2 : 32 AA 38                 ld      (X38AA),a
-10D5 : 4E                       ld      c,(hl)
-10D6 : CD C5 0C                 call    ISLET
-10D9 : DA C4 03                 jp      c,SNERR
+10D0 : F6                       ,byte   $F6             ;;"OR" to skip next instruction
+                        ;
+                        ;[M80] ROUTINE TO READ THE VARIABLE NAME AT THE CURRENT TEXT POSITION
+                        ;[M80] AND PUT A POINTER TO ITS VALUE IN [D,E]. [H,L] IS UPDATED
+                        ;[M80] TO POINT TO THE CHARACTER AFTER THE VARIABLE NAME.
+                        ;[M80] VALTYP IS SETUP. NOTE THAT EVALUATING SUBSCRIPTS IN
+                        ;[M80] A VARIABLE NAME CAN CAUSE RECURSIVE CALLS TO PTRGET SO AT
+                        ;[M80] THAT POINT ALL VALUES MUST BE STORED ON THE STACK.
+                        ;[M80] ON RETURN, [A] DOES NOT REFLECT THE VALUE OF THE TERMINATING CHARACTER
+                        ;
+10D1 : AF         [M80] PTRGET: xor      a              ;[M80] MAKE [A]=0
+10D2 : 32 AA 38                 ld      (DIMFLG),a      ;[M80] FLAG IT AS SUCH
+10D5 : 4E                       ld      c,(hl)          ;[M80] GET FIRST CHARACTER IN [C]
+10D6 : CD C5 0C   {M80} PTRGT2: call    ISLET           ;[M80] CHECK FOR LETTER
+10D9 : DA C4 03                 jp      c,SNERR         ;[M80] MUST HAVE A LETTER
 10DC : AF                       xor     a
-10DD : 47                       ld      b,a
-10DE : 32 AB 38                 ld      (VALTYP),a
-10E1 : D7                       rst     CHRGET
-10E2 : 38 05                    jr      c,L10E9
-10E4 : CD C6 0C                 call    ISLETC
-10E7 : 38 09                    jr      c,L10F2
-10E9                    L10E9:
-10E9 : 47                       ld      b,a
-10EA                    L10EA:
-10EA : D7                       rst     CHRGET
-10EB : 38 FD                    jr      c,L10EA
-10ED : CD C6 0C                 call    ISLETC
-10F0 : 30 F8                    jr      nc,L10EA
-10F2                    L10F2:
-10F2 : D6 24                    sub     024H
-10F4 : 20 08                    jr      nz,L10FE
-10F6 : 3C                       inc     a
-10F7 : 32 AB 38                 ld      (VALTYP),a
+10DD : 47                       ld      b,a             ;[M80] ASSUME NO SECOND CHARACTER
+10DE : 32 AB 38                 ld      (VALTYP),a      ;[M80] ZERO NAMCNT
+10E1 : D7                       rst     CHRGET          ;[M80] GET CHAR
+10E2 : 38 05                    jr      c,ISSEC         Y[M80] ES, WAS NUMERIC
+10E4 : CD C6 0C                 call    ISLETC          ;[M80] SET CARRY IF NOT ALPHABETIC
+10E7 : 38 09                    jr      c,NOSEC         ;[M80] ALLOW ALPHABETICS
+10E9 : 47         [M80] ISSEC:  ld      b,a             ;[M80] IT IS A NUMBER--SAVE IN B
+10EA : D7               EATEM:  rst     CHRGET          ;[M80] GET CHAR
+10EB : 38 FD                    jr      c,EATEM         ;[M65] SKIP NUMERICS
+10ED : CD C6 0C   {M80} VMORC1: call    ISLETC          ;[
+10F0 : 30 F8                    jr      nc,EATEM        ;[M65] SKIP ALPHABETICS
+10F2 : D6 24      [M80] NOSEC:  sub     '$'             ;[M65] IS IT A STRING?
+10F4 : 20 08                    jr      nz,NOTSTR       ;[M65] IF NOT, [VALTYP]=0.
+10F6 : 3C                       inc     a               ;[M65] SET [VALTYP]=1 (STRING !)
+10F7 : 32 AB 38                 ld      (VALTYP),a      
 10FA : 0F                       rrca
 10FB : 80                       add     a,b
 10FC : 47                       ld      b,a
-10FD : D7                       rst     CHRGET
-10FE                    L10FE:
-10FE : 3A CB 38                 ld      a,(SUBFLG)
-1101 : 3D                       dec     a
-1102 : CA A0 11                 jp      z,L11A0
-1105 : F2 0E 11                 jp      p,L110E
-1108 : 7E                       ld      a,(hl)
-1109 : D6 28                    sub     028H
-110B : CA 7A 11                 jp      z,L117A
-110E                    L110E:
-110E : AF                       xor     a
-110F : 32 CB 38                 ld      (SUBFLG),a
-1112 : E5                       push    hl
-1113 : 50                       ld      d,b
+10FD : D7                       rst     CHRGET          ;READ PAST TYPE MARKER
+10FE : 3A CB 38   [M65] NOTSTR: ld      a,(SUBFLG)      ;GET FLAG WHETHER TO ALLOW ARRAYS
+1101 : 3D                       dec     a               ;IF SUBFLG=1, "ERASE" HAS CALLED
+1102 : CA A0 11                 jp      z,ERSFIN        ;PTRGET, AND SPECIAL HANDLING MUST BE DONE
+1105 : F2 0E 11                 jp      p,NOARYS        ;NO ARRAYS ALLOWED
+1108 : 7E                       ld      a,(hl)          ;GET CHAR BACK
+1109 : D6 28                    sub     '('             ;(CHECK FOR "(") WON'T MATCH IF SUBFLG SET
+110B : CA 7A 11                 jp      z,ISARY         ;IT IS!
+110E                    
+110E : AF         [M80] NOARYS: xor     a               ;ALLOW PARENS AGAIN
+110F : 32 CB 38                 ld      (SUBFLG),a      ;SAVE IN FLAG LOCATION
+1112 : E5                       push    hl              ;SAVE THE TEXT POINTER
+1113 : 50                       ld      d,b             
 1114 : 59                       ld      e,c
 1115 : 2A DE 38                 ld      hl,(X38DE)
 1118 : E7                       rst     COMPAR
@@ -3331,9 +3351,9 @@
 1178 : E1               " "             pop     hl
 1179 : C9               " "             ret
                                 ;
-117A                            L117A:
+117A                            ISARY:
 117A : E5               " "             push    hl
-117B : 2A AA 38         "* 8"           ld      hl,(X38AA)
+117B : 2A AA 38         "* 8"           ld      hl,(DIMFLG)
 117E : E3               " "             ex      (sp),hl
 117F : 57               "W"             ld      d,a
 1180                            L1180:
@@ -3355,7 +3375,7 @@
 1194 : 29               "               .byte   ')'
 1195 : 22 D0 38         "" 8"           ld      (TENP2),hl
 1198 : E1               " "             pop     hl
-1199 : 22 AA 38         "" 8"           ld      (X38AA),hl
+1199 : 22 AA 38         "" 8"           ld      (DIMFLG),hl
 119C : 1E 00            "  "            ld      e,000H
 119E : D5               " "             push    de
 119F : 11 E5 F5         "   "           ld      de,0F5E5H
@@ -3377,7 +3397,7 @@
 11B8 : 56               "V"             ld      d,(hl)
 11B9 : 23               "#"             inc     hl
 11BA : 20 EA            "  "            jr      nz,L11A6
-11BC : 3A AA 38         ": 8"           ld      a,(X38AA)
+11BC : 3A AA 38         ": 8"           ld      a,(DIMFLG)
 11BF : B7               " "             or      a
 11C0 : C2 CD 03         "   "           jp      nz,DDERR
 11C3 : F1               " "             pop     af
@@ -3405,7 +3425,7 @@
 11E4 : 22 C3 38         "" 8"           ld      (TENP3),hl
 11E7 : 71               "q"             ld      (hl),c
 11E8 : 23               "#"             inc     hl
-11E9 : 3A AA 38         ": 8"           ld      a,(X38AA)
+11E9 : 3A AA 38         ": 8"           ld      a,(DIMFLG)
 11EC : 17               " "             rla
 11ED : 79               "y"             ld      a,c
 11EE                            L11EE:
@@ -6174,7 +6194,7 @@ Value           Type    Name
 0AD0            Code    L0AD0
 0B05            Code    L0B05
 0B06            Code    L0B06
-0B1C            Code    L0B1C
+0B1C            Code    GIVDBL
 0B21            Code    L0B21
 0B22            Code    L0B22
 0B23            Code    L0B23
@@ -6273,20 +6293,20 @@ Value           Type    Name
 10A0            Code    PREAM
 10A3            Code    PREAM2
 10D1            Code    PTRGET
-10E9            Code    L10E9
-10EA            Code    L10EA
-10F2            Code    L10F2
-10FE            Code    L10FE
-110E            Code    L110E
+10E9            Code    ISSEC
+10EA            Code    EATEM
+10F2            Code    NOSEC
+10FE            Code    NOTSTR
+110E            Code    NOARYS
 1126            Code    L1126
 1132            Code    L1132
 113D            Code    L113D
 1161            Code    L1161
 116C            Code    L116C
 116F            Code    L116F
-117A            Code    L117A
+117A            Code    ISARY
 1180            Code    L1180
-11A0            Code    L11A0
+11A0            Code    ERSFIN
 11A6            Code    L11A6
 11B5            Code    L11B5
 11CD            Code    L11CD
@@ -6610,7 +6630,7 @@ Value           Type    Name
 385D            Data    X385D
 385E            Data    X385E
 38A9            Data    X38A9
-38AA            Data    X38AA
+38AA            Data    DIMFLG
 38AB            Data    VALTYP
 38AC            Data    DORES
 38AD            Data    MEMSIZ
