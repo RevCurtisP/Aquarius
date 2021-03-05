@@ -2,8 +2,17 @@
 ;;
 ;;Annotated by Curtis F Kaylor
 ;;
-;;Originally disassembled with dasmx, but modified to
-;;a TASM/DASM-like syntax
+;;Originally disassembled with dasmx, but modified to match TASM syntax
+
+;;Listing format:
+;;
+;;  Lines beginning with ; are metacomments, i.e. not part of the source code
+;;
+;;  Lines beginning with : are temporary lines to allow progressive testing of 
+;;  conversion to a source file and subsequent assembly. They will be added
+;;  and removed as needed until the generated source code fully assembles.
+
+
 
 ;;Labels and comments are taken from the following:
 ;;  Original Source Code (Canonical Labels and Comments)
@@ -23,11 +32,9 @@
 ;;          https://www.classic-computers.org.nz/system-80/manuals_Level%20II%20ROM%20Reference%20Manual.pdf
 ;;    [M64] COMPUTE!'s Mapping the C64
 ;;
-;;Label sources are denoted to the left of the label and
-;;comment sources are denoted at the beginning of the comment.
+;;Label sources are denoted to the left of the label and comment sources are denoted at the beginning of the comment.
 ;;
-;;Comments taken from canonical source code are preceded
-;;by a single semicolon, while annotations are preceded by
+;;Comments taken from canonical source code are preceded by a single semicolon, while annotations are preceded by
 ;;two semicolons.
 
 
@@ -53,6 +60,8 @@
                         FAC     .equ    $38E7   ;[M80] EXPONENT
 
 
+
+;;Character constants will be removed because [M65] and [M80] use literals
                         ;;Character Constants
                   [GWB] CHRCAN  .equ    3       ;[GWB] CANcel
                         COPYRT  .equ    5       ;;Copyright Symbol
