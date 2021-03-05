@@ -37,6 +37,7 @@
 ;;Comments taken from canonical source code are preceded by a single semicolon, while annotations are preceded by
 ;;two semicolons.
 
+:                               .org    0       ;;Starting Address of ROM
 
                         ;;System Variables
                         SCREEN  .equ    $3000   ;;Screen Character Matrix
@@ -59,35 +60,8 @@
                         FACHO   .equ    $38E6   ;[M80] HIGH ORDER OF MANTISSA
                         FAC     .equ    $38E7   ;[M80] EXPONENT
 
-
-
-;;Character constants will be removed because [M65] and [M80] use literals
-                        ;;Character Constants
-                  [GWB] CHRCAN  .equ    3       ;[GWB] CANcel
-                        COPYRT  .equ    5       ;;Copyright Symbol
-                  [GWB] CHRBEL  .equ    7       ;[GWB] BELl
-                  [GWB] CHRBAK  .equ    8       ;[GWB] BAcKspace
-                  [GWB] CHRLNF  .equ    10      ;[GWB] Line Feed
-                        CLS     ,equ    11      ;;Clear Screen
-                  [GWB] CHRRET  ,equ    13      ;[GWB] RETurn
-                  [GWB] CHRLDL  .equ    21      ;[GWB] Line DeLete
-                        CTLX    ,equ    24      ;;Ctrl-X
-                  [GWB] CHRDEL  .equ    127     ;[GWB] DELete
-
-                        ;[M80] Microsoft BASIC has a number of primitive I/O routines:
-                        ;[M80]  OUTDO (either CALL or RST) prints char in [A] no registers affected
-                        ;[M80]     to either terminal or disk file or printer depending
-                        ;[M80]     flags:
-                        ;[M80]             PRTFLG if non-zero print to printer
-                        ;[M80]
-                        ;[M80]  INCHR   input a character into [A] condition codes destroyed.
-                        ;[M80]
-                        ;[M80]  CRDO    Print a carriage return sequence on either
-                        ;[M80]     terminal or printer depending on flags
-                        ;[M80]     See OUTDO above. See below code for register use
-                        ;[M80]
-
-                        ;;RST 0 - Startup
+;;RST 0 - Startup
+:                       JMPINI  .equ    $1FE1
 0000 : C3 E1 1F   [M80] START:   jp      JMPINI         ;;Start Initialization
                                                         ;
 0003 : 82 06 22                 .byte   $82,$06,$22     ;;Revision Date 1982-06-22
@@ -96,6 +70,7 @@
 
 ;;RST 1 - Syntax Check
 ;;In versions that don't use RST, this routine is named SYNCHR
+:                       SNERR   .equ    $03C4
                         ;[M65] "SYNCHK" LOOKS AT THE CURRENT CHARACTER TO MAKE SURE IT
                         ;[M65] IS THE SPECIFIC THING IN THE BYTE IMMEDIATELY FOLLOWING
                         ;[M65] "RST SYNCHK". IF NOT, IT CALLS THE "SYNTAX ERROR" ROUTINE.
@@ -112,6 +87,7 @@
 
 ;;RST 2 - Get Next Character
 ;;In versions that don't use RST, CHRGTR is called directly
+:                       CHRCON  .equ    $0670
                         ;[M65] "CHRGET" USES [H,L] AS THE CURRENT TEXT PNTR
                         ;[M65] FETCHES A NEW CHARACTER INTO ACCA AFTER INCREMENTING [H,L]
                         ;[M65] AND SETS CONDITION CODES ACCORDING TO WHAT'S IN ACCA.
@@ -129,6 +105,7 @@
 
 ;;RST 3 - Output Character
 ;;In versions that don't use RST, OUTDO is called directly
+:                       OUTDO   .equ    $198A
 0018 : C3 8A 19   [GWB] OUTCHR: jp      OUTDO           ; Execute print character routine
 001B : 00                       nop                     ; Pad out the RST routine
 001C : 00                       nop                     ; (The hook call code from OUTDO
@@ -152,13 +129,14 @@
 
 ;;RST 5 - Get sign of Floating Point Argument
                         ;[M65] PUT SIGN OF FACHO IN ACCA.
+:                       SIGNC   .equ    $14EB                        
 0028 : 3A E7 38   [M80] FSIGN:  ld      a,(FACHO)
 002B : B7                       or      a               ;[M65] IF NUMBER IS ZERO, SO IS RESULT
 002C : C2 EB 14                 jp      nz,SIGNC        ;;Check sign of mantissa if not 0
 002F : C9                       ret
 
 ;;RST 6 - Call Extended BASIC Hook
-;;In Altair 4K Basic, pushea the word following the RST instruction onto the stack
+;;In Altair 4K Basic, pushes the word following the RST instruction onto the stack
 ;;In Level II Basic, this is used by the Disk System
                         ;; Extended ROM Hook dispatch routine
 0030 : DD 2A 06 38      HOOKDO: ld      ix,(HOOK)       ;;Get hook routine address
@@ -169,6 +147,8 @@
 ;;RST 7 - Execute User Defined Machine Language Routine
 ;;In Level II Basic, this is used by the Disk System
 0038 : C3 03 38   [M80] USRFN:  jp      USRPOK          ;;Execute USR() routine
+
+:                               .end                    ;;*** STOP SOURCE CONVERSION ***
 
 ;;This is the address initially loaded into HOOK
 ;;
@@ -258,7 +238,7 @@
 00D7 : 20 F9                    jr      nz,COLOR1
 00D9 : 21 00 40                 ld      hl,$4000
 00DC : CD 80 1E         COLOR2: call    L1E80
-00DF : FE 0D                    cp      CHRCAN
+00DF : FE 0D                    cp      3
 00E1 : 28 1A                    jr      z,COLDST
 00E3 : FE 03                    cp      CTL
 00E5 : 28 06                    jr      z,WARMST
@@ -335,11 +315,11 @@
 0159 : 32 09 38                 ld      (LASTFF),a
 015C : C3 02 04                 jp      READY
                         ;
-015F : 0B               FREMES: .byte   CLS
-0160 : 43 6F 70 79              .byte   "Copyright ",COPYRT," "
+015F : 0B               FREMES: .byte   11
+0160 : 43 6F 70 79              .byte   "Copyright ",5," "
 0164 : 72 69 67 68
 0168 : 74 20 05 20
-016C : 31 39 38 32              .byte   "1982 by Microsoft Inc. S2 ",CHRRET,0
+016C : 31 39 38 32              .byte   "1982 by Microsoft Inc. S2 ",13,0
 0170 : 20 62 79 20
 0174 : 4D 69 63 72
 0178 : 6F 73 6F 66
@@ -657,7 +637,7 @@
 035B : 50 A9 0A                 .byte    80,ANDOP       ;AND
 035E : 46 A8 0A                 .byte    70.OROP        ;OR
 
-0361 : 20 45 72 72[M65] ERR:    .byte " Error",CHRBEL,0
+0361 : 20 45 72 72[M65] ERR:    .byte " Error",7,0
 0365 : 6F 72 07 00
 
 0369
@@ -665,7 +645,7 @@
 036C : 00
 
 036E
-036E : 4F 6B 0D 0A[M80] REDDY:  .byte   "Ok",CHRRET,CHRLNF,0
+036E : 4F 6B 0D 0A[M80] REDDY:  .byte   "Ok",13,10,0
 0372 : 00
 
 
@@ -2610,7 +2590,7 @@
 0D8B : 32 4A 38                 ld      (CHARC),a       ;[M80] LIKE SO
 0D8E : CD DA 19   [M80] INLINC: call    INCHR           ;[M80] GET A CHAR
 0D91 : 4F         {M80} INLNC1: ld      c,a             ;[M80] SAVE CURRENT CHAR IN [C]
-0D92 : FE 7F                    cp      CHRDEL          ;[M80] CHARACTER DELETE?
+0D92 : FE 7F                    cp      127          ;[M80] CHARACTER DELETE?
 0D94 : 28 CE                    jr      z,RUBOUT        ;[M80] DO IT
 0D96 : 3A 4A 38                 ld      a,(CHARC)       ;[M80] BEEN DOING A RUBOUT?
 0D99 : B7                       or      a               ;[M80] SET CC'S
@@ -2627,29 +2607,29 @@
 ;;Dr. Dobb's Journal of Computer Calisthenics and Orthodontia.  He brought the first
 ;;Altair 8800 to the Homebrew Computer Club and was one of the main supporters
 ;;of the effort to make Tiny BASIC a standard on many early machines.
-0DA4 : FE 07      {M80} CHKFUN: cp      CHRBEL          ;[M80] IS IT BOB ALBRECHT RINGING THE BELL
+0DA4 : FE 07      {M80} CHKFUN: cp      7          ;[M80] IS IT BOB ALBRECHT RINGING THE BELL
 0DA6 : 28 41                    jr      z,GOODCH        ;[M80] FOR SCHOOL KIDS?
-0DA8 : FE 03                    cp      CHRCAN          ;[M80] CONTROL-C?
+0DA8 : FE 03                    cp      3          ;[M80] CONTROL-C?
 0DAA : CC EA 19                 call    z,CRDO          ;[M80] TYPE CHAR, AND CRLFT
 0DAD : 37                       scf                     ;[M80] RETURN WITH CARRY ON
 0DAE : C8                       ret     z               ;[M80] IF IT WAS CONTROL-C
-0DAF : FE 0D                    cp      CHRRET
+0DAF : FE 0D                    cp      13
 0DB1 : CA E5 19                 jp      z,GFNINL        ;[M80] IS IT A CARRIAGE RETURN?
-0DB4 : FE 15                    cp      CHRLDL          ;[M80] ;LINE DELETE? (CONTROL-U)
+0DB4 : FE 15                    cp      21          ;[M80] ;LINE DELETE? (CONTROL-U)
 0DB6 : CA 82 0D                 jp      z,INLINU        ;[M80] GO DO IT
 0DB9 : 00                       nop                     ;;;Whatever was removed isn't in the
 0DBA : 00                       nop                     ;;;available source codes
 0DBB : 00                       nop
 0DBC : 00                       nop
 0DBD : 00                       nop
-0DBE : FE 08                    cp      CHRBAK          ;[M80] BACKSPACE? (CONTROL-H)?
+0DBE : FE 08                    cp      8          ;[M80] BACKSPACE? (CONTROL-H)?
 0DC0 : CA 7C 0D                 jp      z,LINLIN        ;[M65] YES
-0DC3 : FE 18                    cp      CTLX            ;[M80] AT START OF LINE?
-0DC5 : 20 05                    jr      nz,NTCTLX       ;[M80] IS IT CONTROL-X (LINE DELETE)
+0DC3 : FE 18                    cp      24            ;[M80] AT START OF LINE?
+0DC5 : 20 05                    jr      nz,NT24       ;[M80] IS IT CONTROL-X (LINE DELETE)
 0DC7 : 3E 23                    ld      a,'#'           ;[M80] SEND NUMBER SIGN
 0DC9 : C3 81 0D                 jp      INLINN          ;[M80] SEND # SIGN AND ECHO
                                 ;
-0DCC                            NTCTLX:
+0DCC                            NT24:
 0DCC : FE 12            "  "            cp      012H
 0DCE : 20 14            "  "            jr      nz,L0DE4
 0DD0 : C5               " "             push    bc
@@ -2827,7 +2807,7 @@
 0EA8 : C8                       ret     z               ;[M80] ALL DONE
 0EA9 : 0A                       ld      a,(bc)          ;[M80] GET CHARACTER TO PRINT
 0EAA : DF                       rst     CHROUT
-0EAB : FE 0D                    cp      CHRRET
+0EAB : FE 0D                    cp      13
 0EAD : CC F0 19                 call    z,CRFIN         ;[M65] TYPE REST OF CARRIAGE RETURN
 0EB0 : 03                       inc     bc              ;[M80] POINT TO THE NEXT CHARACTER
 0EB1 : 18 F4                    jr      STRPR2          ;[M80] AND PRINT IT...
@@ -4928,9 +4908,9 @@
 19E5 : 36 00            "6 "            ld      (hl),000H
 19E7 : 21 5F 38         "!_8"           ld      hl,0385FH
 19EA
-19EA : 3E 0D      [M80] CRDO:   ld      a,CHRRET
+19EA : 3E 0D      [M80] CRDO:   ld      a,13
 19EC : DF                       rst     CHROUT
-19ED : 3E 0A                    ld      a,CHRLNF
+19ED : 3E 0A                    ld      a,10
 19EF : DF         {M80} CRFINO: rst     CHROUT
 19F0 : 3A 47 38   [M80] CRFIN:  ld      a,(PRTFLG)      ;[M80] SEE IF OUTPUTTING TO PRINTER
 19F3 : B7                       or      a
@@ -5580,7 +5560,7 @@
 1D72 : F7                       rst     HOOKDO          ;Call Extended BASIC Hook Routine
 1D73 : 13                       .byte   19
 1D74 : F5                       push    af              ;Save character
-1D75 : FE 0A                    cp      CHRLNF          ;If LF
+1D75 : FE 0A                    cp      10          ;If LF
 1D77 : 28 1A                    jr      z,L1D93
 1D79 : 3A 00 38                 ld      a,(TTYPOS)      ;[M80] GET TTY POS
 1D7C : B7                       or      a               ;[M80] SET CC'S
@@ -6286,7 +6266,7 @@ Value           Type    Name
 0D85            Code    INLIN
 0D8E            Code    INLINC
 0DA3            Code    NOTRUB
-0DCC            Code    NTCTLX
+0DCC            Code    NT24
 0DE4            Code    L0DE4
 0DE9            Code    GOODCH
 0DF8            Code    L0DF8
