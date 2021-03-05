@@ -43,6 +43,7 @@
                         SCREEN  .equ    $3000   ;;Screen Character Matrix
                         COLOR   .equ    $3800   ;;Screen Color Matrix
                   [M80] TTYPOS  .equ    $3800   ;;Current Screen Column (TRMPOS on 6502)
+                        CURRAM  .equ    $3801   ;; Position in CHARACTER RAM of cursor
                   [M65] USRPOK  .equ    $3803   ;;JP instruction for USR() routine
                         HOOK    .equ    $3806   ;;Extended ROM Hook Vector
                   [M80] CNTOFL  .equ    $3808   ;[M80] SUPRESS OUTPUT FLAG ;;Line Count
@@ -148,8 +149,6 @@
 ;;In Level II Basic, this is used by the Disk System
 0038 : C3 03 38   [M80] USRFN:  jp      USRPOK          ;;Execute USR() routine
 
-:                               .end                    ;;*** STOP SOURCE CONVERSION ***
-
 ;;This is the address initially loaded into HOOK
 ;;
 003B : D9               NOHOOK: exx                     ;;Default Hook Routine
@@ -159,16 +158,21 @@
 003F : D9                       exx
 0040 : C9                       ret
 
+:                       L1D94   .equ    $1D94
+:                       LASTWR  .equ    $2FFF
+:                       X385D   .equ    $385D
+:                       L1E80   .equ    $1E80
+:                       XINIT   .equ    $E010
 0041 : 31 A0 38   [M80] INIT:   ld      sp,038A0H       ;[M80] SET UP TEMP STACK
 0044 : 3E 0B                    ld      a,00BH
 0046 : CD 94 1D                 call    L1D94
-0049 : 2A 01 38                 ld      hl,(X3801)
-004C : 36 20                    ld      (hl),020H
-004E : 3E 07                    ld      a,007H
+0049 : 2A 01 38                 ld      hl,(CURRAM)
+004C : 36 20                    ld      (hl),' '
+004E : 3E 07                    ld      a,7             ;;BEL
 0050 : CD 94 1D                 call    L1D94
 0053 : AF                       xor     a
 0054 : D3 FF                    out     ($FF),a
-0056 : 21 FF 2F                 ld      hl,02FFFH
+0056 : 21 FF 2F                 ld      hl,LASTWR
 0059 : 22 5D 38                 ld      (X385D),hl
 005C : 11 11 E0         EXTCHK: ld      de,$E011        ;;Check for Catridge ROM at $E010
 005F : 21 81 00                 ld      hl,$0081
@@ -220,15 +224,13 @@
 00B0 : 42 41 53 49      BASICT: .byte "BASIC"
 00B4 : 43
 
-00B5 : 50 72 65 73      STARTT: .byte "Press RETURN key to start.",0
+00B5 : 50 72 65 73      STARTT: .byte "Press RETURN key to start",0
 00B9 : 73 20 52 45
 00BD : 54 55 52 4E
 00C1 : 20 6B 65 79
 00C5 : 20 74 6F 20
 00C9 : 73 74 61 72
 00CD : 74 00
-
-00CF
 
 00CF : 21 00 34         COLORS: ld      hl,COLOR
 00D2 : 70               COLOR1: ld      (hl),b
@@ -240,7 +242,7 @@
 00DC : CD 80 1E         COLOR2: call    L1E80
 00DF : FE 0D                    cp      3
 00E1 : 28 1A                    jr      z,COLDST
-00E3 : FE 03                    cp      CTL
+00E3 : FE 03                    cp      3
 00E5 : 28 06                    jr      z,WARMST
 00E7 : 2B                       dec     hl
 00E8 : 7C                       ld      a,h
@@ -248,13 +250,19 @@
 00EA : 20 F0                    jr      nz,COLOR2
 00EC : C9                       ret
 
-00ED : 3E 0B            WARMST: ld      a,00BH
+:                       STKINI  .equ    $0BE5
+:                       TTYCHR  .equ    $1D72
+:                       L1A40   .equ    $1A40    
+00ED : 3E 0B            WARMST: ld      a,11
 00EF : CD 72 1D                 call    TTYCHR
 00F2 : 3A 09 38                 ld      a,(LASTFF)
 00F5 : D3 FF                    out     ($FF),a
 00F7 : CD E5 0B                 call    STKINI
 00FA : CD 40 1A                 call    L1A40
 
+:                       DEFALT  .equ    $0187
+:                       X38A9   .equ    $38A9
+:                       X3900   .equ    $3900
 00FD : 21 87 01         COLDST: ld      hl,DEFALT       ;Set System Variable Default Vslues
 0100 : 01 51 00                 ld      bc,81
 0103 : 11 03 38                 ld      de,USRPOK
@@ -263,6 +271,8 @@
 0109 : 32 A9 38                 ld      (X38A9),a
 010C : 32 00 39                 ld      (X3900),a
 010F : 21 64 39                 ld      hl,03964H
+:                               .end                    ;;*** STOP SOURCE CONVERSION ***
+
 0112                    L0112:
 0112 : 23                       inc     hl
 0113 : 4E                       ld      c,(hl)
@@ -5585,7 +5595,7 @@
 1D9B : FE 0B                    cp      11
 1D9D : CA 45 1E                 jp      z,L1E45
 1DA0 : 5F                       ld      e,a
-1DA1 : 2A 01 38                 ld      hl,(X3801)
+1DA1 : 2A 01 38                 ld      hl,(CURRAM)
 1DA4 : 3A 0D 38                 ld      a,(X380D)
 1DA7 : 77                       ld      (hl),a
 1DA8 : 7B                       ld      a,e
@@ -5595,7 +5605,7 @@
 1DAF : 28 0D                    jr      z,L1DBE
 1DB1 : FE 0A                    cp      00AH
 1DB3 : 28 13                    jr      z,L1DC8
-1DB5 : 2A 01 38                 ld      hl,(X3801)
+1DB5 : 2A 01 38                 ld      hl,(CURRAM)
 1DB8 : 77                       ld      (hl),a
 1DB9 : CD 1F 1E                 call    L1E1F
 1DBC : 18 2C                    jr      L1DEA
@@ -5613,7 +5623,7 @@
 1DCC : D2 D8 1D         "   "           jp      nc,L1DD8
 1DCF : 11 28 00         " ( "           ld      de,00028H
 1DD2 : 19               " "             add     hl,de
-1DD3 : 22 01 38         "" 8"           ld      (X3801),hl
+1DD3 : 22 01 38         "" 8"           ld      (CURRAM),hl
 1DD6 : 18 12            "  "            jr      L1DEA
                                 ;
 1DD8                            L1DD8:
@@ -5631,7 +5641,7 @@
 1DE7                            L1DE7:
 1DE7 : CD 3E 1E         " > "           call    L1E3E
 1DEA                    L1DEA:
-1DEA : 2A 01 38                 ld      hl,(X3801)
+1DEA : 2A 01 38                 ld      hl,(CURRAM)
 1DED : 7E                       ld      a,(hl)
 1DEE : 32 0D 38                 ld      (X380D),a
 1DF1 : 36 7F                    ld      (hl),07FH
@@ -5639,7 +5649,7 @@
 1DF4 : F1                       pop     af              ;Restore [AF]
 1DF5 : C9                       ret
                                 ;
-1DF6 : 2A 01 38         "* 8"           ld      hl,(X3801)
+1DF6 : 2A 01 38         "* 8"           ld      hl,(CURRAM)
 1DF9 : 3A 0D 38         ": 8"           ld      a,(X380D)
 1DFC : 77               "w"             ld      (hl),a
 1DFD : C9               " "             ret
@@ -5664,7 +5674,7 @@
 1E1D : 18 D4            RESREG: jr      XPOPAF          ;Restore Registers and return
 
 1E1F                            L1E1F:
-1E1F : 2A 01 38         "* 8"           ld      hl,(X3801)
+1E1F : 2A 01 38         "* 8"           ld      hl,(CURRAM)
 1E22 : 3A 00 38         ": 8"           ld      a,(TTYPOS)
 1E25 : 23               "#"             inc     hl
 1E26 : 3C               "<"             inc     a
@@ -5681,7 +5691,7 @@
 1E3B : C3 FE 1D         "   "           jp      L1DFE
                                 ;
 1E3E                            L1E3E:
-1E3E : 22 01 38         "" 8"           ld      (X3801),hl
+1E3E : 22 01 38         "" 8"           ld      (CURRAM),hl
 1E41 : 32 00 38         "2 8"           ld      (TTYPOS),a
 1E44 : C9               " "             ret
                                 ;
@@ -6624,7 +6634,7 @@ Value           Type    Name
 2C0C            Code    L2C0C
 3177            Data    X3177
 3800            Data    TTYPOS
-3801            Data    X3801
+3801            Data    CURRAM
 3803            Code    USRPOK
 3806            Data    HOOK
 3808            Data    CNTOFL
