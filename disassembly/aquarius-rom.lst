@@ -43,7 +43,7 @@
 
                         ;;System Variables
                         SCREEN  .equ    $3000   ;;Screen Character Matrix
-                        COLOR   .equ    $3800   ;;Screen Color Matrix
+                        COLOR   .equ    $3400   ;;Screen Color Matrix
                   [M80] TTYPOS  .equ    $3800   ;;Current Screen Column (TRMPOS on 6502)
                         CURRAM  .equ    $3801   ;; Position in CHARACTER RAM of cursor
                   [M65] USRPOK  .equ    $3803   ;;JP instruction for USR() routine
@@ -134,7 +134,7 @@
 ;;RST 5 - Get sign of Floating Point Argument
                         ;[M65] PUT SIGN OF FACHO IN ACCA.
 :                       SIGNC   .equ    $14EB                        
-0028 : 3A E7 38   [M80] FSIGN:  ld      a,(FACHO)
+0028 : 3A E7 38   [M80] FSIGN:  ld      a,(FAC)
 002B : B7                       or      a               ;[M65] IF NUMBER IS ZERO, SO IS RESULT
 002C : C2 EB 14                 jp      nz,SIGNC        ;;Check sign of mantissa if not 0
 002F : C9                       ret
@@ -243,7 +243,7 @@
 00D7 : 20 F9                    jr      nz,COLOR1
 00D9 : 21 00 40                 ld      hl,$4000
 00DC : CD 80 1E         COLOR2: call    L1E80
-00DF : FE 0D                    cp      3
+00DF : FE 0D                    cp      13
 00E1 : 28 1A                    jr      z,COLDST
 00E3 : FE 03                    cp      3
 00E5 : 28 06                    jr      z,WARMST
@@ -5375,7 +5375,7 @@
 1C3E : 3E FF                    ld      a,$FF
 1C40 : 32 5E 38                 ld      (X385E),a
 1C43 : CD B1 1C                 call    L1CB1
-1C46                            L1C46:
+1C46                    L1C46:
 1C46 : AF                       xor     a
 1C47 : 32 5D 38                 ld      (X385D),a
 1C4A : D5                       push    de
