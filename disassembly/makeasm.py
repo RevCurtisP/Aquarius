@@ -48,16 +48,6 @@ def makeasm(iname, oname):
     #Remove Address and Object Code Prefix
     line = line[24:]
  
-    #Replace Labels that confuse TASM
-    if False and line[0:1] != ';':
-      label = line[0:8].rstrip().rstrip(':')
-      if label in FIX:
-        label = FIX[label] + ':' 
-        line = label.ljust(8) + line[8:]
-      arg = line[16:24].rstrip()
-      if arg in FIX:
-        line = line[:16] + FIX[arg].ljust(8) + line[24:]
-
     #Replace RST operand for TASM
     if line[0:1] != ';' and line[8:16] == "rst     ":
       arg = line[16:24].rstrip()
