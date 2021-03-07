@@ -3,9 +3,10 @@
 # Convert Annotated Aquarius ROM Disassembly to TASM Source Code
 def makeasm(iname, oname):
 
-  #RST argument substitution dictionary
+  #TASM Substitution Dictionarys
   RST = {"START": "00H", "SYNCHK": "08H", "CHRGET": "10H", "OUTCHR": "18H",
          "COMPAR": "20H", "FSIGN": "28H", "HOOKDO": "30H", "USRFN": "38H"}
+  FIX = {"IF": "SIF", "FOR": "SFOR"}
   
   ifile = open(iname, 'r')
   ofile = open(oname, 'w')
@@ -46,6 +47,16 @@ def makeasm(iname, oname):
     
     #Remove Address and Object Code Prefix
     line = line[24:]
+ 
+    #Replace Labels that confuse TASM
+    if False and line[0:1] != ';':
+      label = line[0:8].rstrip().rstrip(':')
+      if label in FIX:
+        label = FIX[label] + ':' 
+        line = label.ljust(8) + line[8:]
+      arg = line[16:24].rstrip()
+      if arg in FIX:
+        line = line[:16] + FIX[arg].ljust(8) + line[24:]
 
     #Replace RST operand for TASM
     if line[0:1] != ';' and line[8:16] == "rst     ":
