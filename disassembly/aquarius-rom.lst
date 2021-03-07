@@ -63,6 +63,7 @@
                   [M80] RNDCNT  .equ    $381F   ;
                   [M80] RNDX    .equ    $3820   ;[M80] LAST RANDOM NUMBER GENERATED, BETWEEN 0 AND 1
                         ;               $3824   ;;???
+                        X3841   .equ    $3841   ;;*** uaed in RND function
                   [M80] LPTPOS  .equ    $3846   ;[M80] POSITION OF LPT PRINT HEAD
                   [M80] PRTFLG  .equ    $3847   ;[M80] WHETHER OUTPUT GOES TO LPT
                         X3848   .equ    $3848   ;    
@@ -137,7 +138,6 @@
                         L1B10   .equ    $1B10
                         L1C39   .equ    $1C39
                         L1C3A   .equ    $1C3A
-                        L1FC3   .equ    $1FC3
                         L2010   .equ    $2010
                         X2157   .equ    $2157   
                         X3177   .equ    $3177   
@@ -156,8 +156,7 @@
 0000                  | ;;On power up or reset, the Z80 jumps to this RST
 0000                  | ;;The instruction RST START is functionally equivalent to doing
 0000                  | ;;a hardware reset.
-;:::::::::::::::::::::: JMPINI   =      $1FE1
-0000 : C3 E1 1F   [M80] START:   jp      JMPINI         ;;Start Initialization
+0000 : C3 E1 1F   [M80] START:  jp      JMPINI          ;;Start Initialization
 0003 : 82 06 22                 .byte   $82,$06,$22     ;;Revision Date 1982-06-22
 0006 : 0B                       .byte   11              ;;Revision Number?
 0007 : 00                       nop                     ;;Pad out the RST routine
@@ -172,7 +171,6 @@
 0008                  | ;[M65] [A]=NEW CHAR AND [H,L] IS ADVANCED BY "CHRGET".
 0008                  | ;
 0008                  | ;;;In Basic versions that don't use RST, this routine is named SYNCHR
-;:::::::::::::::::::::: SNERR   =      $03C4
 0008 : 7E         [M80] SYNCHK: ld      a,(hl)
 0009 : E3                       ex      (sp),hl
 000A : BE                       cp      (hl)                    ;[M65] CHARACTERS EQUAL?
@@ -195,7 +193,6 @@
 0010                  | ;;use LD A,HL to get the current character, rather than CHRGOT
 0010                  |
 0010                  | ;;;Basic versions that don't use RST use CALL CHRGTR instead
-;:::::::::::::::::::::: CHRCON  =      $0670
 0010 : 23         [M65] CHRGET: inc     hl              ;[M65] INCREMENT THE TEXT PNTR
 0011 : 7E         {M65} CHRGOT: ld      a,(hl)          ;;Entry point to get current character
 0012 : FE 3A      {M65} QNUM:   cp      ':'             ;[M65] IS IT A ":"?
@@ -208,7 +205,6 @@
 0018                  | ;[M80]             PRTFLG if non-zero print to printer
 0018                  |
 0018                  | ;;;Basic versions that don't use RST use CALL OUTDO instead
-;:::::::::::::::::::::: OUTDO   =       $198A
 0018 : C3 8A 19   [GWB] OUTCHR: jp      OUTDO           ;; Execute print character routine
 001B : 00 00 00 00              .byte   0,0,0,0,0       ;; Pad out the RST routine
 001F : 00                                               ;;; (The hook call code from OUTDO could be moved here)
@@ -233,7 +229,6 @@
 0028                  | ;[M80] LEAVES FAC ALONE
 0028                  | ;
 0028                  | ;;;Basic versions that don't use RST use CALL SIGN insteaoard
-;:::::::::::::::::::::: SIGNC   =       $14EB                        
 0028 : 3A E7 38   [M80] FSIGN:  ld      a,(FAC)
 002B : B7                       or      a               ;[M65] IF NUMBER IS ZERO, SO IS RESULT
 002C : C2 EB 14                 jp      nz,SIGNC        ;;Check sign of mantissa if not 0
@@ -275,9 +270,6 @@
 003F : D9                       exx                     ;;Restore BC, DE, and HL 
 0040 : C9                       ret                     ;;and Return
 
-;:::::::::::::::::::::: L1D94   =       $1D94
-;:::::::::::::::::::::: X385D   =       $385D
-;:::::::::::::::::::::: L1E80   =       $1E80
 0041 : 31 A0 38   [M80] INIT:   ld      sp,$38A0        ;[M80] SET UP TEMP STACK
 0044 : 3E 0B                    ld      a,11            ;;CLS character
 0046 : CD 94 1D                 call    L1D94
@@ -390,9 +382,6 @@
 00ED                  | ;;Clears the screen, resets I/O port $FF, initializes
 00ED                  | ;;the hardware stack, 
 00ED                  | ;;***then does other stuff.
-;:::::::::::::::::::::: STKINI  =       $0BE5
-;:::::::::::::::::::::: TTYCHR  =       $1D72
-;:::::::::::::::::::::: L1A40   =       $1A40    
 00ED : 3E 0B            WARMST: ld      a,11
 00EF : CD 72 1D                 call    TTYCHR
 00F2 : 3A 09 38                 ld      a,(LASTFF)
@@ -400,9 +389,6 @@
 00F7 : CD E5 0B                 call    STKINI
 00FA : CD 40 1A                 call    L1A40
 
-;:::::::::::::::::::::: DEFALT  =       $0187
-;:::::::::::::::::::::: X38A9   =       $38A9
-;:::::::::::::::::::::: X3900   =       $3900
 00FD : 21 87 01         COLDST: ld      hl,DEFALT       ;Set System Variable Default Vslues
 0100 : 01 51 00                 ld      bc,81
 0103 : 11 03 38                 ld      de,USRPOK
@@ -429,9 +415,6 @@
 0120 : B8                       cp      b
 0121 : 28 EF                    jr      z,L0112
 
-;:::::::::::::::::::::: L0BB7   =       $0BB7
-;:::::::::::::::::::::: L0BBE   =       $0BBE
-;:::::::::::::::::::::: PRNTIT  =       $1FF2
 0123                    L0123:
 0123 : 2B                       dec     hl
 0124 : 11 2C 3A                 ld      de,03A2CH
@@ -444,8 +427,6 @@
 0132 : 22 4B 38                 ld      (TOPMEM),hl
 0135 : CD BE 0B                 call    L0BBE
 0138 : CD F2 1F                 call    PRNTIT
-;::::::::::::::::::::::         .end                    ;;*** STOP SOURCE CONVERSION ***
-;:::::::::::::::::::::: 
 
 013B                    L013B:
 013B : 31 65 38                 ld      sp,03865H
@@ -474,13 +455,13 @@
 0160 : 43 6F 70 79              .byte   "Copyright ",5," "
 0164 : 72 69 67 68
 0168 : 74 20 05 20
-016C : 31 39 38 32              .byte   "1982 by Microsoft Inc. S2 ",13,0
+016C : 31 39 38 32              .byte   "1982 by Microsoft Inc. S2",10,0
 0170 : 20 62 79 20
 0174 : 4D 69 63 72
 0178 : 6F 73 6F 66
 017C : 74 20 49 6E
 0180 : 63 2E 20 53
-0184 : 32 0A 00
+0184 : 32 0A 00   
 
                                 ;;System Variable Default Values - 81 ($51) bytes
 0187 : C3 97 06         DEFALT: jp      FCERR           ;;USRPOK
@@ -502,14 +483,14 @@
 019E : 47                       ld      b,a             ;;$381A
 019F : 3E 00                    ld      a,000H          ;;$381B
 01A1 : C9                       ret                     ;;$381D
-01A2 : 00                       .byte                   ;;$381E
-01A3 : 00                       .byte 0                 ;;RNDCNT
-01A4 : 00 35 4A CA              .byte $00,$35,$4A,$CA   ;;RNDX
-01A8 : 99                       .byte                   ;;$3824
-01A9 : 39                       .byte                   ;;$3825
-01AA : 1C                       .byte                   ;;$3826
-01AB : 76                       .byte                   ;;$3827
-01AC : 98                       .byte                   ;;$3828
+01A2 : 00                       .byte   0               ;;$381E
+01A3 : 00                       .byte   0               ;;RNDCNT
+01A4 : 00 35 4A CA              .byte   $00,$35,$4A,$CA ;;RNDX
+01A8 : 99                       .byte   $99             ;;$3824
+01A9 : 39                       .byte   $39             ;;$3825
+01AA : 1C                       .byte   $1C             ;;$3826
+01AB : 76                       .byte   $76             ;;$3827
+01AC : 98                       .byte   $98             ;;$3828
 
 01AD                    L01AD:
 01AD : 22 95 B3                 ld      (XB395),hl
@@ -548,65 +529,65 @@
 01CF : 64                       ld      h,h
 01D0 : 39                       add     hl,sp
 01D1 : FE FF                    cp      $FF
-01D3 : 01 39 21                 ld      bc,02139H
+01D3 : 01 39                    .byte   $01,$39 
 
 01D5              [M65] STMDSP: ;MARKS START OF STATEMENT LIST
-01D5 : 12 0C                    .word   ENDS            ;;$0c21
-01D7 : BC 05                    .word   FOR             ;;$05bc
-01D9 : 13 0D                    .word   NEXT            ;;$0d13
-01DB : 1C 07                    .word   DATA            ;;$071c
+01D5 : 12 0C                    .word   ENDS            ;;$0C21
+01D7 : BC 05                    .word   FOR             ;;$05BC
+01D9 : 13 0D                    .word   NEXT            ;;$0D13
+01DB : 1C 07                    .word   DATA            ;;$071C
 01DD : 93 08                    .word   INPUT           ;;$0893
-01DF : CC 10                    .word   DIM             ;;$10cc
-01E1 : BE 08                    .word   READ            ;;$08be
+01DF : CC 10                    .word   DIM             ;;$10CC
+01E1 : BE 08                    .word   READ            ;;$08BE
 01E3 : 31 07                    .word   LET             ;;$0731
-01E5 : DC 06                    .word   GOTO            ;;$06dc
-01E7 : BE 06                    .word   RUN             ;;$06be
-01E9 : 9C 07                    .word   IF              ;;$079c
-01EB : 05 0C                    .word   RESTOR          ;;$0c05
-01ED : CB 06                    .word   GOSUB           ;;$06cb
-01EF : F8 06                    .word   RETURN          ;;$06f8
-01F1 : 1E 07                    .word   REM             ;;$071e
-01F3 : 1F 0C                    .word   STOP            ;;$0c1f
+01E5 : DC 06                    .word   GOTO            ;;$06DC
+01E7 : BE 06                    .word   RUN             ;;$06BE
+01E9 : 9C 07                    .word   IF              ;;$079C
+01EB : 05 0C                    .word   RESTOR          ;;$0C05
+01ED : CB 06                    .word   GOSUB           ;;$06CB
+01EF : F8 06                    .word   RETURN          ;;$06F8
+01F1 : 1E 07                    .word   REM             ;;$071E
+01F3 : 1F 0C                    .word   STOP            ;;$0C1F
 01F5 : 80 07                    .word   ON              ;;$0780
-01F7 : B5 07                    .word   LPRINT          ;;$07b5
-01F9 : 15 1B                    .word   COPY            ;;$1b15
-01FB : 3B 0B                    .word   DEF             ;;$0b3b
-01FD : 6D 0B                    .word   POKE            ;;$0b6d
-01FF : BC 07                    .word   PRINT           ;;$07bc
-0201 : 4B 0C                    .word   CONT            ;;$0c4b
-0203 : 6C 05                    .word   LIST            ;;$056c
+01F7 : B5 07                    .word   LPRINT          ;;$07B5
+01F9 : 15 1B                    .word   COPY            ;;$1B15
+01FB : 3B 0B                    .word   DEF             ;;$0B3B
+01FD : 6D 0B                    .word   POKE            ;;$0B6D
+01FF : BC 07                    .word   PRINT           ;;$07BC
+0201 : 4B 0C                    .word   CONT            ;;$0C4B
+0203 : 6C 05                    .word   LIST            ;;$056C
 0205 : 67 05                    .word   LLIST           ;;$0567
-0207 : CD 0C                    .word   CLEAR           ;;$0ccd
-0209 : 2c 1C                    .word   CLOAD           ;;$1c2c
-020B : 08 1C                    .word   CSAVE           ;;$1c08
-020D : 4F 1A                    .word   PSET            ;;$1a4f
-020F : 4C 1A                    .word   PRESET          ;;$1a4c
-0211 : D6 1A                    .word   SOUND           ;;$1ad6
-0213 : BD 0B                    .word   NEW             ;;$0bbd
-0215 : F5 14                    .word   SGN             ;;$14f5
-0217 : B1 15                    .word   INT             ;;$15b1
+0207 : CD 0C                    .word   CLEAR           ;;$0CCD
+0209 : 2c 1C                    .word   CLOAD           ;;$1C2C
+020B : 08 1C                    .word   CSAVE           ;;$1C08
+020D : 4F 1A                    .word   PSET            ;;$1A4F
+020F : 4C 1A                    .word   PRESET          ;;$1A4C
+0211 : D6 1A                    .word   SOUND           ;;$1AD6
+0213 : BD 0B                    .word   NEW             ;;$0BBD
+0215 : F5 14                    .word   SGN             ;;$14F5
+0217 : B1 15                    .word   INT             ;;$15B1
 0219 : 09 15                    .word   ABS             ;;$1509
 021B : 03 38    .               .word   USRPOK          ;;$3803
-021D : A8 10                    .word   FRE             ;;$10a8
-022F : 2E 0B                    .word   LPOS            ;;$0b2e
-0221 : 33 0B                    .word   POS             ;;$0b33
+021D : A8 10                    .word   FRE             ;;$10A8
+022F : 2E 0B                    .word   LPOS            ;;$0B2E
+0221 : 33 0B                    .word   POS             ;;$0B33
 0223 : 75 17                    .word   SQR             ;;$1775
 0225 : 66 18                    .word   RND             ;;$1866
 0227 : 85 13                    .word   LOG             ;;$1385
-0229 : CD 17                    .word   EXP             ;;$17cd
-022B : D7 18                    .word   COS             ;;$18d7
-022D : DD 18                    .word   SIN             ;;$18dd
+0229 : CD 17                    .word   EXP             ;;$17CD
+022B : D7 18                    .word   COS             ;;$18D7
+022D : DD 18                    .word   SIN             ;;$18DD
 022F : 70 19                    .word   TAN             ;;$1970
 0231 : 85 19                    .word   ATN             ;;$1985
-0233 : 63 0B                    .word   PEEK            ;;$0b63
-0235 : F3 0F                    .word   LEN             ;;$0ff3
-0237 : 29 0E                    .word   STR$            ;;$0e29
+0233 : 63 0B                    .word   PEEK            ;;$0B63
+0235 : F3 0F                    .word   LEN             ;;$0FF3
+0237 : 29 0E                    .word   STR             ;;$0E29
 0239 : 84 10                    .word   VAL             ;;$1084
 023B : 02 10                    .word   ASC             ;;$1002
-023D : 13 10                    .word   CHR$            ;;$1013
-023F : 21 10                    .word   LEFT$           ;;$1021
-0241 : 50 10                    .word   RIGHT$          ;;$1050
-0243 : 59 10                    .word   MID$            ;;$1059
+023D : 13 10                    .word   CHR             ;;$1013
+023F : 21 10                    .word   LEFT            ;;$1021
+0241 : 50 10                    .word   RIGHT           ;;$1050
+0243 : 59 10                    .word   MID             ;;$1059
 
 ;;The first (or only) character of each keyword has bit 7 set.
 ;;In Altair and 6502 Basic, bit 7 was set in the last character
@@ -753,7 +734,7 @@
 02F4 :                | ;[M65] IN ANY CASE MAKE SURE THE SMALLER WORD APPEARS
 02F4 :                | ;[M65] SECOND IN THE RESERVED WORD TABLE ("INP" AND "INPUT")
 02F4 :                | ;[M65] ANOTHER EXAMPLE: IF T OR Q THEN ... "TO" IS CRUNCHED
-02F3 :            [M65] ONEFUN  .equ    TK              ;;*** This might go after SGN
+02F4 :            [M65] ONEFUN  .equ    TK              ;;*** This might go after SGN
 02F4 : D3 47 4E                 .byte   'S'+$80,"GN"    ;;$B2
 02F7 : C9 4E 54                 .byte   'I'+$80,"NT"    ;;$B3
 02FA : C1 42 53                 .byte   'A'+$80,"BS"    ;;$B4
@@ -773,7 +754,7 @@
 0326 : CC 45 4E                 .byte   'L'+$80,"EN"    ;;$C2
 0329 : D3 54 52 24              .byte   'S'+$80,"TR$"   ;;$C3
 032D : D6 41 4C                 .byte   'V'+$80,"AL"    ;;$C4
-0330 : C1 53 43                 .byte   'A'+$80,"CC"    ;;$C5
+0330 : C1 53 43                 .byte   'A'+$80,"SC"    ;;$C5
 0333 : C3 48 52 24              .byte   'C'+$80,"HR$"   ;;$C6
 0337 : CC 45 46 54 24           .byte   'L'+$80,"EFT$"  ;;$C7
 033C : D2 49 47 48 54 24        .byte   'R'+$80,"IGHT$" ;;$C8
@@ -785,72 +766,75 @@
 034B : 80                       .byte   $80             ;;End of List Marker
 
 034C                    ;OPERATOR TABLE CONTAINS PRECEDENCE FOLLOWED BY THE ROUTINE ADDRESS
-034C : 79 5C 16   [M80] OPTAB:  .byte   121,FADDT       ;ADD
-034F : 79 5C 12                 .byte   121,FSUBT       ;SUBTRACT
-0352 : 7C C9 13                 .byte   124,FMULTT      ;MULTIPLY
-0355 : 7C 2D 14                 .byte   124,FDIVT       ;DIVIDE
-0358 : 7F 7E 17                 .byte   127,FPWRT       ;POWER
-035B : 50 A9 0A                 .byte    80,ANDOP       ;AND
-035E : 46 A8 0A                 .byte    70,OROP        ;OR
+034C : 79         [M80] OPTAB:  .byte   121                ;ADD
+034D : 5C 16                    .word   FADDT 
+034F : 79                       .byte   121                ;SUBTRACT
+0350 : 5C 12                    .word   FSUBT 
+0352 : 7C                       .byte   124                ;MULTIPLY
+0353 : C9 13                    .word   FMULTT
+0355 : 7C                       .byte   124                ;DIVIDE
+0356 : 2D 14                    .word   FDIVT 
+0358 : 7F                       .byte   127                ;POWER
+0359 : 7E 17                    .word   FPWRT 
+035B : 50                       .byte    80                ;AND
+035C : A9 0A                    .word   ANDOP 
+035E : 46                       .byte    70                ;OR
+035F : A8 0A                    .word   OROP  
 
 0361 : 20 45 72 72[M65] ERR:    .byte " Error",7,0
 0365 : 6F 72 07 00
 
-0369
 0369 : 20 69 6E 20[M65] INTXT:  .byte   " in ",0
 036C : 00
 
-036E
 036E : 4F 6B 0D 0A[M80] REDDY:  .byte   "Ok",13,10,0
 0372 : 00
-
 
 0373 : 42 72 65 61[M80] BRKTXT: .byte   "Break",0
 0377 : 6B 00
 
-
-                  [M80] ERRTAB:  ;;List OF Error Messages
-                  [M80] ERRNF   .equ    *-ERRTAB        ;;$00
+0379 :            [M80] ERRTAB:  ;;List OF Error Messages
+0379 :            [M80] ERRNF   .equ    *-ERRTAB        ;;$00
 0379 : 4E 46                    .byte   "NF"            ;[M80] NEXT without FOR
-                  [M80] ERRSN   .equ    *-ERRTAB        ;;$02
+037B :            [M80] ERRSN   .equ    *-ERRTAB        ;;$02
 037B : 53 4E                    .byte   "SN"            ;[M80] Syntax error
-                  [M80] ERRRG   .equ    *-ERRTAB        ;;$04
+037D :            [M80] ERRRG   .equ    *-ERRTAB        ;;$04
 037D : 52 47                    .byte   "RG"            ;[M80] RETURN without GOSUB
-                  [M80] ERROD   .equ    *-ERRTAB        ;;$06
+037F :            [M80] ERROD   .equ    *-ERRTAB        ;;$06
 037F : 4F 44                    .byte   "OD"            ;[M80] Out of DATA
-                  [M80] ERRFC   .equ    *-ERRTAB        ;;$08
+0381 :            [M80] ERRFC   .equ    *-ERRTAB        ;;$08
 0381 : 46 43                    .byte   "FC"            ;[M80] Illegal function call
-                  [M80] ERROV   .equ    *-ERRTAB        ;;$0A
+0383 :            [M80] ERROV   .equ    *-ERRTAB        ;;$0A
 0383 : 4F 56                    .byte   "OV"            ;[M80] Overflow
-                  [M80] ERROM   .equ    *-ERRTAB        ;;$0C
+0385 :            [M80] ERROM   .equ    *-ERRTAB        ;;$0C
 0385 : 4F 4D                    .byte   "OM"            ;[M80] Out of memory
-                  [M80] ERRUS   .equ    *-ERRTAB        ;;$0E
+0387 :            [M80] ERRUS   .equ    *-ERRTAB        ;;$0E
 0387 : 55 4C                    .byte   "UL"            ;[M80] Undefined line number
-                  [M80] ERRBS   .equ    *-ERRTAB        ;;$10
+0389              [M80] ERRBS   .equ    *-ERRTAB        ;;$10
 0389 : 42 53                    .byte   "BS"            ;[M80] Subscript out of range
-                  [M80] ERRDDS  .equ    *-ERRTAB        ;;$12
+038B              [M80] ERRDDS  .equ    *-ERRTAB        ;;$12
 038B : 44 44                    .byte   "DD"            ;[M80] Duplicate Definition
-                  [M80] ERRDV0  .equ    *-ERRTAB        ;;$14
+038D              [M80] ERRDV0  .equ    *-ERRTAB        ;;$14
 038D : 2F 30                    .byte   "/0"            ;[M80] Division by zero
-                  [M80] ERRID   .equ    *-ERRTAB        ;;$16
+038F              [M80] ERRID   .equ    *-ERRTAB        ;;$16
 038F : 49 44                    .byte   "ID"            ;[M80] Illegal direct
-                  [M80] ERRTM   .equ    *-ERRTAB        ;;$18
+0391              [M80] ERRTM   .equ    *-ERRTAB        ;;$18
 0391 : 54 4D                    .byte   "TM"            ;[M80] Type mismatch
-                  [M80] ERRSO   .equ    *-ERRTAB        ;;$1A
+0393              [M80] ERRSO   .equ    *-ERRTAB        ;;$1A
 0393 : 4F 53                    .byte   "OS"            ;[M80] Out of string space
-                  [M80] ERRLS   .equ    *-ERRTAB        ;;$1C
+0395              [M80] ERRLS   .equ    *-ERRTAB        ;;$1C
 0395 : 4C 53                    .byte   "LS"            ;[M80] String too long
-                  [M80] ERRST   .equ    *-ERRTAB        ;;$1E
+0397              [M80] ERRST   .equ    *-ERRTAB        ;;$1E
 0397 : 53 54                    .byte   "ST"            ;[M80] String formula too complex
-                  [M80] ERRCN   .equ    *-ERRTAB        ;;$20
+0399              [M80] ERRCN   .equ    *-ERRTAB        ;;$20
 0399 : 43 4E                    .byte   "CN"            ;[M80] Can't continue
-                  [M80] ERRUF   .equ    *-ERRTAB        ;;$22
+039B              [M80] ERRUF   .equ    *-ERRTAB        ;;$22
 039B : 55 46                    .byte   "UF"            ;[M80] Undefined user function
-                  [M80] ERRMO   .equ    *-ERRTAB        ;;$24
+039D              [M80] ERRMO   .equ    *-ERRTAB        ;;$24
 039D : 4D 4F                    .byte   "MO"            ;[M80] Missing operand
 
-                        ;[M80] FIND A "FOR" ENTRY ON THE STACK WITH THE VARIABLE POINTER PASSED IN [D,E]
-                  [M80] FORSIZ  .equ    13              ;;Size of a FOR entry on the stack
+039F                    ;[M80] FIND A "FOR" ENTRY ON THE STACK WITH THE VARIABLE POINTER PASSED IN [D,E]
+039F :            [M80] FORSIZ  .equ    13              ;;Size of a FOR entry on the stack
 
 039F : 21 04 00   [M80] FNDFOR: ld      hl,4+0          ;[M80] IGNORING THE RETURN ADDRESS OF
 03A2 : 39                       add     hl,sp           ;[M80] THIS SUBROUTINE, SET [H,L]=SP
@@ -891,7 +875,7 @@
 03CF : 01                       .byte   001H            ;[M80] "LD BC," OVER THE NEXT 2
 03D0 : 1E 22      [M80] UFERR:  ld      e,ERRUF         ;[M80] "UNDEFINED FUNCTION" ERROR
 03D2 : 01                       .byte   001H            ;[M80] "LD BC," OVER THE NEXT 2
-03D2 : 1E 0A      [M80] OVERR:  ld      e,ERROV         ;;      Overflow Error
+03D3 : 1E 0A      [M80] OVERR:  ld      e,ERROV         ;;      Overflow Error
 03D5 : 01                       .byte   001H            ;[M80] "LD BC," OVER THE NEXT 2
 03D6 : 1E 24      [M80] MOERR:  ld      e,ERRMO         ;;     Missing Operand
 03D8 : 01                       .byte   001H            ;[M80] "LD BC," OVER THE NEXT 2
@@ -922,7 +906,7 @@
 0400 : 3E C1                    ld      a,0C1H
 
 0402 : F7         [M80] READY:  rst     HOOKDO          ;;Call hook routine
-0403 : 02                       .byte 0
+0403 : 02                       .byte   2
 0404 : CD BE 19                 call    FINLPT
 0407 : AF                       xor     a
 0408 : 32 08 38                 ld      (CNTOFL),a
@@ -934,7 +918,7 @@
 0417 : 22 4D 38                 ld      (CURLIN),hl     ;[M80] SETUP CURLIN FOR DIRECT MODE
 ;;GW-BASIC and CP/M Basic have Automatic Line Numbering Logic here
 041A : CD 85 0D   [M80] NTAUTO: call    INLIN           ;[M80] GET A LINE FROM TTY
-041D : 38 F5                    jr      c,MAIN1         ;[M80] IGNORE ^C S
+041D : 38 F5                    jr      c,MAIN          ;[M80] IGNORE ^C S
 041F : D7                       rst     CHRGET          ;[M80] GET THE FIRST
 0420 : 3C                       inc     a               ;[M80] SEE IF 0 SAVING THE CARRY FLAG
 0421 : 3D                       dec     a
@@ -1110,12 +1094,12 @@
 04DF : 3E 95                    ld      a,PRINTK
 04E1 : CA 3C 05                 jp      z,STUFFH        ;THEN USE A "PRINT" TOKEN
 04E4 : 7E                       ld      a,(hl)
-04E5 : FE 30                    cp      ' '             ;[M65] SKIP NUMERICS.
+04E5 : FE 30                    cp      '0'             ;[M65] SKIP NUMERICS.
 04E7 : 38 05                    jr      c,MUSTCR
 04E9 : FE 3C                    cp      '<'             ;[M65] ":" AND ";" ARE ENTERED STRAIGHTAWAY.
 04EB : DA 3C 05                 jp      c,STUFFH
 04EE : D5         [M65] MUSTCR: push    de              ;[M65] SAVE BUFFER POINTER.
-04EF : 11 44 02                 ld      de,RESLST       ;[M65] LOAD RESLST POINTER.
+04EF : 11 44 02                 ld      de,RESLST-1     ;[M65] LOAD RESLST POINTER.
 04F2 : C5                       push    bc              ;[M65] SAVE TEXT POINTER FOR LATER USE.
 04F3 : 01 36 05                 ld      bc,NOTGOS       ;[M80] PLACE TO RETURN IF NOT FUNNY GO
 04F6 : C5                       push    bc
@@ -1434,7 +1418,7 @@
 067E : EF                       rst     FSIGN
 067F : FA 97 06                 jp      m,FCERR
 0682
-0682 : 3A E7 38   [M80] FRCINT: ld      a,(FACHO)
+0682 : 3A E7 38   [M80] FRCINT: ld      a,(FAC)
 0685 : FE 90                    cp      144             ;[M65] FAC .GT. 32767?
 0687 : DA 86 15                 jp      c,QINT          ;[M65] GO TO QINT AND SHOVE IT
 068A : 01 80 90                 ld      bc,$9080
@@ -1559,8 +1543,8 @@
 
 071C : 01         [M80] DATA:   .byte   $01             ;[M80] "LD BC," TO PICK UP ":" INTO C AND SKIP
 071D : 3A                       .byte   ':'
-017E : 0E         [M80] REM:    .byte   $0E             ;[M80] "LD C,"   THE ONLY TERMINATOR IS ZERO
-017F : 00                       .byte   0
+071E : 0E         [M80] REM:    .byte   $0E             ;[M80] "LD C,"   THE ONLY TERMINATOR IS ZERO
+071F : 00                       .byte   0
 0720 : 06 00                    ld      b,0             ;[M80] INSIDE QUOTES THE ONLY TERMINATOR IS ZERO
 0722 : 79         [M80] EXCHQT: ld      a,c             ;[M80] WHEN A QUOTE IS SEEN THE SECOND
 0723 : 48                       ld      c,b             ;[M80] TERMINATOR IS TRADED, SO IN "DATA"
@@ -1587,7 +1571,7 @@
 073F : E3                       ex      (sp),hl         ;SAVE THE TEXT POINTER
 0740 : 22 CE 38                 ld      (SAVTXT),hl     ;PLACE TO SAVE THE VALUE
 0743 : 1F                       rra
-0744 : CD 77 09                 call    CHKSTR
+0744 : CD 77 09                 call    CHKVAL
 0747 : CA 79 07                 jp      z,L0779
 
 074A                    INPCOM:
@@ -1960,8 +1944,8 @@
                         ;                                ;
 0972 : CD 85 09   [M65] FRMNUM: call    FRMEVL
 0975 : F6         [M65] CHKNUM: .byte   $F6             ;;"OR $37" to skip next instruction
-0976 : 37                       scf
-0977 : 3A AB 38   [M65] CHKSTR: ld      a,(VALTYP)
+0976 : 37         [M65] CHKSTR: scf
+0977 : 3A AB 38   [M65] CHKVAL: ld      a,(VALTYP)
 097A : 8F                       adc     a,a             ;;Shift Left and Copy in Cary
 097B : B7                       or      a               ;;Set Flags
 097C : E8                       ret     pe              ;;Return if Overflow
@@ -2254,7 +2238,7 @@
 0AE7 : C1                       pop     bc
 0AE8 : D1                       pop     de
 0AE9 : F5                       push    af
-0AEA : CD 77 09                 call    CHKSTR
+0AEA : CD 77 09                 call    CHKVAL
 0AED : 21 FB 0A                 ld      hl,00AFBH
 0AF0 : E5                       push    hl
 0AF1 : CA 5B 15                 jp      z,FCOMP
@@ -2302,7 +2286,7 @@
 0B23 : 1E 00                    ld      e,0             ;[M80] SET VALTYP TO "FLOATING POINT"
 0B25 : 21 AB 38                 ld      hl,VALTYP       
 0B28 : 73                       ld      (hl),e          
-0B29 : 06 90                    ld      b,90
+0B29 : 06 90                    ld      b,144
 0B2B : C3 FB 14                 jp      L14FB           ;;INEG2 in M80
 
 0B2E :                          ;;Get Printer Column
@@ -2508,7 +2492,7 @@
 0C1E : C9                       ret
                         ;
 0C1F : C0         [M80] STOP:   ret     nz              ;[M80] MAKE SURE "STOP" STATEMENTS HAVE A TERMINATOR
-0C20 : F6                       .byte  $20              ;;"OR" to skip next instruction
+0C20 : F6                       .byte  $F6              ;;"OR" to skip next instruction
 0C21 : C0         [M80] ENDS:   ret nz                  ;[M80] MAKE SURE "END" STATEMENTS HAVE A TERMINATOR
 0C22 : 22 CE 38                 ld      (SAVTXT),hl
 0C25 : 21 F6 FF                 ld      hl,$FFF6        ;;Set Direct Mode
@@ -2528,7 +2512,7 @@
 0C3E : CD DE 19                 call    CRDONZ          ;[M80] PRINT CR IF TTYPOS .NE. 0
 0C41 : F1                       pop     af              ;[M80] GET BACK ^C FLAG
 0C42 : 21 73 03                 ld      hl,BRKTXT       ;[M80] "BREAK"
-0C45 : C2 F4 03                 jp      nz,ERRFIN       ;[M80] CALL STROUT AND FALL INTO READY
+0C45 : C2 F4 03                 jp      nz,ERRFN1       ;[M80] CALL STROUT AND FALL INTO READY
 0C48 : C3 02 04                 jp      READY
                         ;
 0C4B : 2A D4 38   [M80] CONT:   ld      hl,(OLDTXT)     ;[M80] ZERO INDICATES THERE IS NOTHING TO CONTINUE
@@ -2620,7 +2604,7 @@
 
 0CCD : F7               CLEAR:  rst     HOOKDO
 0CCE : 0B                       dec     bc
-0CCF : CA CF 0B                 jp      z,0BCF
+0CCF : CA CF 0B                 jp      z,L0BCF
 0CD2 : CD 7B 06                 call    L067B
 0CD5 : 2B                       dec     hl
 0CD6 : D7                       rst     CHRGET
@@ -3348,7 +3332,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
                       | ;[M80] AND THIS IS WHY [MEMSIZ] CAN'T BE USED TO STORE STRING DATA 
                       | ;[M80] BECAUSE WHAT IF THE USER TOOK VAL OFF THAT HIGH STRING
 1084 : CD F7 0F   [M80] VAL:    call    LEN1            ;[M80] DO SETUP, SET RESULT=REAL
-1087 : CA C3 12                 jp      z,SNGFLT        ;[M80] MAKE SURE TYPE SET UP OK IN EXTENDED
+1087 : CA C3 12                 jp      z,L12C3        ;[M80] MAKE SURE TYPE SET UP OK IN EXTENDED
 108A : 5F                       ld      e,a             ;[M80] GET LENGTH OF STR
 108B : 23                       inc     hl              ;[M80] TO HANDLE THE FACT THE IF
 108C : 23                       inc     hl
@@ -3529,7 +3513,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 116E : C9                       ret
                         ;
 116F                    L116F:
-116F : 32 E7 38                 ld      (FACHO),a
+116F : 32 E7 38                 ld      (FAC),a
 1172 : 21 6D 03                 ld      hl,0036DH
 1175 : 22 E4 38                 ld      (FACLO),hl
 1178 : E1                       pop     hl
@@ -3700,13 +3684,15 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 1258 :                  ;[M80] SUBTRACTION	FAC:=ARG-FAC
 1258 : CD 31 15   [M80] FSUBS:  call    MOVRM           ;[M80] ENTRY IF POINTER TO ARG IS IN (HL)
 125B : 21                       .byte   $21             ;;"LD HL," to skip next instruction
-125C : C1 D1      [M80] FSUBT:  pop     bc              ;;ENTRY TO FMSUB IF ARGUMENT IS ON STACK
-125E : CD 0B 15   [M80] FSUB:   call    NEG            ;[M80] NEGATE SECOND ARGUMENT
+125C : C1         [M80] FSUBT:  pop     bc              ;;ENTRY TO FSUB IF ARGUMENT IS ON STACK
+125D : D1                       pop     de          
+125E : CD 0B 15   [M80] FSUB:   call    NEG             ;[M80] NEGATE SECOND ARGUMENT
+
 1261 :                  ;[M80] ADDITION	FAC:=ARG+FAC
 1261 : 78         [M80] FADD:   ld      a,b
 1262 : B7                       or      a
 1263 : C8                       ret     z
-1264 : 3A E7 38                 ld      a,(FACHO)
+1264 : 3A E7 38                 ld      a,(FAC)
 1267 : B7                       or      a
 1268 : CA 23 15                 jp      z,MOVFR
 126B : 90                       sub     b
@@ -3777,7 +3763,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 12C3                    L12C3:
 12C3 : AF                       xor     a
 12C4                    ZERO0:
-12C4 : 32 E7 38                 ld      (FACHO),a
+12C4 : 32 E7 38                 ld      (FAC),a
 12C7 : C9                       ret
                         ;
 12C8                    L12C8:
@@ -3812,15 +3798,15 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 12E4 : 45                       ld      b,l
 12E5 : B7                       or      a
 12E6 : 28 09                    jr      z,L12F1
-12E8 : 21 E7 38                 ld      hl,FACHO
+12E8 : 21 E7 38                 ld      hl,FAC
 12EB : 86                       add     a,(hl)
 12EC : 77                       ld      (hl),a
-12ED : 30 D4                    jr      nc,SNGFLT
-12EF : 28 D2                    jr      z,SNGFLT
+12ED : 30 D4                    jr      nc,L12C3
+12EF : 28 D2                    jr      z,L12C3
 12F1                    L12F1:
 12F1 : 78                       ld      a,b
 12F2                    L12F2:
-12F2 : 21 E7 38                 ld      hl,FACHO
+12F2 : 21 E7 38                 ld      hl,FAC
 12F5 : B7                       or      a
 12F6 : FC 03 13                 call    m,ROUNDA
 12F9 : 46                       ld      b,(hl)
@@ -3949,13 +3935,13 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 1386 : B7                       or      a               ;[M80] SET CC'S PROPERLY
 1387 : EA 97 06                 jp      pe,FCERR        ;[M80] FAC .LE. 0, BLOW HIM OUT OF THE WATER
 138A : CD 95 13                 call    LOG2
-138D : 01 31 80                 ld      bc,$8031$       
-1390 : 11 18 72                 ld      de,$7218$       ;[M80] GET LN(2)
+138D : 01 31 80                 ld      bc,$8031       
+1390 : 11 18 72                 ld      de,$7218        ;[M80] GET LN(2)
 1393 : 18 36                    jr      FMULT           ;[M80] COMPLETE LOG CALCULATION: USE HART 2524 CALCULATION
 
 1395 : CD 2E 15   [M80] LOG2:   call    MOVRF           ;MOVE FAC TO REGISTERS TOO
 1398 : 3E 80                    ld      a,080H          
-139A : 32 E7 38                 ld      (FACHO),a       ;ZERO THE EXPONENT
+139A : 32 E7 38                 ld      (FAC),a       ;ZERO THE EXPONENT
 139D : A8                       xor     b               ;REMOVE 200 EXCESS FROM X
 139E : F5                       push    af              ;SAVE EXPONENT
 139F : CD 13 15                 call    PUSHF           ;SAVE THE FAC (X)
@@ -4065,7 +4051,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 
 142F                    ;DIVISION	FAC:=ARG/FAC
 142F : EF         [M80] FDIV:   rst     FSIGN           ;[M80] CHECK FOR DIVISION BY ZERO
-1430 : CA C7 03                 jp      z,ERRDV0        ;[M80] DON'T ALLOW DIVIDE BY ZERO
+1430 : CA C7 03                 jp      z,DV0ERR        ;[M80] DON'T ALLOW DIVIDE BY ZERO
 1433 : 2E FF                    ld      l,255           ;[M80] SUBTRACT THE TWO EXPONENTS, L IS A FLAG
 1435 : CD AC 14                 call    MULDIV          ;[M80] FIX UP THE EXPONENTS AND THINGS
 1438 : 34                       inc     (hl)
@@ -4144,7 +4130,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 149E : B3                       or      e
 149F : 20 B7                    jr      nz,L1458
 14A1 : E5                       push    hl
-14A2 : 21 E7 38                 ld      hl,FACHO
+14A2 : 21 E7 38                 ld      hl,FAC
 14A5 : 35                       dec     (hl)
 14A6 : E1                       pop     hl
 14A7 : 20 AF                    jr      nz,L1458
@@ -4154,7 +4140,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 14AD : B7                       or      a
 14AE : 28 1D                    jr      z,L14CD
 14B0 : 7D                       ld      a,l
-14B1 : 21 E7 38                 ld      hl,FACHO
+14B1 : 21 E7 38                 ld      hl,FAC
 14B4 : AE                       xor     (hl)
 14B5 : 80                       add     a,b
 14B6 : 47                       ld      b,a
@@ -4189,7 +4175,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 14DC : DA D3 03                 jp      c,OVFIN6
 14DF : 47                       ld      b,a
 14E0 : CD 61 12                 call    FADD
-14E3 : 21 E7 38                 ld      hl,FACHO
+14E3 : 21 E7 38                 ld      hl,FAC
 14E6 : 34                       inc     (hl)
 14E7 : C0                       ret     nz
 14E8 : C3 D3 03                 jp      OVFIN6
@@ -4209,7 +4195,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 14F6 : 06 88      [M80] FLOAT:  ld      b,$88
 14F8 : 11 00 00                 ld      de,0
 14FB                    L14FB:
-14FB : 21 E7 38                 ld      hl,FACHO
+14FB : 21 E7 38                 ld      hl,FAC
 14FE : 4F                       ld      c,a
 14FF : 70                       ld      (hl),b
 1500 : 06 00                    ld      b,000H
@@ -4383,7 +4369,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
                                                         ;[M80] z AND "DCR	C" ARE FUNCTIONALLY EQUIVALENT
                         ;
                         ;[M80] GREATEST INTEGER FUNCTION
-15B1 : 21 E7 38   [M80] INT:    ld      hl,FACHO        ;[M80] GET EXPONENT
+15B1 : 21 E7 38   [M80] INT:    ld      hl,FAC          ;[M80] GET EXPONENT
 15B4 : 7E                       ld      a,(hl)          
 15B5 : FE 98                    cp      $98             ;[M80] SEE IF NUMBER HAS ANY FRACTIONAL BITS
 15B7 : 3A E4 38                 ld      a,(FACLO)       ;[M80] THE ONLY GUY WHO NEEDS THIS DOESN'T CARE ABOUT THE SIGN
@@ -4529,7 +4515,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 166A : C3 0E 16                 jp      FINCS
                         ;
 166D
-166D : E5                       push    hl
+166D : E5               INPRT:  push    hl
 166E : 21 69 03                 ld      hl,INTXT
 1671 : CD 9D 0E                 call    STROUT
 1674 : E1                       pop     hl
@@ -4590,7 +4576,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 16D3 : 3E 02                    ld      a,002H
 16D5                    L16D5:
 16D5 : 3D                       dec     a
-16D6 : 3D               INPRT:  dec     a
+16D6 : 3D                       dec     a
 16D7 : E1                       pop     hl
 16D8 : F5                       push    af
 16D9 : 11 5E 17                 ld      de,0175EH
@@ -4729,7 +4715,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 1782 : CA CD 17                 jp      z,EXP           ;[M80] IT IS, RESULT IS ONE
 1785 : F2 8C 17                 jp      p,POSEXP        ;[M80] POSITIVE EXPONENT
 1788 : B7                       or      a               ;[M80] IS IT ZERO TO MINUS POWER?
-1789 : CA C7 03                 jp      z,ERRDV0        ;[M80] GIVE DIV BY ZERO AND CONTINUE
+1789 : CA C7 03                 jp      z,DV0ERR        ;[M80] GIVE DIV BY ZERO AND CONTINUE
 178C : B7               POSEXP: or      a               
 178D : CA C4 12                 jp      z,ZERO0         ;IT IS, RESULT IS ZERO
 1790 : D5                       push    de              ;[M80] SAVE X ON STACK
@@ -4739,7 +4725,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 1795 : CD 2E 15                 call    MOVRF           ;GET Y IN THE REGISTERS
 1798 : F2 B5 17                 jp      p,FPWR1         ;NO PROBLEMS IF X IS POSITIVE
 179B : F5                       push    af              ;SAVE LO OF INT FOR EVEN AND ODD INFORMATION
-179C : 3A E7 38                 ld      a,(FACHO)
+179C : 3A E7 38                 ld      a,(FAC)
 179F : FE 99                    cp      099H
 17A1 : 38 03                    jr      c,L17A6
 17A3 : F1                       pop     af
@@ -4791,10 +4777,10 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
                       | ;[M80]        THIS IS ACCOMPLISHED WITH A POLYNOMIAL APPROXIMATION
                       | ;[M80]        TO 2^Z WHERE 0.LE.Z.LT.1  . ONCE THIS IS COMPUTED WE
                       | ;[M80]        HAVE TO EFFECT THE MULTIPLY BY 2^Ny .
-17CD : 01 38 81   [M80] EXP:    ld      bc,$8130        ;[M65] LOG(e) BASE 2
+17CD : 01 38 81   [M80] EXP:    ld      bc,$8138        ;[M65] LOG(e) BASE 2
 17D0 : 11 3B AA                 ld      de,$AA3B        ;[M80] GET LOG2(e)
 17D3 : CD CB 13                 call    FMULT           ;[M80] y=FAC*LOG2(e)
-17D6 : 3A E7 38                 ld      a,(FACHO)       ;[M80] MUST SEE IF TOO LARGE
+17D6 : 3A E7 38                 ld      a,(FAC)         ;[M80] MUST SEE IF TOO LARGE
 17D9 : FE 88                    cp      $88             ;[M80] ABS .GT. 128?
 17DB : 30 22                    jr      nc,EXP100       ;[M80] IF SO OVERFLOW
 17DD : FE 68                    cp      $68             ;[M80] IF TOO SMALL ANSWER IS 1
@@ -4871,7 +4857,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 1866 : EF         [M80] RND:    rst     FSIGN           ;[M80] GET SIGN OF ARG
 1867 : 21 20 38                 ld      hl,RNDX
 186A : FA C4 18                 jp      m,RNDSTR        ;[M80] START NEW SEQUENCE IF NEGATIVE
-186D : 21 41 38                 ld      hl,RNDX       ;[M80] GET LAST NUMBER GENERATED
+186D : 21 41 38                 ld      hl,X3841        ;[M80] GET LAST NUMBER GENERATED
 1870 : CD 20 15                 call    MOVFM
 1873 : 21 20 38                 ld      hl,RNDX
 1876 : C8                       ret     z               ;[M80] RETURN LAST NUMBER GENERATED IF ZERO
@@ -4919,7 +4905,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 18B9 : 15                       dec     d
 18BA : 1C                       inc     e
 18BB : CD B0 12   [M80] NTPTRB: call    NORMAL          ;NORMALIZE THE RESULT
-18BE : 21 41 38                 ld      hl,RNDX         ;SAVE RANDOM NUMBER GENERATED FOR NEXT
+18BE : 21 41 38                 ld      hl,X3841        ;SAVE RANDOM NUMBER GENERATED FOR NEXT
 18C1 : C3 3A 15                 jp      MOVMF           ; TIME
 
 18C4 : 77         [M80] RNDSTR: ld      (hl),a          ;[M80] ZERO THE COUNTERS
@@ -4947,7 +4933,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 18DD                  | ;COMPARING THE RESULT OF THE DIVISION WITH PI/2/(2*PI)=1/4.
 18DD                  | ;IDENTITIES ARE THEN USED TO GET THE RESULT IN QUADRANTS I OR IV.
 18DD                  | ;AN APPROXIMATION POLYNOMIAL IS THEN USED TO COMPUTE SIN(X).
-18DD : 3A E7 38   [M80] SIN:    ld      a,(FACHO)       ;WILL SEE IF .LT.2^-10
+18DD : 3A E7 38   [M80] SIN:    ld      a,(FAC)         ;WILL SEE IF .LT.2^-10
 18E0 : FE 77                    cp      $77             ;AND IF SO SIN(X)=X
 18E2 : D8                       ret     c
 18E3 : 3A E6 38                 ld      a,(FACHO)
@@ -4997,8 +4983,8 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 194F : 32 E6 38                 ld      (FACHO),a       ;[M80] REPLACE SIGN
 1952 : C9                       ret
                         
-1953 : DB 0F 49 81[M80] PI2:    .equ    $DB,$0F,$49,$81 ;[M80] PI/2
-1957 : 00 00 00 7F{M80} FR4:    .equ    $00,$00,$00,$7F ;[M80] 1/4
+1953 : DB 0F 49 81[M80] PI2:    .byte   $DB,$0F,$49,$81 ;[M80] PI/2
+1957 : 00 00 00 7F{M80} FR4:    .byte   $00,$00,$00,$7F ;[M80] 1/4
 
                       + ;[M80] HART ALGORITHM 3341 CONSTANTS
                       | ;[M80] NOTE THAT HART CONSTANTS HAVE BEEN SCALED BY A POWER OF 2
@@ -5027,7 +5013,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
                       + ;ARCTANGENT FUNCTION
                       | ;;Not Implemented
 1985 : F7         [M80] ATN:    rst     HOOKDO          ;execute hook routine 15 (ATN)
-1986 : 0E                       .byte   15              ;if not implemented
+1986 : 0E                       .byte   14              ;if not implemented
 1988 : C3 C4 03                 jp      SNERR           ;  generate SYNTAX error
 
 198A : F7         [M80] OUTDO:  rst     HOOKDO          ;execute hook routine 15 (ATN)
@@ -5318,8 +5304,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 1B1D : 11 E8 33                 ld      de,033E8H
 1B20                    L1B20:
 1B20 : 7E                       ld      a,(hl)
-1B21 : CD E8 1A                 call
-
+1B21 : CD E8 1A                 call    LPTOUT
 1B24 : 23                       inc     hl
 1B25 : E7                       rst     COMPAR
 1B26 : 38 F8                    jr      c,L1B20
@@ -5525,7 +5510,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
                                 ;
 1C2C : F7               CLOAD:  rst     HOOKDO
 1C2D : 14                       inc     d
-1C2E : FE AA                    cp      '*'
+1C2E : FE AA                    cp      MULTK
 1C30 : CA 63 0C                 jp      z,CLOADS
 1C33 : D6 95                    sub     095H
 1C35 : 28 02                    jr      z,L1C39
@@ -5757,7 +5742,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 1D85 : 3D                       dec     a
 1D86 : 32 08 38                 ld      (CNTOFL),a      ;;Decrement Line Counter
 1D89 : 20 08                    jr      nz,ISLF         ;;If zero
-1D8B : 3E 17                    ld      a,24            ;;Set to 24
+1D8B : 3E 17                    ld      a,23            ;;Set to 23
 1D8D : 32 08 38                 ld      (CNTOFL),a      
 1D90 : CD 2F 1A                 call    CQINCH           ;;do a thing
 
@@ -6166,7 +6151,7 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
 1FC0 : 89                       adc     a,c
 1FC1 : 11                       .byte   $11             ;;"LD BC,"
 1FC2 : E5               L1FC2:  push hl 
-1FC3 : 21 04 00                 ld      de,4
+1FC3 : 21 04 00         L1FC3:  ld      hl,4
 1FC6 : 39                       add     hl,sp
 1FC7 : 22 F9 38                 ld      (SAVSTK),hl
 1FCA : E1                       pop     hl
@@ -6204,658 +6189,4 @@ z1005 : C5                       push    bc              ;SAVE RETURN ADDR ON ST
                         ;;Pad rest of ROM space
 1FF8 : F5 F5 F5 F5              .byte   $F5,$F5,$F5,$F5,$F5,$F5,$F5,$F5, 
 
-=======================         .end                    ;End of Program!
-
-
-;--------------------------------------------------------------
-Symbol table
-============
-
-Value           Type    Name
------           ----    ----
-0000            Code    START
-0008            Code    SYNCHK
-0010            Code    CHRGET
-0018            Code    CHROUT
-0020            Code    COMPAR
-0028            Code    SIGN
-0030            Code    HOOKDO
-0041            Code    INIT
-0062            Code    CRTCH1
-0073            Code    CRTCH2
-0089            Code    RESET
-009F            Code    CYCLE
-00CF            Code    COLORS
-00D2            Code    COLOR1
-00DC            Code    COLOR2
-00ED            Code    WARMST
-00FD            Code    COLDST
-010E            Code    L010E
-0112            Code    L0112
-0123            Code    L0123
-012E            Code    L012E
-013B            Code    L013B
-013D            Code    L013D
-0147            Code    L0147
-0153            Code    L0153
-0170            Code    L0170
-0193            Code    L0193
-019E            Code    L019E
-01A2            Code    L01A2
-01AD            Code    L01AD
-01C2            Code    L01C2
-01C6            Code    L01C6
-01C8            Code    L01C8
-01D4            Code    L01D4
-01DC            Code    L01DC
-020B            Code    L020B
-023E            Code    L023E
-024E            Code    L024E
-0251            Code    L0251
-0261            Code    L0261
-0292            Code    L0292
-029D            Code    L029D
-02A0            Code    L02A0
-02A3            Code    L02A3
-036E            Code    REDDY
-039F            Code    FNDFOR
-03A3            Code    LOOPER
-03A8            Code    L03A8
-03B6            Code    POPGOF
-03BE            Code    DATSNE
-03C4            Code    SNERR
-03C7            Code    ERRDV0
-03CA            Code    ERRNF
-03CD            Code    DDERR
-03D3            Code    OVFIN6
-03D4            Code    L03D4
-03D6            Code    MOERR
-03D9            Code    TMERR
-03DB            Code    ERROR
-03F4            Code    ERRFIN
-0401            Code    L0401
-0402            Code    READY
-0414            Code    MAIN
-0448            Code    LEXIST
-044F            Code    MLOOP
-045B            Code    NODEL
-0479            Code    MLOOPR
-0480            Code    FINI
-0489            Code    CHEAD
-0495            Code    CZLOOP
-049F            Code    FNDLIN
-04A2            Code    LOOP
-04BC            Code    CRUNCH
-04C5            Code    KLOOP
-04EE            Code    MUSTCR
-0505            Code    RESCON
-0507            Code    LOPPSI
-0516            Code    L0516
-0524            Code    L0524
-052C            Code    L052C
-0532            Code    L0532
-053C            Code    STUFFH
-0548            Code    COLIS
-054B            Code    NODATT
-0551            Code    STR1
-0558            Code    STRNG
-055E            Code    CRDONE
-057A            Code    LIST4
-0597            Code    L0597
-0598            Code    L0598
-05A8            Code    L05A8
-05B1            Code    L05B1
-05D0            Code    LPFORM
-05E9            Code    NOTOL
-061F            Code    ONEON
-0628            Code    L0628
-062C            Code    NEWSTT
-064B            Code    GONE
-0650            Code    GONE3
-0651            Code    GONE2
-066B            Code    CHRGTR
-0670            Code    CHRCON
-067A            Code    L067A
-067B            Code    L067B
-067E            Code    L067E
-0682            Code    FRCINT
-0697            Code    FCERR
-069C            Code    SCNLIN
-069D            Code    LINGET
-06A0            Code    MORGET
-06BB            Code    L06BB
-06DB            Code    RUNC2
-06DC            Code    GOTO
-06F3            Code    USERR
-0716            Code    L0716
-071B            Code    L071B
-071C            Code    DATA
-071E            Code    REM
-0722            Code    EXCHQT
-0725            Code    L0725
-0731            Code    LET
-074A            Code    INPCOM
-0770            Code    L0770
-0779            Code    L0779
-078E            Code    L078E
-078F            Code    L078F
-07A7            Code    L07A7
-07BA            Code    L07BA
-07C1            Code    L07C1
-07FD            Code    L07FD
-080A            Code    L080A
-080D            Code    L080D
-0811            Code    L0811
-0817            Code    L0817
-0825            Code    L0825
-082D            Code    L082D
-0833            Code    L0833
-083A            Code    L083A
-0853            Code    L0853
-0856            Code    L0856
-085A            Code    L085A
-085E            Code    L085E
-0861            Code    L0861
-0880            Code    TRMNOK
-08C3            Code    L08C3
-08C9            Code    L08C9
-08DA            Code    L08DA
-08EC            Code    L08EC
-08F0            Code    DATBK
-0908            Code    NCOLST
-090B            Code    NOWGET
-0917            Code    NUMINS
-0929            Code    TRMOK
-0953            Code    DATLOP
-096A            Code    L096A
-0972            Code    FRMNUM
-0975            Code    CHKNUM
-0976            Code    CHKSTR
-0977            Code    CHKSTR
-0983            Code    FRMPRN
-0985            Code    FRMEVL
-0988            Code    LPOPER
-0994            Code    RETAOP
-09B3            Code    L09B3
-09BA            Code    NTPLUS
-09CB            Code    L09CB
-09E2            Code    DORELS
-09E4            Code    L09E4
-09FD            Code    EVAL
-0A37            Code    L0A37
-0A3D            Code    DOMIN
-0A4E            Code    ISVAR
-0A5F            Code    ISFUN
-0A87            Code    L0A87
-0A8F            Code    L0A8F
-0A98            Code    L0A98
-0ACB            Code    L0ACB
-0AD0            Code    L0AD0
-0B05            Code    NOTER
-0B06            Code    L0B06
-0B1C            Code    GIVFLT
-0B21            Code    L0B21
-0B22            Code    L0B22
-0B23            Code    L0B23
-0B36            Code    SNGFLT
-0B40            Code    FNDOER
-0B45            Code    ERRDIR
-0B53            Code    L0B53
-0B54            Code    GETBYT
-0B57            Code    CONINT
-0B88            Code    PROMEM
-0B92            Code    BLTU
-0B95            Code    L0B95
-0B98            Code    L0B98
-0BA0            Code    GETSTK
-0BA9            Code    L0BA9
-0BB7            Code    L0BB7
-0BBE            Code    L0BBE
-0BCB            Code    L0BCB
-0BCF            Code    L0CD8
-0BE5            Code    STKINI
-0C05            Code    RESTOR
-0C19            Code    BGNRST
-0C1A            Code    RESFIN
-0C20            Code    L0C20
-0C26            Code    L0C26
-0C29            Code    ENDCON
-0C3B            Code    DIRIS
-0C62            Code    CSAVES
-0C63            Code    CLOADS
-0C92            Code    L0C92
-0C98            Code    L0C98
-0C9A            Code    L0C9A
-0CA3            Code    L0CA3
-0CAD            Code    L0CAD
-0CBD            Code    L0CBD
-0CC5            Code    ISLET
-0CC6            Code    ISLETC
-0CEB            Code    L0CEB
-0D16            Code    L0D16
-0D4D            Code    L0D4D
-0D5B            Code    QINLIN
-0D64            Code    RUBOUT
-0D74            Code    NOTBEG
-0D7C            Code    LINLIN
-0D81            Code    INLINN
-0D82            Code    INLINU
-0D85            Code    INLIN
-0D8E            Code    INLINC
-0DA3            Code    NOTRUB
-0DCC            Code    NT24
-0DE4            Code    L0DE4
-0DE9            Code    GOODCH
-0DF8            Code    L0DF8
-0DFC            Code    L0DFC
-0E12            Code    L0E12
-0E39            Code    STRCPY
-0E4E            Code    STRIN1
-0E50            Code    STRINI
-0E53            Code    STRAD2
-0E5F            Code    STRLIT
-0E60            Code    STRLTI
-0E63            Code    STRLT2
-0E66            Code    STRGET
-0E72            Code    STRFIN
-0E7E            Code    PUTNEW
-0E9D            Code    STROUT
-0EA0            Code    STRPRT
-0EA7            Code    STRPR2
-0EB3            Code    GETSPA
-0ECE            Code    L0ECE
-0EDB            Code    L0EDB
-0EDE            Code    L0EDE
-0EFA            Code    L0EFA
-0F0A            Code    L0F0A
-0F0B            Code    L0F0B
-0F32            Code    L0F32
-0F35            Code    L0F35
-0F57            Code    L0F57
-0F7C            Code    CAT
-0FB4            Code    L0FB4
-0FBD            Code    MOVSTR
-0FBE            Code    L0FBE
-0FC6            Code    FRESTR
-0FC9            Code    FREFAC
-0FCC            Code    FRETM2
-0FCD            Code    FRETMP
-0FE2            Code    NOTLST
-0FE4            Code    FRETMS
-0FF7            Code    LEN1
-1006            Code    ASC2
-1019            Code    SETSTR
-1025            Code    LEFT3
-106F            Code    MID2
-10A0            Code    PREAM
-10A3            Code    PREAM2
-10D1            Code    PTRGET
-10E9            Code    ISSEC
-10EA            Code    EATEM
-10F2            Code    NOSEC
-10FE            Code    NOTSTR
-110E            Code    NOARYS
-1126            Code    L1126
-1132            Code    L1132
-113D            Code    L113D
-1161            Code    L1161
-116C            Code    L116C
-116F            Code    L116F
-117A            Code    ISARY
-1180            Code    L1180
-11A0            Code    ERSFIN
-11A6            Code    L11A6
-11B5            Code    L11B5
-11CD            Code    L11CD
-11D3            Code    L11D3
-11EE            Code    L11EE
-11F5            Code    L11F5
-1212            Code    L1212
-122B            Code    L122B
-1230            Code    L1230
-124C            Code    L124C
-1250            Code    L1250
-1253            Code    FADDS
-125E            Code    FSUB
-1261            Code    FADD
-127A            Code    L127A
-129F            Code    L129F
-12AD            Code    FADFLT
-12B0            Code    NORMAL
-12B3            Code    L12B3
-12C3            Code    SNGFLT
-12C4            Code    ZERO0
-12C8            Code    L12C8
-12CE            Code    L12CE
-12D7            Code    L12D7
-12DF            Code    L12DF
-12E2            Code    L12E2
-12F1            Code    L12F1
-12F2            Code    L12F2
-1303            Code    ROUNDA
-1310            Code    L1310
-131C            Code    NEGR
-1330            Code    SHIFTR
-1332            Code    L1332
-133D            Code    L133D
-1346            Code    L1346
-134E            Code    L134E
-1352            Code    L1352
-1354            Code    L1354
-1385            Code    LOG
-1395            Code    LOG2
-13CB            Code    FMULT
-13F3            Code    L13F3
-1403            Code    L1403
-1416            Code    L1416
-141A            Code    L141A
-141C            Code    L141C
-1421            Code    DIV10
-142D            Code    FDIVT
-142F            Code    FDIV
-1458            Code    L1458
-146A            Code    L146A
-1482            Code    L1482
-1487            Code    L1487
-14AC            Code    MULDIV
-14CC            Code    L14CC
-14CD            Code    L14CD
-14D4            Code    MUL10
-14EB            Code    SIGNC
-14F1            Code    L14F1
-14F6            Code    FLOAT
-14FB            Code    L14FB
-150B            Code    NEG
-1513            Code    PUSHF
-1520            Code    MOVFM
-1523            Code    MOVFR
-152E            Code    MOVRF
-1531            Code    MOVRM
-1538            Code    INXHRT
-153A            Code    MOVMF
-153D            Code    VMOVE
-153F            Code    L153F
-1546            Code    L1546
-155B            Code    FCOMP
-1573            Code    L1573
-1586            Code    QINT
-15AA            Code    QINTA
-15B1            Code    INT
-15CA            Code    L15CA
-15D2            Code    L15D2
-15E0            Code    L15E0
-15E5            Code    FIN
-15EF            Code    FIN1
-15F7            Code    FINC
-160A            Code    FINC1
-160E            Code    FINCS
-161A            Code    FINDP
-161E            Code    FINE
-1621            Code    FINE2
-162D            Code    FINE3
-1637            Code    FINMUL
-1638            Code    FINMLT
-163F            Code    FINDIG
-1656            Code    FINLOG
-1661            Code    FNEDG1
-1675            Code    L1675
-1680            Code    FOUT
-168C            Code    L168C
-169B            Code    L169B
-16B0            Code    L16B0
-16B9            Code    L16B9
-16D5            Code    L16D5
-16E6            Code    L16E6
-16F5            Code    L16F5
-171A            Code    L171A
-1726            Code    L1726
-1736            Code    L1736
-1738            Code    L1738
-1742            Code    L1742
-1745            Code    L1745
-1748            Code    L1748
-1770            Code    PSHNEG
-178C            Code    POSEXP
-17A6            Code    L17A6
-17B5            Code    FPWR1
-17CD            Code    EXP
-17FF            Code    EXP100
-1802            Code    EXP110
-180E            Code    EXP115
-1811            Code    EXP200
-1837            Code    POLYX
-1846            Code    POLY
-184F            Code    L184F
-18A0            Code    RND1
-18A3            Code    L18A3
-18A6            Code    L18A6
-18BB            Code    NTPTRB
-18C4            Code    RNDSTR
-18D7            Code    COS
-18DD            Code    SIN
-18F3            Code    SIN1
-1935            Code    SIN2A
-1942            Code    SIN3
-199A            Code    MORSPL
-19A6            Code    NOTABL
-19B7            Code    ZERLP1
-19BA            Code    LPTPOP
-19BB            Code    LPTCHR
-19BE            Code    FINLPT
-19C7            Code    PRINTW
-19D6            Code    TTYPOP
-19DA            Code    INCHR
-19DE            Code    CRDONZ
-19E5            Code    GFNINL
-19EA            Code    CRDO
-19F0            Code    CRFIN
-19FA            Code    CRCONT
-19FB            Code    INKEY
-1A0B            Code    L1A0B
-1A18            Code    L1A18
-1A25            Code    L1A25
-1A2F            Code    CQINCH
-1A33            Code    CQINC1
-1A39            Code    L1A39
-1A40            Code    L1A40
-1A4A            Code    L1A4A
-1A4F            Code    PSET
-1A51            Code    PPRSET
-1A5C            Code    SETC
-1A64            Code    L1A64
-1A68            Code    POINT
-1A77            Code    L1A77
-1A79            Code    L1A79
-1A7F            Code    SCAND
-1A8E            Code    SCALXY
-1A96            Code    FCERRP
-1AAA            Code    L1AAA
-1AB4            Code    L1AB4
-1ABA            Code    L1ABA
-1ABE            Code    L1ABE
-1AC5            Code    L1AC5
-1AD0            Code    L1AD0
-1AE1            Code    L1AE1
-1AE8            Code    LPTOUT
-1AED            Code    LPTRDY
-1AF9            Code    OUTBT1
-1B08            Code    OUTBIZ
-1B0A            Code    OUTBIT
-1B0E            Code    LPTDLY
-1B10            Code    L1B10
-1B20            Code    L1B20
-1B2E            Code    L1B2E
-1B34            Code    L1B34
-1B3E            Code    L1B3E
-1B4D            Code    L1B4D
-1B50            Code    L1B50
-1B57            Code    L1B57
-1B62            Code    L1B62
-1B67            Code    L1B67
-1B6D            Code    L1B6D
-1B74            Code    L1B74
-1B7E            Code    L1B7E
-1B7F            Code    L1B7F
-1B87            Code    L1B87
-1B8A            Code    L1B8A
-1BA5            Code    L1BA5
-1BAC            Code    L1BAC
-1BAE            Code    L1BAE
-1BB1            Code    L1BB1
-1BBC            Code    L1BBC
-1BC0            Code    L1BC0
-1BCE            Code    L1BCE
-1BD0            Code    L1BD0
-1BD2            Code    L1BD2
-1BDA            Code    L1BDA
-1BE5            Code    L1BE5
-1C1C            Code    L1C1C
-1C1F            Code    L1C1F
-1C2B            Code    L1C2B
-1C39            Code    L1C39
-1C3A            Code    L1C3A
-1C46            Code    L1C46
-1C60            Code    L1C60
-1C62            Code    L1C62
-1C6C            Code    L1C6C
-1C8C            Code    L1C8C
-1C9A            Code    L1C9A
-1CB1            Code    L1CB1
-1CB8            Code    L1CB8
-1CC8            Code    L1CC8
-1CD2            Code    L1CD2
-1CD7            Code    L1CD7
-1CD9            Code    L1CD9
-1CE5            Code    L1CE5
-1CED            Code    L1CED
-1CF5            Code    L1CF5
-1D0D            Code    L1D0D
-1D17            Code    L1D17
-1D1D            Code    L1D1D
-1D25            Code    L1D25
-1D30            Code    L1D30
-1D38            Code    L1D38
-1D3F            Code    L1D3F
-1D4B            Code    L1D4B
-1D51            Code    L1D51
-1D5C            Code    L1D5C
-1D5E            Code    L1D5E
-1D72            Code    TTYCHR
-1D93            Code    ISLF
-1D94            Code    L1D94
-1DBE            Code    L1DBE
-1DC8            Code    L1DC8
-1DD8            Code    L1DD8
-1DDD            Code    L1DDD
-1DE5            Code    L1DE5
-1DE7            Code    L1DE7
-1DEA            Code    L1DEA
-1DF3            Code    XPOPAF
-1DFE            Code    L1DFE
-1E0E            Code    L1E0E
-1E14            Code    OUTBEL
-1E1D            Code    RESREG
-1E1F            Code    L1E1F
-1E3E            Code    L1E3E
-1E45            Code    L1E45
-1E59            Code    L1E59
-1E5C            Code    L1E5C
-1E64            Code    SOUNDS
-1E76            Code    SDELAY
-1E78            Code    SDELAL
-1E7E            Code    L1E7E
-1E80            Code    L1E80
-1E81            Code    L1E81
-1EA2            Code    L1EA2
-1EBA            Code    L1EBA
-1EC5            Code    L1EC5
-1ECE            Code    L1ECE
-1ED1            Code    L1ED1
-1ED7            Code    L1ED7
-1EDA            Code    L1EDA
-1EDF            Code    L1EDF
-1EE7            Code    L1EE7
-1EF7            Code    L1EF7
-1EF9            Code    L1EF9
-1EFC            Code    L1EFC
-1F00            Code    L1F00
-1F19            Code    L1F19
-1F28            Code    L1F28
-1F36            Code    L1F36
-1F43            Code    L1F43
-1FAE            Code    L1FAE
-1FB2            Code    L1FB2
-1FB5            Code    L1FB5
-1FC2            Code    L1FC2
-1FC3            Code    L1FC3
-1FCE            Code    L1FCE
-1FD1            Code    L1FD1
-1FD8            Code    STKSAV
-1FE1            Code    INIT
-1FE8            Code    L1FE8
-1FF2            Code    PRNTIT
-2010            Code    L2010
-2C0C            Code    L2C0C
-3800            Data    TTYPOS
-3801            Data    CURRAM
-3803            Code    USRPOK
-3806            Data    HOOK
-3808            Data    CNTOFL
-3809            Data    LASTFF
-3810            Code    L3810
-381F            Data    RNDCNT
-3846            Data    LPTPOS
-3847            Data    PRTFLG
-384D            Data    CURLIN
-384F            Data    TXTTAB
-38C7            Data    ENDFOR
-38CB            Data    SUBFLG
-38CE            Data    SAVTXT
-38E4            Data    FACLO
-38E6            Data    FACHO
-38E7            Data    FAC
-3999            Code    L3999
-4145            Code    L4145
-4153            Code    L4153
-4241            Code    L4241
-4449            Code    L4449
-444E            Code    L444E
-4548            Code    L4548
-454C            Code    L454C
-4645            Code    L4645
-4749            Code    L4749
-474F            Code    L474F
-494C            Code    L494C
-4D45            Code    L4D45
-4D49            Code    L4D49
-4DB0            Code    L4DB0
-4E41            Code    L4E41
-4E45            Code    L4E45
-4E4F            Code    L4E4F
-4E55            Code    L4E55
-4F4C            Code    L4F4C
-4F50            Code    L4F50
-504F            Code    L504F
-5248            Code    L5248
-5250            Code    L5250
-5345            Code    L5345
-5349            Code    L5349
-534F            Code    L534F
-5441            Code    L5441
-5445            Code    L5445
-790A            Code    L790A
-848D            Code    L848D
-92C3            Code    L92C3
-B395            Data    XB395
-BE10            Code    LBE10
-CA19            Code    LCA19
-D698            Code    LD698
-D717            Code    LD717
-E010            Code    XINIT
-E1C1            Code    LE1C1
-E503            Code    LE503
-F703            Code    LF703
-
-Number of symbols:                      695
-
-;--------------------------------------------------------------
+                                .end                    ;End of Program!
