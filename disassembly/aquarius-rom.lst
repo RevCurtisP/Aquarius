@@ -36,17 +36,16 @@
 ;;
 ;;Label sources are denoted to the left of the label and comment sources are denoted at the beginning of the comment.
 ;;
-;;Comments taken from canonical source code are preceded by a single semicolon, while annotations are preceded by
-;;two semicolons.
-
-:                               .org    0       ;;Starting Address of ROM
+;;Comments taken from the above sources are preceded by a single semicolon, while unsourced comments
+;;are preceded by two semicolons, and annotations are preceded by three semicolons.
 
                         ;;System Variables
                         SCREEN  .equ    $3000   ;;Screen Character Matrix
                         COLOR   .equ    $3400   ;;Screen Color Matrix
                   [M80] TTYPOS  .equ    $3800   ;;Current Screen Column (TRMPOS on 6502)
-                        CURRAM  .equ    $3801   ;; Position in CHARACTER RAM of cursor
+                        CURRAM  .equ    $3801   ;;Position in CHARACTER RAM of cursor
                   [M65] USRPOK  .equ    $3803   ;;JP instruction for USR() routine
+                        USRADD  .equ    $3804   ;;Address of USR routine
                         HOOK    .equ    $3806   ;;Extended ROM Hook Vector
                   [M80] CNTOFL  .equ    $3808   ;[M80] SUPRESS OUTPUT FLAG ;;Line Count
                         LASTFF  .equ    $3809   ;;Last value last outpUt to port #FF
@@ -56,32 +55,41 @@
                         ;               $3824   ;;???
                   [M80] LPTPOS  .equ    $3846   ;[M80] POSITION OF LPT PRINT HEAD
                   [M80] PRTFLG  .equ    $3847   ;[M80] WHETHER OUTPUT GOES TO LPT
+                        TOPMEM  .equ    $384B   
                   [M80] CURLIN  .equ    $384D   ;[M80] CURRENT LINE #
-                        TXTTAB  .equ    $384F
+                        TXTTAB  .equ    $384F   
+                        MEMSIZ  .equ    $38AD   
                         FACLO   .equ    $38E4   ;[M80] LOW ORDER OF MANTISSA
                         FACMO   .equ    $38E5   ;[M80] MIDDLE ORDER OF MANTISSA
                         FACHO   .equ    $38E6   ;[M80] HIGH ORDER OF MANTISSA
                         FAC     .equ    $38E7   ;[M80] EXPONENT
+ 
+                        ;;External Addresses
+                        XINIT   .equ    $E010   ;;ROM Cartridge Initialization Entry Point
 
-;;RST 0 - Startup
-:                       JMPINI  .equ    $1FE1
+                                .org    0       ;;Starting Address of ROM
+                         
+0000                  + ;;RST 0 - Startup
+0000                  | ;;On power up or reset, the Z80 jumps to this RST
+0000                  | ;;The instruction RST START is functionally equivalent to doing
+0000                  | ;;a hardware reset.
+::::::::::::::::::::::: JMPINI   =      $1FE1
 0000 : C3 E1 1F   [M80] START:   jp      JMPINI         ;;Start Initialization
-
 0003 : 82 06 22                 .byte   $82,$06,$22     ;;Revision Date 1982-06-22
 0006 : 0B                       .byte   11              ;;Revision Number?
 0007 : 00                       nop                     ;;Pad out the RST routine
 
-;;RST 1 - Syntax Check
-;;In versions that don't use RST, this routine is named SYNCHR
-:                       SNERR   .equ    $03C4
-                      + ;;Check for Matching Character
-                      | ;[M65] "SYNCHK" LOOKS AT THE CURRENT CHARACTER TO MAKE SURE IT
-                      | ;[M65] IS THE SPECIFIC THING IN THE BYTE IMMEDIATELY FOLLOWING
-                      | ;[M65] "RST SYNCHK". IF NOT, IT CALLS THE "SYNTAX ERROR" ROUTINE.
-                      | ;[M65] OTHERWISE IT GOBBLES THE NEXT CHAR AND RETURNS,
-                      | ;
-                      | ;[M65] [A]=NEW CHAR AND [H,L] IS ADVANCED BY "CHRGET".
-                      | ;
+0008                  + ;;RST 1 - Syntax Check
+0008                  | ;;Check for Matching Character
+0008                  | ;[M65] "SYNCHK" LOOKS AT THE CURRENT CHARACTER TO MAKE SURE IT
+0008                  | ;[M65] IS THE SPECIFIC THING IN THE BYTE IMMEDIATELY FOLLOWING
+0008                  | ;[M65] "RST SYNCHK". IF NOT, IT CALLS THE "SYNTAX ERROR" ROUTINE.
+0008                  | ;[M65] OTHERWISE IT GOBBLES THE NEXT CHAR AND RETURNS,
+0008                  | ;
+0008                  | ;[M65] [A]=NEW CHAR AND [H,L] IS ADVANCED BY "CHRGET".
+0008                  | ;
+0008                  | ;;;In Basic versions that don't use RST, this routine is named SYNCHR
+::::::::::::::::::::::: SNERR   =      $03C4
 0008 : 7E         [M80] SYNCHK: ld      a,(hl)
 0009 : E3                       ex      (sp),hl
 000A : BE                       cp      (hl)                    ;[M65] CHARACTERS EQUAL?
@@ -89,86 +97,106 @@
 000C : E3                       ex      (sp),hl
 000D : C2 C4 03                 jp      nz,SNERR                ;[M65] "SYNTAX ERROR"
 
-;;RST 2 - Get Next Character
-;;In versions that don't use RST, CHRGTR is called directly
-:                       CHRCON  .equ    $0670
-                      + ;[M80] CHRGET - THE NEXT CHARACTER SCAN ROUTINE
-                      | ;[M65] "CHRGET" USES [H,L] AS THE CURRENT TEXT PNTR
-                      | ;[M65] FETCHES A NEW CHARACTER INTO ACCA AFTER INCREMENTING [H,L]
-                      | ;[M65] AND SETS CONDITION CODES ACCORDING TO WHAT'S IN ACCA.
-                      | ;[M65]       NOT C=  NUMERIC   ("0" THRU "9")
-                      | ;[M65]       Z=      ":" OR END-OF-LINE (A NULL)
-                      | ;[M65]
-                      | ;[M65] [ACCA] = NEW CHAR.
-                      | ;[M65] [H,L]=[H,L]+1
-                      | ;[M65]
-0010 : 23         [M65] CHRGET: inc     hl            ;INCREMENT THE TEXT PNTR
-0011 : 7E         {M65} CHRGOT: ld      a,(hl)        ;entry point to get current character
-0012 : FE 3A      {M65} QNUM:   cp      ':'           ;IS IT A ":"?
-0014 : D0                       ret     nc            ;IT IS .GE. ":"
-0015 : C3 70 06                 jp      CHRCON
+0010                  + ;;RST 2 - Get Next Character
+0010                  | ;[M80] CHRGET - THE NEXT CHARACTER SCAN ROUTINE
+0010                  | ;[M65] "CHRGET" USES [H,L] AS THE CURRENT TEXT PNTR
+0010                  | ;[M65] FETCHES A NEW CHARACTER INTO ACCA AFTER INCREMENTING [H,L]
+0010                  | ;[M65] AND SETS CONDITION CODES ACCORDING TO WHAT'S IN ACCA.
+0010                  | ;[M65]       NOT C=  NUMERIC   ("0" THRU "9")
+0010                  | ;[M65]       Z=      ":" OR END-OF-LINE (A NULL)
+0010                  | ;[M65]
+0010                  | ;[M65] [ACCA] = NEW CHAR.
+0010                  | ;[M65] [H,L]=[H,L]+1
+0010                  | 
+0010                  | ;;Since the text pointer is kept in HL, the 8080 versions of Basic
+0010                  | ;;use LD A,HL to get the current character, rather than CHRGOT
+0010                  |
+0010                  | ;;;Basic versions that don't use RST use CALL CHRGTR instead
+::::::::::::::::::::::: CHRCON  =      $0670
+0010 : 23         [M65] CHRGET: inc     hl              ;[M65] INCREMENT THE TEXT PNTR
+0011 : 7E         {M65} CHRGOT: ld      a,(hl)          ;;Entry point to get current character
+0012 : FE 3A      {M65} QNUM:   cp      ':'             ;[M65] IS IT A ":"?
+0014 : D0                       ret     nc              ;[M65] IT IS .GE. ":"
+0015 : C3 70 06                 jp      CHRCON          ;;Continue in CHRGETR
 
-;;RST 3 - Output Character
-;;In versions that don't use RST, OUTDO is called directly
-:                       OUTDO   .equ    $198A
-0018 : C3 8A 19   [GWB] OUTCHR: jp      OUTDO           ; Execute print character routine
-001B : 00                       nop                     ; Pad out the RST routine
-001C : 00                       nop                     ; (The hook call code from OUTDO
-001D : 00                       nop                     ;  could be moved here)
-001E : 00                       nop
-001F : 00                       nop
+0018                  + ;;RST 3 - Output Character
+0018                  | ;[M80]  OUTDO (either CALL or RST) prints char in [A] no registers affected
+0018                  | ;[M80]        to either terminal or disk file or printer depending flags:
+0018                  | ;[M80]             PRTFLG if non-zero print to printer
+0018                  |
+0018                  | ;;;Basic versions that don't use RST use CALL OUTDO instead
+::::::::::::::::::::::  OUTDO   =       $198A
+0018 : C3 8A 19   [GWB] OUTCHR: jp      OUTDO           ;; Execute print character routine
+001B : 00 00 00 00              .byte   0,0,0,0,0       ;; Pad out the RST routine
+001F : 00                                               ;;; (The hook call code from OUTDO could be moved here)
 
-;;RST 4 - Compare HL and DE
-;;In Level II Basic - This set the flags based on VALTYP
-;;In versions that don't use RST, this routine is named DCOMPR
-0020 : 7C         [M80] COMPAR: ld      a,h              ;;Compare [DE] to [HL]
+0020                  + ;;RST 4 - Integer Compare
+0020                  | ;[TR1] Compares HL with DE. After execution, 
+0020                  | ;[TR1] A=0 if HL=DE, A=1 if HL>DE or A=FFH if HL<DE. 
+0020                  | ;[TR1]The S and Z flags are valid.
+0020                  | ;;;
+0020                  | ;;;In versions that don't use RST, this routine is named DCOMPR
+0020 : 7C         [M80] COMPAR: ld      a,h             ;;Compare [DE] to [HL]
 0021 : 92                       sub     d               ;;Sets Z flag if equal
 0022 : C0                       ret     nz              ;;Sets Carry if [DE] > [HL]
 0023 : 7D                       ld      a,l             ;;Destroys [A]
 0024 : 93                       sub     e
 0025 : C9                       ret
+0026 : 00 00                    .byte   0,0             ;; Pad out the RST routine
 
-;;These were system variables in Altair 4K Basic, which was loaded into RAM
-0026 : 00                       nop                     ;;[A4K] Terminal Row
-0027 : 00                       nop                     ;;[A4K] Terminal Column
-
-;;RST 5 - Get sign of Floating Point Argument
-                        ;[M65] PUT SIGN OF FACHO IN ACCA.
-:                       SIGNC   .equ    $14EB                        
+0028                  + ;;RST 5 - Get sign of Floating Point Argument
+0028                  | ;[M80] PUT SIGN OF FAC IN A.
+0028                  | ;[M80] ALTERS A ONLY
+0028                  | ;[M80] LEAVES FAC ALONE
+0028                  | ;
+0028                  | ;;;Basic versions that don't use RST use CALL SIGN insteaoard
+::::::::::::::::::::::: SIGNC   =       $14EB                        
 0028 : 3A E7 38   [M80] FSIGN:  ld      a,(FAC)
 002B : B7                       or      a               ;[M65] IF NUMBER IS ZERO, SO IS RESULT
 002C : C2 EB 14                 jp      nz,SIGNC        ;;Check sign of mantissa if not 0
 002F : C9                       ret
 
-;;RST 6 - Call Extended BASIC Hook
-;;In Altair 4K Basic, pushes the word following the RST instruction onto the stack
-;;In Level II Basic, this is used by the Disk System
-                        ;; Extended ROM Hook dispatch routine
+0030                  + ;;RST 6 - Extended BASIC Hook Dispatch
+0030                  | ;;The additional functionality of Extended Basic are invoked via this RST.
+0030                  | ;;Each RST HOOK instruction is followed by a byte that indicates which hook
+0030                  | ;;routine to execute. On startup, this routine jumps to NOHOOK, which skips
+0030                  | ;;the hook number byte the does a RET.
+0030                  | ;;
+0030                  | ;;Extended Basic overwrites the address in HOOK, enabling hook dispatch.
+0030                  | ;;
+0030                  } ;;
+0030                  | ;;*** TODO: List the hook routines.  
 0030 : DD 2A 06 38      HOOKDO: ld      ix,(HOOK)       ;;Get hook routine address
 0034 : DD E9                    jp      (ix)            ;;and jump to it
-0036 : 00                       nop                     ;;Pad out RST routine
-0037 : 00                       nop
+0036 : 00 00                    .byte   0,0             ;;Pad out RST routine
 
-;;RST 7 - Execute User Defined Machine Language Routine
-;;In Level II Basic, this is used by the Disk System
+0038                  + ;;RST 7 - Execute USR Routine
+0038                  | ;;The instruction RST USRFN executes user defined code at
+0038                  | ;;the address in USR via the JP instruction in USRPOK.
+0038                  | ;;
+0038                  | ;;This is the same entry point used by the USR function.
+0038                  | ;;***TODO: how to detect a USR() call
 0038 : C3 03 38   [M80] USRFN:  jp      USRPOK          ;;Execute USR() routine
 
-;;This is the address initially loaded into HOOK
-;;
-003B : D9               NOHOOK: exx                     ;;Default Hook Routine
-003C : E1                       pop     hl
-003D : 23                       inc     hl              ;;Increment the return address
-003E : E5                       push    hl              ;;to skip the byte after the RST
-003F : D9                       exx
-0040 : C9                       ret
+003B                  + ;;Default Extended BASIC Hook Routine
+003B                  | ;;The system variable HOOK is loaded with the address of this 
+003B                  | ;;routine on startup, so that all RST HOOK instructions
+003B                  | ;;are routed here. 
+003B                  | ;;
+003B                  | ;;This routine returns to the second byte after the RST 
+003B                  | ;;RST instruction, preserving all registers.
+003B : D9               NOHOOK: exx                     ;;Save BC, DE, and HL
+003C : E1                       pop     hl              ;;Get return address off stack
+003D : 23                       inc     hl              ;;Increment to skip byte after RST
+003E : E5                       push    hl              ;;Put new return address on stack
+003F : D9                       exx                     ;;Restore BC, DE, and HL 
+0040 : C9                       ret                     ;;and Return
 
-:                       L1D94   .equ    $1D94
-:                       LASTWR  .equ    $2FFF
-:                       X385D   .equ    $385D
-:                       L1E80   .equ    $1E80
-:                       XINIT   .equ    $E010
-0041 : 31 A0 38   [M80] INIT:   ld      sp,038A0H       ;[M80] SET UP TEMP STACK
-0044 : 3E 0B                    ld      a,00BH
+::::::::::::::::::::::: L1D94   =       $1D94
+::::::::::::::::::::::: X385D   =       $385D
+::::::::::::::::::::::: L1E80   =       $1E80
+0041 : 31 A0 38   [M80] INIT:   ld      sp,$38A0        ;[M80] SET UP TEMP STACK
+0044 : 3E 0B                    ld      a,11            ;;CLS character
 0046 : CD 94 1D                 call    L1D94
 0049 : 2A 01 38                 ld      hl,(CURRAM)
 004C : 36 20                    ld      (hl),' '
@@ -176,11 +204,13 @@
 0050 : CD 94 1D                 call    L1D94
 0053 : AF                       xor     a
 0054 : D3 FF                    out     ($FF),a
-0056 : 21 FF 2F                 ld      hl,LASTWR
+0056 : 21 FF 2F                 ld      hl,$2FFF        ;;End of Basic ROM
 0059 : 22 5D 38                 ld      (X385D),hl
-005C : 11 11 E0         EXTCHK: ld      de,$E011        ;;Check for Catridge ROM at $E010
-005F : 21 81 00                 ld      hl,$0081
-0062 : 1B               EXTCH1: dec     de
+
+005C                    ;;Check for Catridge ROM at $E010
+005C : 11 11 E0         CRTCHK: ld      de,$E011        
+005F : 21 81 00                 ld      hl,CRTSIG-1
+0062 : 1B         (~~~) CRTCH1: dec     de
 0063 : 1B                       dec     de
 0064 : 23                       inc     hl
 0065 : 1A                       ld      a,(de)
@@ -188,46 +218,53 @@
 0067 : 0F                       rrca
 0068 : 83                       add     a,e
 0069 : BE                       cp      (hl)
-006A : 28 F6                    jr      z,EXTCH1
+006A : 28 F6                    jr      z,CRTCH1
 006C : 7E                       ld      a,(hl)
 006D : B7                       or      a
-006E : 20 19                    jr      nz,RESET
+006E : 20 19                    jr      nz,RESET        ;;ROM not found, start Basic
 0070 : EB                       ex      de,hl
 0071 : 06 0C                    ld      b,00CH
-0073 : 86               EXTCH2: add     a,(hl)
+0073 : 86         (~~~) CRTCH2: add     a,(hl)
 0074 : 23                       inc     hl
 0075 : 80                       add     a,b
 0076 : 05                       dec     b
-0077 : 20 FA                    jr      nz,EXTCH2
+0077 : 20 FA                    jr      nz,CRTCH2
 0079 : AE                       xor     (hl)
 007A : D3 FF                    out     ($FF),a
 007C : 32 09 38                 ld      (LASTFF),a
 007F : C3 10 E0                 jp      XINIT           ;;Execute Catridge Code
 
-0082 : 2B 37 24 24      EXTSIG: .byte   "+7$$3,",0      ;;$A000 Cartridge Signature
+0082 : 2B 37 24 24      CRTSIG: .byte   "+7$$3,",0      ;;$A000 Cartridge Signature
 0086 : 33 2C 00
 
-0089
-0089 : 11 A1 31         RESET:  ld      de,SCREEN+417   ;;print startup message
-008C : 21 B0 00                 ld      hl,BASICT
-008F : 01 05 00                 ld      bc,5
+0089                  + ;;Display Startup Screen
+0089                  | ;;Copies the bytes at BASICT and STARTT directly to
+0089                  | ;;specific positions in screen memory.
+0089 : 11 A1 31         RESET:  ld      de,SCREEN+417    
+008C : 21 B0 00                 ld      hl,BASICT         
+008F : 01 05 00                 ld      bc,STARTT-BASICT
 0092 : ED B0                    ldir
-0094 : 11 10 32                 ld      de,SCREEN+528
+0094 : 11 10 32                 ld      de,SCREEN+528   
 0097 : 21 B5 00                 ld      hl,STARTT
 009A : 01 19 00                 ld      bc,25
 009D : ED B0                    ldir
 
-009F : 06 03            CYCLE:  ld      b,3             ;;cycle color
+
+009F                  + ;;Cycle Screen Colors
+009F                  | ;;Cycles through backround colors by sequentially
+009F                  | ;;calling the COLORS routine in a loop.
+009F : 06 03            CYCLE:  ld      b,3             ;; Black on Yellow
 00A1 : CD CF 00                 call    COLORS
-00A4 : 06 02                    ld      b,2
+00A4 : 06 02                    ld      b,2             ;; Black on Blue
 00A6 : CD CF 00                 call    COLORS
-00A9 : 06 06                    ld      b,6
+00A9 : 06 06                    ld      b,6             ;; Black on Green
 00AB : CD CF 00                 call    COLORS
 00AE : 18 EF                    jr      CYCLE
 
+0080                  + ;;Start Screen Text
+0080                  | ;;Copied directly into Screen RAM by the RESET routine
 00B0 : 42 41 53 49      BASICT: .byte "BASIC"
 00B4 : 43
-
 00B5 : 50 72 65 73      STARTT: .byte "Press RETURN key to start",0
 00B9 : 73 20 52 45
 00BD : 54 55 52 4E
@@ -236,27 +273,43 @@
 00C9 : 73 74 61 72
 00CD : 74 00
 
-00CF : 21 00 34         COLORS: ld      hl,COLOR
-00D2 : 70               COLOR1: ld      (hl),b
-00D3 : 23                       inc     hl
-00D4 : 7C                       ld      a,h
-00D5 : FE 38                    cp      $38
+00CF                  + ;;Set Screen Colors and Check for Keypress
+00CF                  | ;;Fills color RAM with the foreground/backround colors
+00CF                  | ;;pssed in the accumulator, then goes into a delay loop
+00CF                  | ;;that checks for a keypress.
+00CF                  | ;;
+00CF                  | ;;If RETURN is pressed, execution passes to COLDST,
+00CF                  | ;;initializing the Basic interpreter,
+00CF                  | ;;
+00CF                  | ;;If CTRL-C is pressed, execution passes to WARMST,
+00CF                  | ;;preserving the Basic program and returning the user
+00CF                  | ;;to the "Ok" prompt.
+00CF : 21 00 34         COLORS: ld      hl,COLOR        ;;Store Accumulator in all bytes of Color
+00D2 : 70         (~~~) COLOR1: ld      (hl),b          ;;memory, addresses $3400 through $3FFF
+00D3 : 23                       inc     hl              ;;
+00D4 : 7C                       ld      a,h             ;;NOTE: This wipes out $3B80 through $3FFF,
+00D5 : FE 38                    cp      $38             ;;which are after the end of Color memory.
 00D7 : 20 F9                    jr      nz,COLOR1
-00D9 : 21 00 40                 ld      hl,$4000
-00DC : CD 80 1E         COLOR2: call    L1E80
-00DF : FE 0D                    cp      13
-00E1 : 28 1A                    jr      z,COLDST
-00E3 : FE 03                    cp      3
-00E5 : 28 06                    jr      z,WARMST
-00E7 : 2B                       dec     hl
+00D9 : 21 00 40                 ld      hl,$4000        ;;Loop 12,288 times
+00DC : CD 80 1E   (~~~) COLOR2: call    L1E80           ;;Check for keypress
+00DF : FE 0D                    cp      13              ;;Is it RETURN?
+00E1 : 28 1A                    jr      z,COLDST        ;;Cold Start
+00E3 : FE 03                    cp      3               ;;Is it CTRL-C?
+00E5 : 28 06                    jr      z,WARMST        ;;Warm Start
+00E7 : 2B                       dec     hl              ;;Decrement Counter
 00E8 : 7C                       ld      a,h
 00E9 : B5                       or      l
-00EA : 20 F0                    jr      nz,COLOR2
-00EC : C9                       ret
+00EA : 20 F0                    jr      nz,COLOR2       ;;If not 0, loop
+00EC : C9                       ret                     ;;Back to CYCLE
 
-:                       STKINI  .equ    $0BE5
-:                       TTYCHR  .equ    $1D72
-:                       L1A40   .equ    $1A40    
+
+00ED                  + ;;Basic Interpreter Warm Start
+00ED                  | ;;Clears the screen, resets I/O port $FF, initializes
+00ED                  | ;;the hardware stack, 
+00ED                  | ;;***then does other stuff.
+::::::::::::::::::::::: STKINI  =       $0BE5
+::::::::::::::::::::::: TTYCHR  =       $1D72
+::::::::::::::::::::::: L1A40   =       $1A40    
 00ED : 3E 0B            WARMST: ld      a,11
 00EF : CD 72 1D                 call    TTYCHR
 00F2 : 3A 09 38                 ld      a,(LASTFF)
@@ -264,9 +317,9 @@
 00F7 : CD E5 0B                 call    STKINI
 00FA : CD 40 1A                 call    L1A40
 
-:                       DEFALT  .equ    $0187
-:                       X38A9   .equ    $38A9
-:                       X3900   .equ    $3900
+::::::::::::::::::::::: DEFALT  =       $0187
+::::::::::::::::::::::: X38A9   =       $38A9
+::::::::::::::::::::::: X3900   =       $3900
 00FD : 21 87 01         COLDST: ld      hl,DEFALT       ;Set System Variable Default Vslues
 0100 : 01 51 00                 ld      bc,81
 0103 : 11 03 38                 ld      de,USRPOK
@@ -275,7 +328,6 @@
 0109 : 32 A9 38                 ld      (X38A9),a
 010C : 32 00 39                 ld      (X3900),a
 010F : 21 64 39                 ld      hl,03964H
-:                               .end                    ;;*** STOP SOURCE CONVERSION ***
 
 0112                    L0112:
 0112 : 23                       inc     hl
@@ -294,18 +346,24 @@
 0120 : B8                       cp      b
 0121 : 28 EF                    jr      z,L0112
 
+::::::::::::::::::::::: L0BB7   =       $0BB7
+::::::::::::::::::::::: L0BBE   =       $0BBE
+::::::::::::::::::::::: PRNTIT  =       $1FF2
 0123                    L0123:
 0123 : 2B                       dec     hl
 0124 : 11 2C 3A                 ld      de,03A2CH
 0127 : E7                       rst     COMPAR
 0128 : DA B7 0B                 jp      c,L0BB7
-012B : 11 CE FF                 ld      de,0FFCEH
+012B : 11 CE FF                 ld      de,$FFCE
 012E                    L012E:
 012E : 22 AD 38                 ld      (MEMSIZ),hl
 0131 : 19                       add     hl,de
 0132 : 22 4B 38                 ld      (TOPMEM),hl
 0135 : CD BE 0B                 call    L0BBE
 0138 : CD F2 1F                 call    PRNTIT
+:::::::::::::::::::::::         .end                    ;;*** STOP SOURCE CONVERSION ***
+::::::::::::::::::::::: 
+
 013B                    L013B:
 013B : 31 65 38                 ld      sp,03865H
 013E : CD E5 0B                 call    STKINI
@@ -6096,8 +6154,8 @@ Value           Type    Name
 0028            Code    SIGN
 0030            Code    HOOKDO
 0041            Code    INIT
-0062            Code    EXTCH1
-0073            Code    EXTCH2
+0062            Code    CRTCH1
+0073            Code    CRTCH2
 0089            Code    RESET
 009F            Code    CYCLE
 00CF            Code    COLORS
@@ -6699,7 +6757,6 @@ Value           Type    Name
 3848            Data    X3848
 3849            Data    X3849
 384A            Data    CHARC
-384B            Data    TOPMEM
 384D            Data    CURLIN
 384F            Data    TXTTAB
 3851            Data    X3851
@@ -6709,7 +6766,6 @@ Value           Type    Name
 38AA            Data    DIMFLG
 38AB            Data    VALTYP
 38AC            Data    DORES
-38AD            Data    MEMSIZ
 38AF            Data    TEMPPT
 38BF            Data    X38BF
 38C1            Data    FRETOP
