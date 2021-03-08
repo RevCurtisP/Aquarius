@@ -3598,6 +3598,7 @@
 11DC : 70                       ld      (hl),b
 11DD : 23                       inc     hl
 11DE : 4F                       ld      c,a             ;{M80} [C]=ENTRIES NEEDED TO STORE SIZE OF EACH DIMENSION
+11DF : CD A0 0B                 call	GETSTK          ;[M80] GET SPACE FOR DIMENSION ENTRIES
 11E2 : 23                       inc     hl              ;[M80] SKIP OVER THE SIZE LOCATIONS
 11E3 : 23                       inc     hl
 11E4 : 22 C3 38                 ld      (TENP3),hl      ;SAVE THE LOCATION TO PUT THE SIZE IN
@@ -4190,7 +4191,7 @@
                         ;
 14EB                    ;;Jumped to from FSIGN 
 14EB : 3A E6 38   [M80] SIGNC:  ld      a,(FACHO)       ;[M80] GET SIGN OF FACHO, IT IS NON-ZERO
-14EE : FE                       byte $FE                ;"CP" AROUND NEXT BYTE
+14EE : FE                       byte    $FE             ;"CP" AROUND NEXT BYTE
 14EF : 2F         [M80] FCOMPS: cpl                     ;ENTRY FROM FCOMP, COMPLEMENT SIGN
 14F0 : 17         (M80) ICOMPS: rla                     ;ENTRY FROM ICOMP, PUT SIGN BIT IN CARRY
 14F1 : 9F         [M80] SIGNS:  sbc     a,a             ;A=0 IF CARRY WAS 0, A=377 IF CARRY WAS 1
@@ -4259,8 +4260,8 @@
 1538 : 23         [M80] INXHRT: inc     hl              ;[M80] INC POINTER TO BEGINNING OF NEXT NUMBER
 1539 : C9                       ret
 
-153A                  +  ;[M80] MOVE NUMBER FROM FAC TO MEMORY [(HL)]
-153A                  |  ;[M80] ALTERS A,B,D,E,H,L
+153A                  + ;[M80] MOVE NUMBER FROM FAC TO MEMORY [(HL)]
+153A                  | ;[M80] ALTERS A,B,D,E,H,L
 153A : 11 E4 38   [M80] MOVMF:  ld      de,FACLO        ;GET POINTER TO FAC
 
 153D                  + ;MOVE NUMBER FROM (DE) TO (HL)
