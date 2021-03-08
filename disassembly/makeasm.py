@@ -3,10 +3,15 @@
 # Convert Annotated Aquarius ROM Disassembly to TASM Source Code
 def makeasm(iname, oname):
 
-  #TASM Substitution Dictionarys
+  #Psuedo-Op Replacement Dictionary
+  PSO = {"byte": ".byte", "end": ".end", "equ": ".equ", 
+           "org": ".org", "set": ".set", "word": ".word"}
+  
   RST = {"START": "00H", "SYNCHK": "08H", "CHRGET": "10H", "OUTCHR": "18H",
          "COMPAR": "20H", "FSIGN": "28H", "HOOKDO": "30H", "USRFN": "38H"}
   ARGS = {"'\\'": "$5A", "a,'\\'": "a,$5C"}
+  
+  eqlabels = []
   
   ifile = open(iname, 'r')
   ofile = open(oname, 'w')
@@ -47,13 +52,33 @@ def makeasm(iname, oname):
     
     #Remove Address and Object Code Prefix
     line = line[24:]
-
+    
     #Replace operands that cause errors
     if line[0:1] != ';':
       arg = line[16:24].rstrip()
       if arg in ARGS:
         line = line[:16] + ARGS[arg].ljust(8) + line[24:]
 
+    #Get Instruction Mnemonic for Psuedo-Op and RST Conversions
+    if line[0:1] != ';' and line[8:9] != ';':
+      label = line[:8].rstrip()
+      mnemonic = line[8:16].rstrip()
+      if mnemonic.find(" ") > -1:
+        print("Misaligned operator/operand in line " + str(lineno))
+        print(">" + mnemonic)
+    else:
+      mnemonic = None
+
+    #Replace Psuedo-Ops
+    if mnemonic == "=":
+      if label in eqlabels:
+        mnemonic = "set"
+      else:
+        eqlabels.append(label)
+        mnemonic = "equ"
+    if mnemonic and mnemonic in PSO:
+        line = line[:8] + PSO[mnemonic].ljust(8) + line[16:]
+        
     #Replace RST operand for TASM
     if line[0:1] != ';' and line[8:16] == "rst     ":
       arg = line[16:24].rstrip()
@@ -66,7 +91,9 @@ def makeasm(iname, oname):
     ofile.write(line + '\n')
 
     if line[:12] == "        .end": break
-    
+  
+  print(eqlabels)
+  
   ofile.close()
   ifile.close()
 
