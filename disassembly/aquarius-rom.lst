@@ -127,10 +127,9 @@
                         L08AA   equ     $08AA  
                         L08C3   equ     $08C3
                         L08DA   equ     $08DA   
-                        L0BA9   equ     $0BA9
+                        REASON  equ     $0BA9
                         L0C20   equ     $0C20
                         L0C26   equ     $0C26
-                        L1230   equ     $1230
                         L146A   equ     $146A
                         L184F   equ     $184F
                         L1A64   equ     $1A64
@@ -418,7 +417,7 @@
 0123 : 2B                       dec     hl
 0124 : 11 2C 3A                 ld      de,03A2CH
 0127 : E7                       rst     COMPAR
-0128 : DA B7 0B                 jp      c,L0BB7
+0128 : DA B7 0B                 jp      c,OMERR
 012B : 11 CE FF                 ld      de,$FFCE
 012E                    L012E:
 012E : 22 AD 38                 ld      (MEMSIZ),hl
@@ -2371,7 +2370,7 @@
 0B91 : C9                       ret
                         ;
 0B92                    BLTU:
-0B92 : CD A9 0B                 call    L0BA9
+0B92 : CD A9 0B                 call    REASON
 0B95                    L0B95:
 0B95 : C5                       push    bc
 0B96 : E3                       ex      (sp),hl
@@ -2412,12 +2411,12 @@
 0BAE : 3E FF                    ld      a,$FF           ; TOP OF THE STACK
 0BB0 : 9C                       sbc     a,h
 0BB1 : 67                       ld      h,a             ;NOW SEE IF [SP] IS LARGER
-0BB2 : 38 03                    jr      c,L0BB7         ;IN CASE [H,L] WAS TOO BIG
+0BB2 : 38 03                    jr      c,OMERR         ;IN CASE [H,L] WAS TOO BIG
 0BB4 : 39                       add     hl,sp           ;IF SO, CARRY WILL BE SET
 0BB5 : E1                       pop     hl              ;GET BACK ORIGINAL [H,L]
 0BB6 : D8                       ret     c               ;WAS OK?
 
-0BB7                    L0BB7:
+0BB7                    OMERR:
 0BB7 : 11 0C 00                 ld      de,ERROM
 0BBA : C3 DB 03                 jp      ERROR
                                 ;
@@ -2628,13 +2627,13 @@
 0CEE : 7C                       ld      a,h
 0CEF : 9A                       sbc     a,d
 0CF0 : 57                       ld      d,a
-0CF1 : DA B7 0B                 jp      c,L0BB7
+0CF1 : DA B7 0B                 jp      c,OMERR
 0CF4 : E5                       push    hl
 0CF5 : 2A D6 38                 ld      hl,(VARTAB)
 0CF8 : 01 28 00                 ld      bc,00028H
 0CFB : 09                       add     hl,bc
 0CFC : E7                       rst     COMPAR
-0CFD : D2 B7 0B                 jp      nc,L0BB7
+0CFD : D2 B7 0B                 jp      nc,OMERR
 0D00 : EB                       ex      de,hl
 0D01 : 22 4B 38                 ld      (TOPMEM),hl
 0D04 : E1                       pop     hl
@@ -3588,8 +3587,31 @@
 11CA : CA 2B 12                 jp      z,GETDEF        ;[M80] JUMP OFF AND READ E INDICES....
 11CD : 11 10 00   [M80] BSERR:  ld      de,ERRBS        ;[M80] "SUBSCRIPT OUT OF RANGE"
 11D0 : C3 DB 03                 jp      ERROR
-                        ;
-11D3                    
+
+                      + ;[M80] HERE WHEN VARIABLE IS NOT FOUND IN THE ARRAY TABLE
+                      | ;[M80]
+                      | ;[M80] BUILDING AN ENTRY:
+                      | ;[M80] 
+                      | ;[M80]	PUT DOWN THE DESCRIPTOR	
+                      | ;[M80]	SETUP NUMER OF DIMENSIONS
+                      | ;[M80]	MAKE SURE THERE IS ROOM FOR THE NEW ENTRY
+                      | ;[M80]	REMEMBER VARPTR
+                      | ;[M80]	TALLY=4 (VALTYP FOR THE EXTENDED)
+                      | ;[M80]	SKIP 2 LOCS FOR LATER FILL IN -- THE SIZE
+                      | ;[M80] LOOP:	GET AN INDICE
+                      | ;[M80]	PUT NUMBER +1 DOWN AT VARPTR AND INCREMENT VARPTR
+                      | ;[M80]	TALLY= TALLY * NUMBER+1
+                      | ;[M80]	DECREMENT NUMBER-DIMS
+                      | ;[M80]	JNZ	LOOP
+                      | ;[M80]	CALL REASON WITH [H,L] REFLECTING LAST LOC OF VARIABLE
+                      | ;[M80]	UPDATE STREND
+                      | ;[M80]	ZERO BACKWARDS
+                      | ;[M80]	MAKE TALLY INCLUDE MAXDIMS
+                      | ;[M80]	PUT DOWN TALLY
+                      | ;[M80]	IF CALLED BY DIMENSION, RETURN
+                      | ;[M80]	OTHERWISE INDEX INTO THE VARIABLE AS IF IT
+                      | ;[M80]	WERE FOUND ON THE INITIAL SEARCH
+                      | ;
 11D3 : 11 04 00   [M80] NOTFDD: ld      de,4            ;[M80] [D,E]=SIZE OF ONE VALUE (VALTYP)
 11D6 : F1                       pop     af              ;[M80] [A]=NUMBER OF DIMENSIONS
 11D7 : CA 97 06                 jp      z,FCERR         ;[M80] "ILLEGAL FUNCTION CALL"
@@ -3607,81 +3629,93 @@
 11E9 : 3A AA 38                 ld      a,(DIMFLG)      ;{M80} CALLED BY DIMENSION?
 11EC : 17                       rla                     ;[M80] SET CARRY IF SO
 11ED : 79                       ld      a,c             ;[M80] [A]=NUMBER OF DIMENSIONS
-11EE : 01 0B 00   (M80) LOPPTA: ld      bc,11           ;MAP 0 TO 11 AND 1 TO 10
-11F1 : 30 02                    jr      nc,NOTDIM       ;DEFAULT DIMENSIONS TO TEN
-11F3 : C1         (M80) POPDIM: pop     bc              ;POP OFF AN INDICE INTO [B,C]
-11F4 : 03                       inc     bc              ;ADD ONE TO IT FOR THE ZERO ENTRY
-11F5 : 71         (M80) NOTDIM: ld      (hl),c          ;PUT THE MAXIMUM DOWN
-11F6 : F5                       push    af              ;SAVE NUMBER OF DIMENSIONS AND DIMFLG (CARRY)
+11EE : 01 0B 00   (M80) LOPPTA: ld      bc,11           ;[M80] MAP 0 TO 11 AND 1 TO 10
+11F1 : 30 02                    jr      nc,NOTDIM       ;[M80] DEFAULT DIMENSIONS TO TEN
+11F3 : C1         (M80) POPDIM: pop     bc              ;[M80] POP OFF AN INDICE INTO [B,C]
+11F4 : 03                       inc     bc              ;[M80] ADD ONE TO IT FOR THE ZERO ENTRY
+11F5 : 71         (M80) NOTDIM: ld      (hl),c          ;[M80] PUT THE MAXIMUM DOWN
+11F6 : F5                       push    af              ;[M80] SAVE NUMBER OF DIMENSIONS AND DIMFLG (CARRY)
 11F7 : 23                       inc     hl
 11F8 : 70                       ld      (hl),b
 11F9 : 23                       inc     hl
 11FA : E5                       push    hl
-11FB : CD CA 15                 call    UMULT
-11FE : EB                       ex      de,hl
-11FF : E1                       pop     hl
-1200 : F1                       pop     af              ;GET NUMBER OF DIMENSIONS AND DIMFLG (CARRY) BACK
-1201 : 3D                       dec     a               ;DECREMENT THE NUMBER OF DIMENSIONS LEFT
-1202 : 20 EA                    jr      nz,LOPPTA       ;HANDLE THE OTHER INDICES
-1204 : F5                       push    af
-1205 : 42                       ld      b,d
-1206 : 4B                       ld      c,e
-1207 : EB                       ex      de,hl
-1208 : 19                       add     hl,de
-1209 : DA B7 0B                 jp      c,L0BB7
-120C : CD A9 0B                 call    L0BA9
-120F : 22 DA 38                 ld      (STREND),hl
-1212                    L1212:
-1212 : 2B                       dec     hl
+11FB : CD CA 15                 call    UMULT           ;[M80] MULTIPLY [B,C]=NEWMAX BY CURTOL=[D,E]
+11FE : EB                       ex      de,hl           
+11FF : E1                       pop     hl              
+1200 : F1                       pop     af              ;[M80] GET NUMBER OF DIMENSIONS AND DIMFLG (CARRY) BACK
+1201 : 3D                       dec     a               ;[M80] DECREMENT THE NUMBER OF DIMENSIONS LEFT
+1202 : 20 EA                    jr      nz,LOPPTA       ;[M80] HANDLE THE OTHER INDICES
+1204 : F5                       push    af              ;[M80] SAVE DIMFLG (CARRY)
+1205 : 42                       ld      b,d             ;[M80] [B,C]=SIZE
+1206 : 4B                       ld      c,e             
+1207 : EB                       ex      de,hl           ;[M80] [D,E]=START OF VALUES
+1208 : 19                       add     hl,de           ;[M80] [H,L]=END OF VALUES
+1209 : DA B7 0B                 jp      c,OMERR         ;[M80] OUT OF MEMORY POINTER BEING GENERATED?
+120C : CD A9 0B                 call    REASON          ;[M80] SEE IF THERE IS ROOM FOR THE VALUES
+120F : 22 DA 38                 ld      (STREND),hl     ;[M80] UPDATE THE END OF STORAGE
+1212 : 2B         (M80) ZERITA: dec     hl              ;[M80] ZERO THE NEW ARRAY
 1213 : 36 00                    ld      (hl),000H
-1215 : E7                       rst     COMPAR
-1216 : 20 FA                    jr      nz,L1212
-1218 : 03                       inc     bc
-1219 : 57                       ld      d,a
-121A : 2A C3 38                 ld      hl,(TENP3)
-121D : 5E                       ld      e,(hl)
-121E : EB                       ex      de,hl
-121F : 29                       add     hl,hl
-1220 : 09                       add     hl,bc
-1221 : EB                       ex      de,hl
-1222 : 2B                       dec     hl
-1223 : 2B                       dec     hl
-1224 : 73                       ld      (hl),e
+1215 : E7                       rst     COMPAR          ;[M80] BACK AT THE BEGINNING?
+1216 : 20 FA                    jr      nz,ZERITA       ;[M80] NO, ZERO MORE
+1218 : 03                       inc     bc              ;(M80) ADD ONE TO INCLUDE BYTE FOR NUMBER OF DIMENSIONS
+1219 : 57                       ld      d,a             ;[M80[ [D]=ZERO
+121A : 2A C3 38                 ld      hl,(TENP3)      ;[M80[ GET A POINTER AT THE NUMBER OF DIMENSIONS
+121D : 5E                       ld      e,(hl)          ;[M80[ [E]=NUMBER OF DIMENSIONS
+121E : EB                       ex      de,hl           ;[M80[ [H,L]=NUMBER OF DIMENSIONS
+121F : 29                       add     hl,hl           ;[M80[ [H,L]=NUMBER OF DIMENSIONS TIMES TWO
+1220 : 09                       add     hl,bc           ;[M80[ ADD ON THE SIZE TO GET THE TOTAL NUMBER OF BYTES USED
+1221 : EB                       ex      de,hl           ;[M80[ [D,E]=TOTAL SIZE
+1222 : 2B                       dec     hl              ;[M80[ BACK UP TO POINT TO LOCATION TO PUT
+1223 : 2B                       dec     hl              ;[M80[ THE SIZE OF THE ARRAY IN BYTES IN.
+1224 : 73                       ld      (hl),e          ;[M80[ PUT DOWN THE SIZE
 1225 : 23                       inc     hl
 1226 : 72                       ld      (hl),d
 1227 : 23                       inc     hl
-1228 : F1                       pop     af
-1229 : 38 21                    jr      c,L124C
-122B                    GETDEF:
-122B : 47                       ld      b,a
-122C : 4F                       ld      c,a
-122D : 7E                       ld      a,(hl)
-122E : 23                       inc     hl
-122F : 16 E1                    ld      d,0E1H
-1231 : 5E                       ld      e,(hl)
-1232 : 23                       inc     hl
+1228 : F1                       pop     af              ;[M80] GET BACK DIMFLG (CARRY) AND SET [A]=0
+1229 : 38 21                    jr      c,FINNOW
+
+                        ;[M80] AT THIS POINT [H,L] POINTS BEYOND THE SIZE TO THE NUMBER OF DIMENSIONS
+                        ;[M80] STRATEGY:
+                        ;[M80]	NUMDIM=NUMBER OF DIMENSIONS
+                        ;[M80]	CURTOL=0
+                        ;[M80] INLPNM:GET A NEW INDICE
+                        ;[M80]	POP NEW MAX INTO CURMAX
+                        ;[M80]	MAKE SURE INDICE IS NOT TOO BIG
+                        ;[M80]	MUTLIPLY CURTOL BY CURMAX
+                        ;[M80]	ADD INDICE TO CURTOL
+                        ;[M80]	NUMDIM=NUMDIM-1
+                        ;[M80]	JNZ	INLPNM
+                        ;[M80]	USE CURTOL*4 (VALTYP FOR EXTENDED) AS OFFSET
+                        ;
+122B : 47         [M80] GETDEF: ld      b,a             ;[M80] [B,C]=CURTOL=ZERO
+122C : 4F                       ld      c,a             
+122D : 7E                       ld      a,(hl)          ;[M80] [A]=NUMBER OF DIMENSIONS
+122E : 23                       inc     hl              ;[M80] POINT PAST THE NUMBER OF DIMENSIONS
+122F : 16                       byte    $16             ;[M80] "LD D," AROUND THE NEXT BYTE
+1230 : E1         [M80] INLPNM: pop     hl              ;[M80] [H,L]= POINTER INTO VARIABLE ENTRY
+1231 : 5E                       ld      e,(hl)          ;[M80] [D,E]=MAXIMUM FOR THE CURRENT INDICE
+1232 : 23                       inc     hl              
 1233 : 56                       ld      d,(hl)
-1234 : 23                       inc     hl
-1235 : E3                       ex      (sp),hl
-1236 : F5                       push    af
-1237 : E7                       rst     COMPAR
-1238 : D2 CD 11                 jp      nc,BSERR
-123B : E5                       push    hl
-123C : CD CA 15                 call    UMULT
-123F : D1                       pop     de
-1240 : 19                       add     hl,de
-1241 : F1                       pop     af
-1242 : 3D                       dec     a
-1243 : 44                       ld      b,h
+1234 : 23                       inc     hl              ;[M80] [H,L]=CURRENT INDICE
+1235 : E3                       ex      (sp),hl         ;[M80] POINTER INTO THE VARIABLE GOES ON THE STACK
+1236 : F5                       push    af              ;[M80] SAVE THE NUMBER OF DIMENSIONS
+1237 : E7                       rst     COMPAR          ;[M80] SEE IF THE CURRENT INDICE IS TOO BIG
+1238 : D2 CD 11                 jp      nc,BSERR        ;[M80] IF SO "BAD SUBSCRIPT" ERROR
+123B : E5                       push    hl              
+123C : CD CA 15                 call    UMULT           ;[M80] CURTOL=CURTOL*CURRENT MAXIMUM
+123F : D1                       pop     de              
+1240 : 19                       add     hl,de           ;[M80] ADD THE INDICE TO CURTOL
+1241 : F1                       pop     af              ;[M80] GET THE NUMBER OF DIMENSIONS IN [A]
+1242 : 3D                       dec     a               ;[M80] SEE IF ALL THE INDICES HAVE BEEN PROCESSED
+1243 : 44                       ld      b,h             ;[M80] [B,C]=CURTOL IN CASE WE LOOP BACK
 1244 : 4D                       ld      c,l
-1245 : 20 E9                    jr      nz,L1230
-1247 : 29                       add     hl,hl
-1248 : 29                       add     hl,hl
-1249 : C1                       pop     bc
-124A : 09                       add     hl,bc
-124B : EB                       ex      de,hl
-124C                    L124C:
-124C : 2A D0 38                 ld      hl,(TENP2)
+1245 : 20 E9                    jr      nz,INLPNM       ;[M80] PROCESS THE REST OF THE INDICES
+1247 : 29                       add     hl,hl           ;[M80] MULTIPLY BY TWO
+1248 : 29                       add     hl,hl           ;[M80] NOW MULTIPLIED BY FOUR
+1249 : C1         {M80} DONMUL: pop     bc              ;[M80] POP OFF THE ADDRESS OF WHERE THE VALUES BEGIN
+124A : 09                       add     hl,bc           ;[M80] ADD IT ONTO CURTOL TO GET PLACE VALUE IS STORED
+124B : EB                       ex      de,hl           ;[M80] RETURN THE POINTER IN [D,E]
+124C : 2A D0 38   (M80) FINNOW: ld      hl,(TENP2)      ;[M80] REGET THE TEXT POINTER
 124F : C9                       ret
                         ;
 1250                    L1250:
@@ -5751,7 +5785,7 @@
 1D63 : A2                       and     d
 1D64 : C0                       ret     nz
 1D65 : 73                       ld      (hl),e
-1D66 : CD A9 0B                 call    L0BA9
+1D66 : CD A9 0B                 call    REASON
 1D69 : 7E                       ld      a,(hl)
 1D6A : B7                       or      a
 1D6B : 23                       inc     hl
