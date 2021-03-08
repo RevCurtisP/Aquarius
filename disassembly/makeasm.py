@@ -92,8 +92,6 @@ def makeasm(iname, oname):
 
     if line[:12] == "        .end": break
   
-  print(eqlabels)
-  
   ofile.close()
   ifile.close()
 
