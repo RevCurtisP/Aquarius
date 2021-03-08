@@ -3717,12 +3717,71 @@
 124B : EB                       ex      de,hl           ;[M80] RETURN THE POINTER IN [D,E]
 124C : 2A D0 38   (M80) FINNOW: ld      hl,(TENP2)      ;[M80] REGET THE TEXT POINTER
 124F : C9                       ret
-                        ;
-1250                    L1250:
-1250 : 21 57 17                 ld      hl,FHALF
-1253                    FADDS:
-1253 : CD 31 15                 call    MOVRM
-1256 : 18 09                    jr      FADD
+
+1250                  + ;[M80] MATHPK FOR BASIC MCS 8080  GATES/ALLEN/DAVIDOFF
+1250                  | ;
+1250                  | ;[M80] EXTERNAL LOCATIONS USED BY THE MATH-PACKAGE
+1250                  | ;
+1250                  | ;[M80] THE FLOATING ACCUMULATOR
+1250                  | ;(M80) FACLO:   [LOW ORDER OF MANTISSA (LO)]
+1250                  | ;(M80) FACMO:   [MIDDLE ORDER OF MANTISSA (MO)]
+1250                  | ;(M80) FACHO:   [HIGH ORDER OF MANTISSA (HO)]
+1250                  | ;(M80) FAC:     [EXPONENT]
+1250                  | ;(M80)          [TEMPORARY COMPLEMENT OF SIGN IN MSB]
+1250                  | ;(M80] ARGLO:	        [LOCATION OF SECOND ARGUMENT]
+1250                  | ;(M80] ARG:	
+1250                  | ;(M80] FBUFFR:	BUFFER FOR FOUT
+1250                  | ;[M80]
+1250                  | ;[M80] THE FLOATING POINT FORMAT IS AS FOLLOWS:
+1250                  | ;[M80]
+1250                  | ;[M80] THE SIGN IS THE FIRST BIT OF THE MANTISSA
+1250                  | ;[M80] THE MANTISSA IS 24 BITS LONG
+1250                  | ;[M80] THE BINARY POINT IS TO THE LEFT OF THE MSB
+1250                  | ;[M80] NUMBER = MANTISSA * 2 ^ EXPONENT
+1250                  | ;[M80] THE MANTISSA IS POSITIVE, WITH A ONE ASSUMED TO BE WHERE THE SIGN BIT IS
+1250                  | ;[M80] THE SIGN OF THE EXPONENT IS THE FIRST BIT OF THE EXPONENT
+1250                  | ;[M80] THE EXPONENT IS STORED IN EXCESS 200 I.E. WITH A BIAS OF 200
+1250                  | ;[M80] SO, THE EXPONENT IS A SIGNED 8-BIT NUMBER WITH 200 ADDED TO IT
+1250                  | ;[M80] AN EXPONENT OF ZERO MEANS THE NUMBER IS ZERO, THE OTHER BYTES ARE IGNORED
+1250                  | ;[M80] TO KEEP THE SAME NUMBER IN THE FAC WHILE SHIFTING:
+1250                  | ;[M80] 	TO SHIFT RIGHT,	EXP:=EXP+1
+1250                  | ;[M80] 	TO SHIFT LEFT,	EXP:=EXP-1
+1250                  | ;[M80]
+1250                  | ;[M80] SO, IN MEMORY THE NUMBER LOOKS LIKE THIS:
+1250                  | ;[M80] 	[BITS 17-24 OF THE MANTISSA]
+1250                  | ;[M80] 	[BITS 9-16 OF THE MANTISSA]
+1250                  | ;[M80] 	[THE SIGN IN BIT 7, BITS 2-8 OF THE MANTISSA ARE IN BITS 6-0]
+1250                  | ;[M80] 	[THE EXPONENT AS A SIGNED NUMBER + 200]
+1250                  | ;[M80] (REMEMBER THAT BIT 1 OF THE MANTISSA IS ALWAYS A ONE)
+1250                  | ;[M80]
+1250                  | ;[M80] ARITHMETIC ROUTINE CALLING CONVENTIONS:
+1250                  | ;[M80]
+1250                  | ;[M80] FOR ONE ARGUMENT FUNCTIONS:
+1250                  | ;[M80] 	THE ARGUMENT IS IN THE FAC, THE RESULT IS LEFT IN THE FAC
+1250                  | ;[M80] FOR TWO ARGUMENT OPERATIONS:
+1250                  | ;[M80] 	THE FIRST ARGUMENT IS IN B,C,D,E I.E. THE "REGISTERS"
+1250                  | ;[M80] 	THE SECOND ARGUMENT IS IN THE FAC
+1250                  | ;[M80] 	THE RESULT IS LEFT IN THE FAC
+1250                  | ;[M80] 
+1250                  | ;[M80] THE "S" ENTRY POINTS TO THE TWO ARGUMENT OPERATIONS HAVE (HL) POINTING TO
+1250                  | ;[M80] THE FIRST ARGUMENT INSTEAD OF THE FIRST ARGUMENT BEING IN THE REGISTERS.
+1250                  | ;[M80] MOVRM IS CALLED TO GET THE ARGUMENT IN THE REGISTERS.
+1250                  | ;[M80] THE "T" ENTRY POINTS ASSUME THE FIRST ARGUMENT IS ON THE STACK.
+1250                  | ;[M80] POPR IS USED TO GET THE ARGUMENT IN THE REGISTERS.
+1250                  | ;[M80] NOTE: THE "T" ENTRY POINTS SHOULD ALWAYS BE JUMPED TO AND NEVER CALLED
+1250                  | ;[M80] BECAUSE THE RETURN ADDRESS ON THE STACK WILL BE CONFUSED WITH THE NUMBER.
+1250                  | ;[M80] 
+1250                  | ;[M80] ON THE STACK, THE TWO LO'S ARE PUSHED ON FIRST AND THEN THE HO AND SIGN.
+1250                  | ;[M80] THIS IS DONE SO IF A NUMBER IS STORED IN MEMORY, IT CAN BE PUSHED ON THE
+1250                  | ;[M80] STACK WITH TWO PUSHM'S.  THE LOWER BYTE OF EACH PART IS IN THE LOWER
+1250                  | ;[M80] MEMORY ADDRESS SO WHEN THE NUMBER IS POPPED INTO THE REGISTERS, THE HIGHER
+1250                  | ;[M80] ORDER BYTE WILL BE IN THE HIGHER ORDER REGISTER OF THE REGISTER PAIR, I.E.
+1250                  | ;[M80] THE HIGHER ORDER BYTE WILL BE POPPED INTO B, D OR H.
+
+1250                    ;[M80] FLOATING POINT ADDITION AND SUBTRACTION                    
+1250 : 21 57 17   [M80] FADDH:  ld      hl,FHALF        ;[M80] ENTRY TO ADD 1/2
+1253 : CD 31 15   [M80] FADDS:  call    MOVRM           ;[M80] GET ARGUMENT INTO THE REGISTERS
+1256 : 18 09                    jr      FADD            ;[M80] DO THE ADDITION
 
 1258 :                  ;[M80] SUBTRACTION	FAC:=ARG-FAC
 1258 : CD 31 15   [M80] FSUBS:  call    MOVRM           ;[M80] ENTRY IF POINTER TO ARG IS IN (HL)
@@ -4627,7 +4686,7 @@
 16B5 : F5                       push    af
 16B6 : CD 48 17                 call    L1748
 16B9                    L16B9:
-16B9 : CD 50 12                 call    L1250
+16B9 : CD 50 12                 call    FADDH
 16BC : 3C                       inc     a
 16BD : CD 86 15                 call    QINT
 16C0 : CD 23 15                 call    MOVFR
