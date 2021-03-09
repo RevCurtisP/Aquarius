@@ -56,10 +56,10 @@
                         X380C   equ     $380C   ;    
                         X380D   equ     $380D   ;    
                         ;       equ              
-                        X3811   equ     $3811   ;    
-                        X3815   equ     $3815   ;    
-                        X3819   equ     $3819   ;    
-                        X381C   equ     $381C   ;    
+                        FDIVC   equ     $3810   ;    
+                        FDIVB   equ     $3814   ;    
+                        FDIVA   equ     $3818   ;    
+                        FDIVG   equ     $381B   ;    
                         ;               $381E   ;[M80]STORAGE FOR RND
                   [M80] RNDCNT  equ     $381F   ;
                   [M80] RNDX    equ     $3820   ;[M80] LAST RANDOM NUMBER GENERATED, BETWEEN 0 AND 1
@@ -107,8 +107,8 @@
                         FACMO   equ     $38E5   ;[M80] MIDDLE ORDER OF MANTISSA
                         FACHO   equ     $38E6   ;[M80] HIGH ORDER OF MANTISSA
                         FAC     equ     $38E7   ;[M80] EXPONENT
-                        X38F6   equ     $38F6   ;    
-                        X38F7   equ     $38F7   ;    
+                        FMULTA  equ     $38F5   ;    
+                        FMULTB  equ     $38F6   ;    
                         SAVSTK  equ     $38F9   ;
                         X3900   equ     $3900   ;    
                         X3B0D   equ     $3B0D   ;    
@@ -130,7 +130,6 @@
                         REASON  equ     $0BA9
                         L0C20   equ     $0C20
                         L0C26   equ     $0C26
-                        L146A   equ     $146A
                         L184F   equ     $184F
                         L1A64   equ     $1A64
                         L1B10   equ     $1B10
@@ -139,7 +138,6 @@
                         L2010   equ     $2010
                         X2157   equ     $2157   
                         X3177   equ     $3177   
-                        L3810   equ     $3810
                         L92C3   equ     $92C3
                         LCA19   equ     $CA19
                         LD698   equ     $D698
@@ -471,18 +469,18 @@
 0191 : 20                       byte    ' '             ;;Character under Cursor
 0192 : 00                       byte    0               ;;Last key scan code
 0193 : 00                       byte    0               ;;Key debounce count
-0194 : D6 00                    sub     $00             ;;$3810
-0196 : 6F                       ld      l,a             ;;$3812
-0197 : 7C                       ld      a,h             ;;$3813
-0198 : DE 00                    sbc     a,00            ;;$3814
-019A : 67                       ld      h,a             ;;$3816
-019B : 78                       ld      a,b             ;;$3817
-019C : DE 00                    sbc     a,00            ;;$3818
-019E : 47                       ld      b,a             ;;$381A
-019F : 3E 00                    ld      a,000H          ;;$381B
-01A1 : C9                       ret                     ;;$381D
-01A2 : 00                       byte    0               ;;$381E
-01A3 : 00                       byte    0               ;;RNDCNT
+0194 : D6 00                    sub     $00             ;3810 FDIVC [M80] SAVE LO'S OF NUMBER
+0196 : 6F                       ld      l,a             ;3812       [M80] SAVE HO OF NUMBER
+0197 : 7C                       ld      a,h             ;3813       [M80] SUBTRACT NUMBER THAT WAS IN FAC
+0198 : DE 00                    sbc     a,00            ;3814 FDIVB [M80] SUBTRACT LO
+019A : 67                       ld      h,a             ;3816       [M80] SAVE IT
+019B : 78                       ld      a,b             ;3817       [M80] SUBTRACT MIDDLE ORDER
+019C : DE 00                    sbc     a,00            ;3818 FDIVA    
+019E : 47                       ld      b,a             ;381A          
+019F : 3E 00                    ld      a,0             ;381B FDIVG [M80] SUBTRACT HO
+01A1 : C9                       ret                     ;381C          
+01A2 : 00                       byte    0               ;          
+01A3 : 00                       byte    0               ;;RNDCN    GET HIGHEST ORDER
 01A4 : 00 35 4A CA              byte    $00,$35,$4A,$CA ;;RNDX
 01A8 : 99                       byte    $99             ;;$3824
 01A9 : 39                       byte    $39             ;;$3825
@@ -3331,7 +3329,7 @@
                       | ;[M80] AND THIS IS WHY [MEMSIZ] CAN'T BE USED TO STORE STRING DATA 
                       | ;[M80] BECAUSE WHAT IF THE USER TOOK VAL OFF THAT HIGH STRING
 1084 : CD F7 0F   [M80] VAL:    call    LEN1            ;[M80] DO SETUP, SET RESULT=REAL
-1087 : CA C3 12                 jp      z,L12C3        ;[M80] MAKE SURE TYPE SET UP OK IN EXTENDED
+1087 : CA C3 12                 jp      z,ZERO        ;[M80] MAKE SURE TYPE SET UP OK IN EXTENDED
 108A : 5F                       ld      e,a             ;[M80] GET LENGTH OF STR
 108B : 23                       inc     hl              ;[M80] TO HANDLE THE FACT THE IF
 108C : 23                       inc     hl
@@ -3791,82 +3789,111 @@
 125E : CD 0B 15   [M80] FSUB:   call    NEG             ;[M80] NEGATE SECOND ARGUMENT
 
 1261 :                  ;[M80] ADDITION	FAC:=ARG+FAC
-1261 : 78         [M80] FADD:   ld      a,b
-1262 : B7                       or      a
-1263 : C8                       ret     z
-1264 : 3A E7 38                 ld      a,(FAC)
-1267 : B7                       or      a
-1268 : CA 23 15                 jp      z,MOVFR
-126B : 90                       sub     b
-126C : 30 0C                    jr      nc,L127A
-126E : 2F                       cpl
-126F : 3C                       inc     a
-1270 : EB                       ex      de,hl
-1271 : CD 13 15                 call    PUSHF
-1274 : EB                       ex      de,hl
-1275 : CD 23 15                 call    MOVFR
+1261 : 78         [M80] FADD:   ld      a,b             ;[M80] CHECK IF FIRST ARGUMENT IS ZERO    
+1262 : B7                       or      a               ;[M80] GET EXPONENT
+1263 : C8                       ret     z               ;[M80] IT IS, RESULT IS NUMBER IN FAC
+1264 : 3A E7 38                 ld      a,(FAC)         ;[M80] GET EXPONENT
+1267 : B7                       or      a               ;[M80] SEE IF THE NUMBER IS ZERO
+1268 : CA 23 15                 jp      z,MOVFR         ;[M80] IT IS, ANSWER IS IN REGISTERS
+
+                      + ;;Align Numbers
+                      | ;[M80] WE WANT TO GET THE SMALLER NUMBER IN THE REGISTERS SO WE CAN SHIFT IT RIGHT
+                      | ;[M80] AND ALIGN THE BINARY POINTS OF THE TWO NUMBERS.  THEN WE CAN JUST ADD OR
+                      | ;[M80] SUBTRACT THEM (DEPENDING ON THEIR SIGNS) BYTEWISE.
+126B : 90                       sub     b               ;[M80] CHECK RELATIVE SIZES
+126C : 30 0C                    jr      nc,FADD1        ;[M80] IS FAC SMALLER?
+126E : 2F                       cpl                     ;[M80] YES, NEGATE SHIFT COUNT
+126F : 3C                       inc     a               
+1270 : EB                       ex      de,hl           ;[M80] SWITCH FAC AND REGISTERS, SAVE (DE)
+1271 : CD 13 15                 call    PUSHF           ;[M80] PUT FAC ON STACK
+1274 : EB                       ex      de,hl           ;[M80] GET (DE) BACK WHERE IT BELONGS
+1275 : CD 23 15                 call    MOVFR           ;[M80] PUT REGISTERS IN THE FAC
 1278 : C1                       pop     bc
-1279 : D1                       pop     de
-127A                    L127A:
-127A : FE 19                    cp      019H
-127C : D0                       ret     nc
-127D : F5                       push    af
-127E : CD 46 15                 call    UNPACK
-1281 : 67                       ld      h,a
-1282 : F1                       pop     af
-1283 : CD 30 13                 call    SHIFTR
-1286 : 7C                       ld      a,h
-1287 : B7                       or      a
-1288 : 21 E4 38                 ld      hl,FACLO
-128B : F2 9F 12                 jp      p,L129F
-128E : CD 10 13                 call    L1310
-1291 : 30 5E                    jr      nc,L12F1
-1293 : 23                       inc     hl
-1294 : 34                       inc     (hl)
+1279 : D1                       pop     de              ;[M80] GET THE OLD FAC IN THE REGISTERS
+127A                    
+127A : FE 19      [M80] FADD1:  cp      25              ;ARE WE WITHIN 24 BITS?
+127C : D0                       ret     nc              
+127D : F5                       push    af              ;SAVE SHIFT COUNT
+127E : CD 46 15                 call    UNPACK          ;UNPACK THE NUMBERS
+1281 : 67                       ld      h,a             ;SAVE SUBTRACTION FLAG
+1282 : F1                       pop     af              ;GET SHIFT COUNT BACK
+1283 : CD 30 13                 call    SHIFTR          ;SHIFT REGISTERS RIGHT THE RIGHT AMOUNT
+1286
+1286                  + ;;Add or Subtract Numbers
+1286                  | ;[M80] IF THE NUMBERS HAVE THE SAME SIGN, THEN WE ADD THEM.  IF THE SIGNS ARE
+1286                  | ;[M80] DIFFERENT, THEN WE HAVE TO SUBTRACT THEM.  WE HAVE TO DO THIS BECAUSE THE      
+1286                  | ;[M80] MANTISSAS ARE POSITIVE.  JUDGING BY THE EXPONENTS, THE LARGER NUMBER IS IN
+1286                  | ;[M80] THE FAC, SO IF WE SUBTRACT, THE SIGN OF THE RESULT SHOULD BE THE SIGN OF THE
+1286                  | ;[M80] FAC; HOWEVER, IF THE EXPONENTS ARE THE SAME, THE NUMBER IN THE REGISTERS
+1286                  | ;[M80] COULD BE BIGGER, SO AFTER WE SUBTRACT THEM, WE HAVE TO CHECK IF THE RESULT
+1286                  | ;[M80] WAS NEGATIVE.  IF IT WAS, WE NEGATE THE NUMBER IN THE REGISTERS AND
+1286                  | ;[M80] COMPLEMENT THE SIGN OF THE FAC.  (HERE THE FAC IS UNPACKED)
+1286                  | ;[M80] IF WE HAVE TO ADD THE NUMBERS, THE SIGN OF THE RESULT IS THE SIGN OF THE
+1286                  | ;[M80] FAC.  SO, IN EITHER CASE, WHEN WE ARE ALL DONE, THE SIGN OF THE RESULT
+1286                  | ;[M80] WILL BE THE SIGN OF THE FAC.
+1286 : 7C                       ld      a,h             ;[M80] GET SUBTRACTION FLAG
+1287 : B7                       or      a               
+1288 : 21 E4 38                 ld      hl,FACLO        ;[M80] SET POINTER TO LO'S
+128B : F2 9F 12                 jp      p,FADD3         ;[M80] SUBTRACT IF THE SIGNS WERE DIFFERENT
+128E : CD 10 13                 call    FADDA           ;[M80] ADD THE NUMBERS
+1291 : 30 5E                    jr      nc,ROUND        ;[M80] ROUND RESULT IF THERE WAS NO OVERFLOW
+1293 : 23                       inc     hl              ;[M80] THERE WAS OVERFLOW
+1294 : 34                       inc     (hl)            ;[M80] INCREMENT EXPONENT
 1295 : CA D3 03                 jp      z,OVERR
-1298 : 2E 01                    ld      l,001H
-129A : CD 52 13                 call    L1352
-129D : 18 52                    jr      L12F1
-                                ;
-129F                    L129F:
-129F : AF                       xor     a
-12A0 : 90                       sub     b
-12A1 : 47                       ld      b,a
-12A2 : 7E                       ld      a,(hl)
-12A3 : 9B                       sbc     a,e
-12A4 : 5F                       ld      e,a
-12A5 : 23                       inc     hl
-12A6 : 7E                       ld      a,(hl)
-12A7 : 9A                       sbc     a,d
-12A8 : 57                       ld      d,a
-12A9 : 23                       inc     hl
-12AA : 7E                       ld      a,(hl)
+1298 : 2E 01                    ld      l,1             ;[M80] SHIFT RESULT RIGHT ONE, SHIFT CARRY IN
+129A : CD 52 13                 call    SHRADD
+129D : 18 52                    jr      ROUND           ;[M80] ROUND RESULT AND WE ARE DONE
+129F                    
+129F                    ;[M80] HERE TO SUBTRACT C,D,E,B FROM ((HL)+0,1,2),0
+129F : AF         [M80] FADD3:  xor     a               ;[M80] SUBTRACT NUMBERS, NEGATE UNDERFLOW BYTE
+12A0 : 90                       sub     b               
+12A1 : 47                       ld      b,a             ;[M80] SAVE IT
+12A2 : 7E                       ld      a,(hl)          ;[M80] SUBTRACT LOW ORDERS
+12A3 : 9B                       sbc     a,e             
+12A4 : 5F                       ld      e,a             
+12A5 : 23                       inc     hl              ;[M80] UPDATE POINTER TO NEXT BYTE
+12A6 : 7E                       ld      a,(hl)          ;[M80] SUBTRACT MIDDLE ORDERS
+12A7 : 9A                       sbc     a,d             
+12A8 : 57                       ld      d,a             
+12A9 : 23                       inc     hl              ;[M80] UPDATE POINTER TO HIGH ORDERS
+12AA : 7E                       ld      a,(hl)          ;[M80] SUBTRACT HIGH ORDERS
 12AB : 99                       sbc     a,c
 12AC : 4F                       ld      c,a
-12AD                    FADFLT:
-12AD : DC 1C 13                 call    c,NEGR
-12B0                    NORMAL:
-12B0 : 68                       ld      l,b
-12B1 : 63                       ld      h,e
-12B2 : AF                       xor     a
-12B3                    L12B3:
-12B3 : 47                       ld      b,a
-12B4 : 79                       ld      a,c
-12B5 : B7                       or      a
-12B6 : 20 27                    jr      nz,L12DF
-12B8 : 4A                       ld      c,d
-12B9 : 54                       ld      d,h
-12BA : 65                       ld      h,l
-12BB : 6F                       ld      l,a
-12BC : 78                       ld      a,b
-12BD : D6 08                    sub     008H
-12BF : FE E0                    cp      0E0H
-12C1 : 20 F0                    jr      nz,L12B3
-12C3                    L12C3:
-12C3 : AF                       xor     a
-12C4                    ZERO0:
-12C4 : 32 E7 38                 ld      (FAC),a
-12C7 : C9                       ret
+12AD
+12AD                    ;[M80] BECAUSE WE WANT A POSITIVE MANTISSA, CHECK IF WE HAVE TO NEGATE THE NUMBER
+12AD : DC 1C 13   [M80] FADFLT: call    c,NEGR
+
+12B0                  + ;NORMALIZE C,D,E,B
+12B0                  | ;ALTERS A,B,C,D,E,H,L
+12B0                  | ;HERE WE SHIFT THE MANTISSA LEFT UNTIL THE MSB IS A ONE.
+12B0                  | ;EXCEPT IN 4K, THE IDEA IS TO SHIFT LEFT BY 8 AS MANY TIMES AS
+12B0                  | ;POSSIBLE.
+12B0                  | ;
+12B0 : 68         [M80] NORMAL: ld      l,b             ;[M80] PUT LOWEST 2 BYTES IN (HL)
+12B1 : 63                       ld      h,e             
+12B2 : AF                       xor     a               ;[M80] ZERO SHIFT COUNT
+12B3 : 47         (M80) NORM1:  ld      b,a             ;[M80] SAVE SHIFT COUNT
+12B4 : 79                       ld      a,c             ;[M80] DO WE HAVE 1 BYTE OF ZEROS
+12B5 : B7                       or      a               
+12B6 : 20 27                    jr      nz,NORM3        ;[M80] NO, SHIFT ONE PLACE AT A TIME
+12B8                  - ;[M80] THIS LOOP SPEEDS THINGS UP BY SHIFTING 8 PLACES AT ONE TIME
+12B8 : 4A                       ld      c,d             ;[M80] YES, SHIFT OVER 1 BYTE
+12B9 : 54                       ld      d,h             
+12BA : 65                       ld      h,l             
+12BB : 6F                       ld      l,a             ;SHIFT IN 8 ZEROS FOR THE LOW ORDER
+12BC : 78                       ld      a,b             ;UPDATE SHIFT COUNT
+12BD : D6 08                    sub     8            
+12BF : FE E0                    cp      0E0H            ;DID WE SHIFT IN 4 BYTES OF ZEROS?
+12C1 : 20 F0                    jr      nz,NORM1        ;NO, TRY TO SHIFT OVER 8 MORE
+12C3  
+12C3                  + ;[M80] ZERO FAC
+12C3                  | ;[M80] ALTERS A ONLY
+12C3                  | ;[M80] EXITS WITH A=0
+12C3                  | ;[M80] BY OUR FLOATING POINT FORMAT, THE NUMBER IS ZERO IF THE EXPONENT IS ZERO
+12C3                  | ;
+12C3 : AF               ZERO:   xor     a               ;[M80] ZERO A
+12C4 : 32 E7 38         ZERO0:  ld      (FAC),a         ;[M80] ZERO THE FAC'S EXPONENT, ENTRY IF A=0
+12C7 : C9                       ret                     ;[M80] ALL DONE
                         ;
 12C8                    L12C8:
 12C8 : 7C                       ld      a,h
@@ -3892,32 +3919,36 @@
 12DC : 79                       ld      a,c
 12DD : 8F                       adc     a,a
 12DE : 4F                       ld      c,a
-12DF                    L12DF:
+12DF                    NORM3:
 12DF : F2 C8 12                 jp      p,L12C8
 12E2                    L12E2:
 12E2 : 78                       ld      a,b
 12E3 : 5C                       ld      e,h
 12E4 : 45                       ld      b,l
 12E5 : B7                       or      a
-12E6 : 28 09                    jr      z,L12F1
+12E6 : 28 09                    jr      z,ROUND
 12E8 : 21 E7 38                 ld      hl,FAC
 12EB : 86                       add     a,(hl)
 12EC : 77                       ld      (hl),a
-12ED : 30 D4                    jr      nc,L12C3
-12EF : 28 D2                    jr      z,L12C3
-12F1                    L12F1:
-12F1 : 78                       ld      a,b
-12F2                    L12F2:
-12F2 : 21 E7 38                 ld      hl,FAC
+12ED : 30 D4                    jr      nc,ZERO
+12EF : 28 D2                    jr      z,ZERO
+12F1                    
+12F1                  + ;[M80] ROUND RESULT IN C,D,E,B AND PUT NUMBER IN THE FAC
+12F1                  | ;[M80] ALTERS A,B,C,D,E,H,L
+12F1                  | ;[M80] WE ROUND C,D,E UP OR DOWN DEPENDING UPON THE MSB OF B
+12F1                  | ;
+12F1 : 78         [M80] ROUND:  ld      a,b             ;[M80] SEE IF WE SHOULD ROUND UP
+12F2 : 21 E7 38   [M80] ROUNDB: ld      hl,FAC          ;[M80] ENTRY FROM FDIV, GET POINTER TO EXPONENT
 12F5 : B7                       or      a
-12F6 : FC 03 13                 call    m,ROUNDA
-12F9 : 46                       ld      b,(hl)
-12FA : 23                       inc     hl
-12FB : 7E                       ld      a,(hl)
-12FC : E6 80                    and     080H
-12FE : A9                       xor     c
-12FF : 4F                       ld      c,a
-1300 : C3 23 15                 jp      MOVFR
+12F6 : FC 03 13                 call    m,ROUNDA        ;[M80] DO IT IF NECESSARY
+12F9 : 46                       ld      b,(hl)          ;[M80] PUT EXPONENT IN B
+12FA                  - ;[80] HERE WE PACK THE HO AND SIGN        
+12FA : 23                       inc     hl              ;[M80]  POINT TO SIGN
+12FB : 7E                       ld      a,(hl)          ;[M80]  GET SIGN
+12FC : E6 80                    and     080H            ;[M80]  GET RID OF UNWANTED BITS
+12FE : A9                       xor     c               ;[M80]  PACK SIGN AND HO
+12FF : 4F                       ld      c,a             ;[M80]  SAVE IT IN C
+1300 : C3 23 15                 jp      MOVFR           ;[M80]  SAVE NUMBER IN FAC
 
 1303                    ;[M80] SUBROUTNE FOR ROUND:  ADD ONE TO C,D,E                  
 1303 : 1C               ROUNDA: inc     e               ;[M80] ADD ONE TO THE LOW ORDER, ENTRY FROM QINT
@@ -3930,105 +3961,105 @@
 130B : 34                       inc     (hl)            ;[M80] UPDATE EXPONENT
 130C : C0                       ret     nz              ;[M80] RETURN IF IT DID NOT OVERFLOW
 130D : C3 D3 03                 jp      OVERR           ;[M80] OVERFLOW
-                        ;
-1310                    L1310:
-1310 : 7E                       ld      a,(hl)
-1311 : 83                       add     a,e
-1312 : 5F                       ld      e,a
-1313 : 23                       inc     hl
-1314 : 7E                       ld      a,(hl)
-1315 : 8A                       adc     a,d
-1316 : 57                       ld      d,a
-1317 : 23                       inc     hl
-1318 : 7E                       ld      a,(hl)
-1319 : 89                       adc     a,c
-131A : 4F                       ld      c,a
-131B : C9                       ret
-                        ;
-131C                    NEGR:
-131C : 21 E8 38                 ld      hl,038E8H
-131F : 7E                       ld      a,(hl)
-1320 : 2F                       cpl
-1321 : 77                       ld      (hl),a
-1322 : AF                       xor     a
-1323 : 6F                       ld      l,a
-1324 : 90                       sub     b
-1325 : 47                       ld      b,a
-1326 : 7D                       ld      a,l
-1327 : 9B                       sbc     a,e
-1328 : 5F                       ld      e,a
-1329 : 7D                       ld      a,l
-132A : 9A                       sbc     a,d
-132B : 57                       ld      d,a
-132C : 7D                       ld      a,l
-132D : 99                       sbc     a,c
-132E : 4F                       ld      c,a
-132F : C9                       ret
-                        ;
-1330                    SHIFTR:
-1330 : 06 00                    ld      b,000H
-1332                    L1332:
-1332 : D6 08                    sub     008H
-1334 : 38 07                    jr      c,L133D
-1336 : 43                       ld      b,e
-1337 : 5A                       ld      e,d
-1338 : 51                       ld      d,c
-1339 : 0E 00                    ld      c,000H
-133B : 18 F5                    jr      L1332
-                        ;
-133D                    L133D:
-133D : C6 09                    add     a,009H
-133F : 6F                       ld      l,a
-1340 : 7A                       ld      a,d
-1341 : B3                       or      e
-1342 : B0                       or      b
-1343 : 20 09                    jr      nz,L134E
-1345 : 79                       ld      a,c
-1346                    L1346:
-1346 : 2D                       dec     l
-1347 : C8                       ret     z
-1348 : 1F                       rra
-1349 : 4F                       ld      c,a
-134A : 30 FA                    jr      nc,L1346
-134C : 18 06                    jr      L1354
-                        ;
-134E                    L134E:
-134E : AF                       xor     a
-134F : 2D                       dec     l
-1350 : C8                       ret     z
-1351 : 79                       ld      a,c
-1352                    L1352:
-1352 : 1F                       rra
-1353 : 4F                       ld      c,a
-1354                    L1354:
-1354 : 7A                       ld      a,d
-1355 : 1F                       rra
-1356 : 57                       ld      d,a
-1357 : 7B                       ld      a,e
-1358 : 1F                       rra
-1359 : 5F                       ld      e,a
-135A : 78                       ld      a,b
-135B : 1F                       rra
-135C : 47                       ld      b,a
-135D : 18 EF                    jr      L134E
-                        ;
-135F : 00                       nop
-1360 : 00                       nop
-1361 : 00                       nop
-1362 : 81                       add     a,c
-
-1363 :                  ;CONSTANTS USED BY LOG 
-1363 : 04               LOGP:   byte    4                ;;HART 2524 COEFFICIENTS
-1364 : 9A F7 19 83              byte    $9A,$F7,$19,$83  ;4.8114746
-1368 : 24 63 43 83              byte    $24,$63,$43,$83  ;6.105852
-136C : 75 CD 8D 84              byte    $75,$CD,$8D,$84  ;-8.86266
-1370 : A9 7F 83 82              byte    $A9,$7F,$83,$82  ;-2.054667
-1374 : 04               LOGQ:   byte    4
-1375 : 00 00 00 81              byte    $00,$00,$00,$81  ;1.0
-1379 : E2 B0 4D 83              byte    $E2,$B0,$4D,$83  ;6.427842
-137D : 0A 72 11 83              byte    $0A,$72,$11,$83  ;4.545171
-1381 : F4 04 35 7F              byte    $F4,$04,$35,$7F  ;.3535534
-
+1310                    
+1310                  + ;[M80] ADD (HL)+2,1,0 TO C,D,E
+1310                  | ;[M80] THIS CODE IS USED BY FADD, FOUT
+1310 : 7E         [M80] FADDA:  ld      a,(hl)          ;[M80] GET LOWEST ORDER
+1311 : 83                       add     a,e             ;[M80] ADD IN OTHER LOWEST ORDER
+1312 : 5F                       ld      e,a             ;[M80] SAVE IT
+1313 : 23                       inc     hl              ;[M80] UPDATE POINTER TO NEXT BYTE
+1314 : 7E                       ld      a,(hl)          ;[M80] ADD MIDDLE ORDERS
+1315 : 8A                       adc     a,d             
+1316 : 57                       ld      d,a             
+1317 : 23                       inc     hl              ;[M80] UPDATE POINTER TO HIGH ORDER
+1318 : 7E                       ld      a,(hl)          ;[M80] ADD HIGH ORDERS
+1319 : 89                       adc     a,c             
+131A : 4F                       ld      c,a             
+131B : C9                       ret                     ;[M80] ALL DONE
+131C
+131C                  + ;[M80] NEGATE NUMBER IN C,D,E,B
+131C                  | ;[M80] THIS CODE IS USED BY FADD, QINT
+131C                  | ;[M80] ALTERS A,B,C,D,E,L
+131C                  | ;
+131C : 21 E8 38   [M80] NEGR:   ld      hl,FAC+1        ;[M80] NEGATE FAC
+131F : 7E                       ld      a,(hl)          ;[M80] GET SIGN
+1320 : 2F                       cpl                     ;[M80] COMPLEMENT IT
+1321 : 77                       ld      (hl),a          ;[M80] SAVE IT AGAIN
+1322 : AF                       xor     a               ;[M80] ZERO A
+1323 : 6F                       ld      l,a             ;[M80] SAVE ZERO IN L
+1324 : 90                       sub     b               ;[M80] NEGATE LOWEST ORDER
+1325 : 47                       ld      b,a             ;[M80] SAVE IT
+1326 : 7D                       ld      a,l             ;[M80] GET A ZERO
+1327 : 9B                       sbc     a,e             ;[M80] NEGATE NEXT HIGHEST ORDER
+1328 : 5F                       ld      e,a             ;[M80] SAVE IT
+1329 : 7D                       ld      a,l             ;[M80] GET A ZERO
+132A : 9A                       sbc     a,d             ;[M80] NEGATE NEXT HIGHEST ORDER
+132B : 57                       ld      d,a             ;[M80] SAVE IT
+132C : 7D                       ld      a,l             ;[M80] GET ZERO BACK
+132D : 99                       sbc     a,c             ;[M80] NEGATE HIGHEST ORDER
+132E : 4F                       ld      c,a             ;[M80] SAVE IT
+132F : C9                       ret                     ;[M80] ALL DONE
+1330                    
+1330                  + ;[M80] SHIFT C,D,E RIGHT
+1330                  | ;[M80] A = SHIFT COUNT
+1330                  | ;[M80] ALTERS A,B,C,D,E,L
+1330                  | ;[M80] THE IDEA (EXCEPT IN 4K) IS TO SHIFT RIGHT 8 PLACES AS MANY TIMES AS
+1330                  | ;[M80]  POSSIBLE
+1330                  | ;
+1330 : 06 00      [M80] SHIFTR: ld      b,0             ;[M80] ZERO OVERFLOW BYTE
+1332 : D6 08      (M80) SHFTR1: sub     8               ;[M80] CAN WE SHIFT IT 8 RIGHT?
+1334 : 38 07                    jr      c,SHFTR2        ;[M80] NO, SHIFT IT ONE PLACE AT A TIME
+1334                  - ;[M80] THIS LOOP SPEEDS THINGS UP BY SHIFTING 8 PLACES AT ONE TIME
+1336 : 43                       ld      b,e             ;[M80] SHIFT NUMBER 1 BYTE RIGHT
+1337 : 5A                       ld      e,d             
+1338 : 51                       ld      d,c             
+1339 : 0E 00                    ld      c,0             ;[M80 PUT 0 IN HO
+133B : 18 F5                    jr      SHFTR1          ;[M80 TRY TO SHIFT 8 RIGHT AGAIN
+133D : C6 09      (M80) SHFTR2: add     a,9             ;[M80 CORRECT SHIFT COUNT
+133F : 6F                       ld      l,a             ;[M80 SAVE SHIFT COUNT
+133D                  - ;[M80] TEST FOR CASE (VERY COMMON) WHERE SHIFTING SMALL INTEGER RIGHT.
+133D                  - ;[M80] THIS HAPPENS IN FOR LOOPS, ETC.
+1340 : 7A                       ld      a,d             ;[M80] SEE IF THREE LOWS ARE ZERO.
+1341 : B3                       or      e               
+1342 : B0                       or      b               
+1343 : 20 09                    jr      nz,SHFTR3       ;[M80] IF SO, DO USUAL.
+1345 : 79                       ld      a,c             ;[M80] GET HIGH BYTE TO SHIFT
+1346 : 2D         (M80) SHFTRF: dec     l               ;[M80] DONE SHIFTING?
+1347 : C8                       ret     z               ;[M80] YES, DONE
+1348 : 1F                       rra                     ;[M80] ROTATE ONE RIGHT
+1349 : 4F                       ld      c,a             ;[M80] SAVE RESULT
+134A : 30 FA                    jr      nc,SHFTRF       ;[M80] ZAP BACK AND DO NEXT ONE IF NONE
+134C : 18 06                    jr      SHFTC           ;[M80] CONTINUE SHIFTING
+134E : AF         (M80) SHFTR3: xor     a               ;[M80] CLEAR CARRY
+134F : 2D                       dec     l               ;[M80] ARE WE DONE SHIFTING?
+1350 : C8                       ret     z               ;[M80] RETURN IF WE ARE
+1351 : 79                       ld      a,c             ;[M80] GET HO
+1352 : 1F         [M80] SHRADD: rra                     ;[M80] ENTRY FROM FADD, SHIFT IT RIGHT             
+1353 : 4F                       ld      c,a             ;[M80] SAVE IT
+1354 : 7A         (M80) SHFTC:  ld      a,d             ;[M80] SHIFT NEXT BYTE RIGHT
+1355 : 1F                       rra                     
+1356 : 57                       ld      d,a             
+1357 : 7B                       ld      a,e             ;[M80] SHIFT LOW ORDER RIGHT
+1358 : 1F                       rra                     
+1359 : 5F                       ld      e,a             
+135A : 78                       ld      a,b             ;[M80] SHIFT OVERFLOW BYTE RIGHT
+135B : 1F                       rra                     
+135C : 47                       ld      b,a             
+135D : 18 EF                    jr      SHFTR3          ;[M80] SEE IF WE ARE DONE
+135F
+135F :                  ;[M80] CONSTANTS USED BY LOG 
+135F : 00 00 00 81(M80) FONE:   byte    $00,$00,$00,$81 ;1
+1363 : 04         [M80] LOGP:   byte    4                ;[M80] HART 2524 COEFFICIENTS
+1364 : 9A F7 19 83              byte    $9A,$F7,$19,$83  ;[M80] 4.8114746
+1368 : 24 63 43 83              byte    $24,$63,$43,$83  ;[M80] 6.105852
+136C : 75 CD 8D 84              byte    $75,$CD,$8D,$84  ;[M80] -8.86266
+1370 : A9 7F 83 82              byte    $A9,$7F,$83,$82  ;[M80] -2.054667
+1374 : 04         [M80] LOGQ:   byte    4
+1375 : 00 00 00 81              byte    $00,$00,$00,$81  ;[M80] 1.0
+1379 : E2 B0 4D 83              byte    $E2,$B0,$4D,$83  ;[M80] 6.427842
+137D : 0A 72 11 83              byte    $0A,$72,$11,$83  ;[M80] 4.545171
+1381 : F4 04 35 7F              byte    $F4,$04,$35,$7F  ;[M80] .3535534
+1385
 1385 :                + ;[M80] NATURAL LOG FUNCTION
 1385 :                | ;[M80] CALCULATION IS BY:
 1385 :                | ;[M80]  LN(F*2^N)=(N+LOG2(F))*LN(2)
@@ -4040,75 +4071,80 @@
 138D : 01 31 80                 ld      bc,$8031       
 1390 : 11 18 72                 ld      de,$7218        ;[M80] GET LN(2)
 1393 : 18 36                    jr      FMULT           ;[M80] COMPLETE LOG CALCULATION: USE HART 2524 CALCULATION
-
-1395 : CD 2E 15   [M80] LOG2:   call    MOVRF           ;MOVE FAC TO REGISTERS TOO
+1395
+1395                    ;[M80] USE HART 2524 CALCULATION
+1395 : CD 2E 15   [M80] LOG2:   call    MOVRF           ;[M80] MOVE FAC TO REGISTERS TOO
 1398 : 3E 80                    ld      a,080H          
-139A : 32 E7 38                 ld      (FAC),a         ;ZERO THE EXPONENT
-139D : A8                       xor     b               ;REMOVE 200 EXCESS FROM X
-139E : F5                       push    af              ;SAVE EXPONENT
-139F : CD 13 15                 call    PUSHF           ;SAVE THE FAC (X)
-13A2 : 21 63 13                 ld      hl,LOGP
-13A5 : CD 46 18                 call    POLY
-13A8 : C1                       pop     bc
-13A9 : E1                       pop     hl
-13AA : CD 13 15                 call    PUSHF
-13AD : EB                       ex      de,hl
-13AE : CD 23 15                 call    MOVFR
-13B1 : 21 74 13                 ld      hl,LOGQ
-13B4 : CD 46 18                 call    POLY
-13B7 : C1                       pop     bc
+139A : 32 E7 38                 ld      (FAC),a         ;[M80] ZERO THE EXPONENT
+139D : A8                       xor     b               ;[M80] REMOVE 200 EXCESS FROM X
+139E : F5                       push    af              ;[M80] SAVE EXPONENT
+139F : CD 13 15                 call    PUSHF           ;[M80] SAVE THE FAC (X)
+13A2 : 21 63 13                 ld      hl,LOGP         ;[M80] POINT TO P CONSTANTS
+13A5 : CD 46 18                 call    POLY            ;[M80] CALCULATE P(X)
+13A8 : C1                       pop     bc              ;[M80] FETCH X
+13A9 : E1                       pop     hl              ;[M80] PUSHF WOULD ALTER DE
+13AA : CD 13 15                 call    PUSHF           ;[M80] PUSH P(X) ON THE STACK
+13AD : EB                       ex      de,hl           ;[M80] GET LOW BYTES OF X TO (DE)
+13AE : CD 23 15                 call    MOVFR           ;[M80] AND MOVE TO FAC
+13B1 : 21 74 13                 ld      hl,LOGQ         ;[M80] POINT TO Q COEFFICIENTS
+13B4 : CD 46 18                 call    POLY            ;[M80] COMPUTE Q(X)
+13B7 : C1                       pop     bc              ;[M80] FETCH P(X) TO REGISTERS
 13B8 : D1                       pop     de
-13B9 : CD 2F 14                 call    FDIV
-13BC : F1                       pop     af
-13BD : CD 13 15                 call    PUSHF
-13C0 : CD F6 14                 call    FLOAT
+13B9 : CD 2F 14                 call    FDIV            ;[M80] CALCULATE P(X)/Q(X)
+13BC : F1                       pop     af              ;[M80] RE-FETCH EXPONENT
+13BD : CD 13 15                 call    PUSHF           ;[M80] SAVE EVALUATION
+13C0 : CD F6 14                 call    FLOAT           ;[M80] FLOAT THE EXPONENT
 13C3 : C1                       pop     bc
 13C4 : D1                       pop     de
-13C5 : C3 61 12                 jp      FADD
+13C5 : C3 61 12                 jp      FADD            ;[M80] GET EVAL. BACK
 
                         ;;***Unused code? 
                         ;;;IMULT in [M80] fell into here
 13C8 : 21                       byte    $21             ;;[LD HL.] to skip next two instructions
-13C9 : C1         [M80] FMULTT: pop     bc              ;[M80] GET FIRST ARGUMENT OFF STACK, ENTRY FROM POLYX
+13C9 : C1         (M80) FMULTT: pop     bc              ;[M80] GET FIRST ARGUMENT OFF STACK, ENTRY FROM POLYX
 13CA : D1                       pop     de              
-
-                        ;###[M80] FLOATING MULTIPLICATION AND DIVISION
-
-13CB                    ;[M80] MULTIPLICATION		FAC:=ARG*FAC
-13CB : EF         [M80] FMULT:  rst     FSIGN
-13CC : C8                       ret     z
-13CD : 2E 00                    ld      l,000H
-13CF : CD AC 14                 call    MULDIV
-13D2 : 79                       ld      a,c
-13D3 : 32 F6 38                 ld      (X38F6),a
-13D6 : EB                       ex      de,hl
-13D7 : 22 F7 38                 ld      (X38F7),hl
-13DA : 01 00 00                 ld      bc,00000H
+13CB
+13CB                  # ;[M80] FLOATING MULTIPLICATION AND DIVISION
+13CB
+13CB                  + ;[M80] MULTIPLICATION		FAC:=ARG*FAC
+13CB                  | ;[M80] ALTERS A,B,C,D,E,H,L
+13CB                  | ;
+13CB : EF         [M80] FMULT:  rst     FSIGN           ;[M80] CHECK IF FAC IS ZERO
+13CC : C8                       ret     z               ;[M80] IF IT IS, RESULT IS ZERO
+13CD : 2E 00                    ld      l,0             ;[M80] ADD THE TWO EXPONENTS, L IS A FLAG
+13CF : CD AC 14                 call    MULDIV          ;[M80] FIX UP THE EXPONENTS
+13D2                  - ;[M80] SAVE THE NUMBER IN THE REGISTERS SO WE CAN ADD IT FAST
+13D2 : 79                       ld      a,c             ;[M80] GET HO
+13D3 : 32 F6 38                 ld      (FMULTA+1),a    ;[M80] STORE HO OF REGISTERS
+13D6 : EB                       ex      de,hl           ;[M80] STORE THE TWO LO'S OF THE REGISTERS
+13D7 : 22 F7 38                 ld      (FMULTB+1),hl      
+13DA : 01 00 00                 ld      bc,0            ;[M80] ZERO THE PRODUCT REGISTERS
 13DD : 50                       ld      d,b
 13DE : 58                       ld      e,b
-13DF : 21 B0 12                 ld      hl,012B0H
-13E2 : E5                       push    hl
-13E3 : 21 EB 13                 ld      hl,013EBH
-13E6 : E5                       push    hl
-13E7 : E5                       push    hl
-13E8 : 21 E4 38                 ld      hl,FACLO
-13EB : 7E                       ld      a,(hl)
-13EC : 23                       inc     hl
+13DF : 21 B0 12                 ld      hl,NORMAL
+13E2 : E5                       push    hl              ;[M80]  ON THE STACK
+13E3 : 21 EB 13                 ld      hl,FMULT2       ;[M80] PUT FMULT2 ON THE STACK TWICE, SO AFTER
+13E6 : E5                       push    hl              ;[M80]  WE MULTIPLY BY THE LO BYTE, WE WILL
+13E7 : E5                       push    hl              ;[M80]  MULTIPLY BY THE MO AND HO
+13E8 : 21 E4 38                 ld      hl,FACLO        ;[M80] GET ADDRESS OF LO OF FAC
+13EB : 7E         (M80) FMULT2: ld      a,(hl)          ;[M80] GET BYTE TO MULTIPLY BY
+13EC : 23                       inc     hl              ;[M80] MOVE POINTER TO NEXT BYTE
 13ED : B7                       or      a
-13EE : 28 2C                    jr      z,L141C
-13F0 : E5                       push    hl
-13F1 : 2E 08                    ld      l,008H
+13EE : 28 2C                    jr      z,FMULT3         ;[M80] ARE WE MULTIPLYING BY ZERO?
+13F0 : E5                       push    hl              ;[M80] SAVE POINTER
+13F1 : 2E 08                    ld      l,8             ;[M80] SET UP A COUNT
+
 13F3                    L13F3:
 13F3 : 1F                       rra
 13F4 : 67                       ld      h,a
 13F5 : 79                       ld      a,c
 13F6 : 30 0B                    jr      nc,L1403
 13F8 : E5                       push    hl
-13F9 : 2A F7 38                 ld      hl,(X38F7)
+13F9 : 2A F7 38                 ld      hl,(FMULTB+1)
 13FC : 19                       add     hl,de
 13FD : EB                       ex      de,hl
 13FE : E1                       pop     hl
-13FF : 3A F6 38                 ld      a,(X38F6)
+13FF : 3A F6 38                 ld      a,(FMULTA+1)
 1402 : 89                       adc     a,c
 1403                    L1403:
 1403 : 1F                       rra
@@ -4131,27 +4167,26 @@
 1416 : 2D                       dec     l
 1417 : 7C                       ld      a,h
 1418 : 20 D9                    jr      nz,L13F3
-141A                    POPHRT:
-141A : E1                       pop     hl
-141B : C9                       ret
-                        ;
-141C                    L141C:
-141C : 43                       ld      b,e
+141A                    
+141A : E1         [M80] POPHRT: pop     hl              ;[M80] GET POINTER TO NUMBER TO MULTIPLY BY
+141B : C9                       ret                     ;[M80] ALL DONE
+141C : 43         [M80] FMULT3: ld      b,e             ;[M80] MULTIPLY BY ZERO: SHIFT EVERYTHING 8 RIGHT
 141D : 5A                       ld      e,d
 141E : 51                       ld      d,c
-141F : 4F                       ld      c,a
-1420 : C9                       ret
+141F : 4F                       ld      c,a             ;[M80] SHIFT IN 8 ZEROS ON THE LEFT
+1420 : C9                       ret                     ;[M80] ALL DONE
 
-1421              [M80] ;THIS SUBROUTINE DIVIDES BY TEN ONCE. IT IS USED BY FIN, FOUT
+1421                  + ;[M80]  DIVIDE FAC BY 10
+1421                  - ;[M80]  ALTERS A,B,C,D,E,H,L
 1421 : CD 13 15   [M80] DIV10:  call    PUSHF           ;[M80] WE HAVE TO DIVIDE -- SAVE COUNT
 1424 : 01 20 84                 ld      bc,$8420        ;[M80] 10.0
 1427 : 11 00 00                 ld      de,$0000        
 142A : CD 23 15                 call    MOVFR           ;[M80] MOVE TEN INTO THE FAC
-
 142D : C1         [M80] FDIVT:  pop     bc              ;[F80] GET NUMBER BACK IN REGISTERS
 142E : D1                       pop     de              ;[F80] FALL INTO DIVIDE AND WE ARE DONE
 
-142F                    ;DIVISION	FAC:=ARG/FAC
+142F                    ;[M80] DIVISION       FAC:=ARG/FAC
+142F                    ;[M80] ALTERS A,B,C,D,E,H,L
 142F : EF         [M80] FDIV:   rst     FSIGN           ;[M80] CHECK FOR DIVISION BY ZERO
 1430 : CA C7 03                 jp      z,DV0ERR        ;[M80] DON'T ALLOW DIVIDE BY ZERO
 1433 : 2E FF                    ld      l,255           ;[M80] SUBTRACT THE TWO EXPONENTS, L IS A FLAG
@@ -4160,59 +4195,81 @@
 1439 : CA D3 03                 jp      z,OVERR         ;[M80] OVERFLOW
 143C : 34                       inc     (hl)
 143D : CA D3 03                 jp      z,OVERR         ;[M80] OVERFLOW
-1440 : 2B                       dec     hl
-1441 : 7E                       ld      a,(hl)
-1442 : 32 19 38                 ld      (X3819),a
-1445 : 2B                       dec     hl
-1446 : 7E                       ld      a,(hl)
-1447 : 32 15 38                 ld      (X3815),a
-144A : 2B                       dec     hl
+1440                  - ;[M80] HERE WE SAVE THE FAC IN MEMORY SO WE CAN SUBTRACT IT FROM THE NUMBER
+1440                  - ;[M80] IN THE REGISTERS QUICKLY.
+1440 : 2B                       dec     hl              ;[M80] POINT TO HO
+1441 : 7E                       ld      a,(hl)          ;[M80] GET HO
+1442 : 32 19 38                 ld      (FDIVA+1),a       ;[M80] SAVE IT
+1445 : 2B                       dec     hl              ;[M80] SAVE MIDDLE ORDER
+1446 : 7E                       ld      a,(hl)          
+1447 : 32 15 38                 ld      (FDIVB+1),a       ;[M80] PUT IT WHERE NOTHING WILL HURT IT
+144A : 2B                       dec     hl              ;[M80] SAVE LO
 144B : 7E                       ld      a,(hl)
-144C : 32 11 38                 ld      (X3811),a
-144F : 41                       ld      b,c
-1450 : EB                       ex      de,hl
-1451 : AF                       xor     a
+144C : 32 11 38                 ld      (FDIVC+1),a
+144F                  - ;[M80] THE NUMERATOR WILL BE KEPT IN B,H,L.  THE QUOTIENT WILL BE FORMED IN C,D,E.
+144F                  | ;[M80] TO GET A BIT OF THE QUOTIENT, WE FIRST SAVE B,H,L ON THE STACK, THEN
+144F                  | ;[M80] SUBTRACT THE DENOMINATOR THAT WE SAVED IN MEMORY.  THE CARRY INDICATES
+144F                  | ;[M80] WHETHER OR NOT B,H,L WAS BIGGER THAN THE DENOMINATOR.  IF B,H,L WAS BIGGER,
+144F                  | ;[M80] THE NEXT BIT OF THE QUOTIENT IS A ONE.  TO GET THE OLD B,H,L OFF THE STACK,
+144F                  | ;[M80] WE POP THEM INTO THE PSW.  IF THE DENOMINATOR WAS BIGGER, THE NEXT BIT OF
+144F                  | ;[M80] THE QUOTIENT IS ZERO, AND WE GET THE OLD B,H,L BACK BY POPPING IT OFF THE
+144F                  | ;[M80] STACK.  WE HAVE TO KEEP AN EXTRA BIT OF THE QUOTIENT IN FDIVG+1 IN CASE THE
+144F                  | ;[M80] DENOMINATOR WAS BIGGER,  THEN B,H,L WILL GET SHIFTED LEFT.  IF THE MSB  OF
+144F                  | ;[M80] B WAS ONE, IT HAS TO BE STORED SOMEWHERE, SO WE STORE IT IN FDIVG+1.  THEN
+144F                  | ;[M80] THE NEXT TIME THROUGH THE LOOP B,H,L WILL LOOK BIGGER BECAUSE IT HAS AN
+144F                  | ;[M80] EXTRA HO BIT IN FDIVG+1. WE ARE DONE DIVIDING WHEN THE MSB OF C IS A ONE.
+144F                  | ;[M80] THIS OCCURS WHEN WE HAVE CALCULATED 24 BITS OF THE QUOTIENT.  WHEN WE JUMP
+144F                  | ;[M80] TO ROUND, THE 25TH BIT OF THE QUOTIENT DETERMINES WHETHER WE ROUND OR NOT.
+144F                  | ;[M80] IT IS IN THE MSB OF A.  IF INITIALLY THE DENOMINATOR IS BIGGER THAN THE
+144F                  | ;[M80] NUMERATOR, THE FIRST BIT OF THE QUOTIENT WILL BE ZERO.  THIS MEANS WE
+144F                  | ;[M80] WILL GO THROUGH THE DIVIDE LOOP 26 TIMES, SINCE IT STOPS ON THE 25TH BIT
+144F                  | ;[M80] AFTER THE FIRST NON-ZERO BIT OF THE QUOTIENT.  SO, THIS QUOTIENT WILL LOOK
+144F                  | ;[M80] SHIFTED LEFT ONE FROM THE QUOTIENT OF TWO NUMBERS IN WHICH THE NUMERATOR IS
+144F                  | ;[M80] BIGGER.  THIS CAN ONLY OCCUR ON THE FIRST TIME THROUGH THE LOOP, SO C,D,E
+144F                  | ;[M80] ARE ALL ZERO.  SO, IF WE FINISH THE LOOP AND C,D,E ARE ALL ZERO, THEN WE
+144F                  | ;[M80] MUST DECREMENT THE EXPONENT TO CORRECT FOR THIS.
+144F : 41                       ld      b,c             ;[M80] GET NUMBER IN B,H,L
+1450 : EB                       ex      de,hl           
+1451 : AF                       xor     a               ;[M80] ZERO C,D,E AND HIGHEST ORDER
 1452 : 4F                       ld      c,a
 1453 : 57                       ld      d,a
 1454 : 5F                       ld      e,a
-1455 : 32 1C 38                 ld      (X381C),a
-1458                    L1458:
-1458 : E5                       push    hl
-1459 : C5                       push    bc
-145A : 7D                       ld      a,l
-145B : CD 10 38                 call    L3810
-145E : DE 00                    sbc     a,000H
-1460 : 3F                       ccf
-1461 : 30 07                    jr      nc,L146A
-1463 : 32 1C 38                 ld      (X381C),a
-1466 : F1                       pop     af
-1467 : F1                       pop     af
-1468 : 37                       scf
-1469 : D2 C1 E1                 jp      nc,LE1C1
-146C : 79                       ld      a,c
-146D : 3C                       inc     a
+1455 : 32 1C 38                 ld      (FDIVG+1),a
+1458 : E5         [M80] FDIV1:  push    hl              ;[M80] SAVE LO'S OF NUMBER              
+1459 : C5                       push    bc              ;[M80] SAVE HO OF NUMBER
+145A : 7D                       ld      a,l             ;[M80] SUBTRACT NUMBER THAT WAS IN FAC
+145B : CD 10 38                 call    FDIVC           ;;Call Divide Routine in RAM for apeed
+145E : DE 00                    sbc     a,0             ;[M80] SUBTRACT LO
+1460 : 3F                       ccf                     ;[M80] SET CARRY TO CORESPOND TO NEXT QUOTIENT BIT
+1461 : 30 07                    jr      nc,FDIV2        ;[M80] GET OLD NUMBER BACK IF WE SUBTRACTED TOO MUCH
+1463 : 32 1C 38                 ld      (FDIVG+1),a     ;[M80] UPDATE HIGHEST ORDER
+1466 : F1                       pop     af              ;[M80] THE SUBTRACTION WAS GOOD
+1467 : F1                       pop     af              ;[M80] GET PREVIOUS NUMBER OFF STACK
+1468 : 37                       scf                     ;[M80] NEXT BIT IN QUOTIENT IS A ONE
+1469 : D2                       byte    $D2             ;[M80] "JNC" AROUND NEXT 2 BYTES
+146A : C1         (M80) FDIV2:  pop     bc              ;[M80] WE SUBTRACTED TOO MUCH
+146B : E1                       pop     hl              ;[M80] GET OLD NUMBER BACK
+146C : 79                       ld      a,c             ;[M80] ARE WE DONE?
+146D : 3C                       inc     a               ;[M80] SET SIGN FLAG WITHOUT AFFECTING CARRY
 146E : 3D                       dec     a
-146F : 1F                       rra
-1470 : F2 87 14                 jp      p,L1487
-1473 : 17                       rla
-1474 : 3A 1C 38                 ld      a,(X381C)
-1477 : 1F                       rra
-1478 : E6 C0                    and     0C0H
-147A : F5                       push    af
-147B : 78                       ld      a,b
-147C : B4                       or      h
-147D : B5                       or      l
-147E : 28 02                    jr      z,L1482
-1480 : 3E 20                    ld      a,020H
-1482                    L1482:
-1482 : E1                       pop     hl
-1483 : B4                       or      h
-1484 : C3 F2 12                 jp      L12F2
-                        ;
-1487                    L1487:
-1487 : 17                       rla
-1488 : 7B                       ld      a,e
-1489 : 17                       rla
+146F : 1F                       rra                     ;[M80]PUT CARRY IN MSB
+1470 : F2 87 14                 jp      p,DIV2A         ;[M80]NOT READY TO ROUND YET
+1473 : 17                       rla                     ;[M80]BIT BACK TO CARRY
+1474 : 3A 1C 38                 ld      a,(FDIVG+1)     ;[M80]FETCH EXTRA BIT
+1477 : 1F                       rra                     ;[M80]BOTH NOW IN A
+1478 : E6 C0                    and     $C0             ;[M80]CLEAR SUPERFLUOUS BITS
+147A : F5                       push    af              ;[M80]SAVE FOR LATER
+147B : 78                       ld      a,b             ;[M80]FETCH HO OF REMAINDER
+147C : B4                       or      h               ;[M80]FETCH HO
+147D : B5                       or      l               ;[M80]SEE IF OTHER REMAINDER BITS AND IF SO SET ST
+147E : 28 02                    jr      z,DIV2AA        ;[M80]IF NOT IGNORE
+1480 : 3E 20                    ld      a,020H          ;[M80]ST BIT
+1482 : E1         (M80) DIV2AA: pop     hl              ;[M80]AND THE REST OF REMAINDER
+1483 : B4                       or      h               ;[M80]"OR" IN REST
+1484 : C3 F2 12                 jp      ROUNDB          ;[M80]USE REMAINDER
+1487 : 17         (M80) DIV2A:  rla                     ;[M80]WE AREN'T, GET OLD CARRY BACK
+1488 : 7B                       ld      a,e             ;[M80]ROTATE EVERYTHING LEFT ONE
+1489 : 17                       rla                     ;[M80]ROTATE NEXT BIT OF QUOTIENT IN
 148A : 5F                       ld      e,a
 148B : 7A                       ld      a,d
 148C : 17                       rla
@@ -4220,23 +4277,23 @@
 148E : 79                       ld      a,c
 148F : 17                       rla
 1490 : 4F                       ld      c,a
-1491 : 29                       add     hl,hl
-1492 : 78                       ld      a,b
-1493 : 17                       rla
+1491 : 29                       add     hl,hl           ;[M80] ROTATE A ZERO INTO RIGHT END OF NUMBER
+1492 : 78                       ld      a,b             ;[M80] THE HO BYTE, FINALLY!
+1493 : 17         {M80} FDIV2A: rla                     
 1494 : 47                       ld      b,a
-1495 : 3A 1C 38                 ld      a,(X381C)
+1495 : 3A 1C 38   {M80} FDIV2B: ld      a,(FDIVG+1)
 1498 : 17                       rla
-1499 : 32 1C 38                 ld      (X381C),a
-149C : 79                       ld      a,c
-149D : B2                       or      d
-149E : B3                       or      e
-149F : 20 B7                    jr      nz,L1458
-14A1 : E5                       push    hl
-14A2 : 21 E7 38                 ld      hl,FAC
-14A5 : 35                       dec     (hl)
-14A6 : E1                       pop     hl
-14A7 : 20 AF                    jr      nz,L1458
-14A9 : C3 C3 12                 jp      L12C3
+1499 : 32 1C 38                 ld      (FDIVG+1),a
+149C : 79                       ld      a,c             ;[M80] ADD ONE TO EXPONENT IF THE FIRST SUBTRACTION
+149D : B2                       or      d               ;[M80]  DID NOT WORK
+149E : B3                       or      e               
+149F : 20 B7                    jr      nz,FDIV1        ;[M80] THIS ISN'T THE CASE        
+14A1 : E5                       push    hl              ;[M80] SAVE PART OF NUMBER
+14A2 : 21 E7 38                 ld      hl,FAC          ;[M80] GET POINTER TO FAC
+14A5 : 35                       dec     (hl)            ;[M80] DECREMENT EXPONENT
+14A6 : E1                       pop     hl              ;[M80] GET NUMBER BACK
+14A7 : 20 AF                    jr      nz,FDIV1        ;[M80] DIVIDE MORE IF NO OVERFLOW OCCURED
+14A9 : C3 C3 12                 jp      ZERO            ;[M80] UNDERFLOW!!
                         ;
 14AC : 78         [M80] MULDIV: ld      a,b
 14AD : B7                       or      a
@@ -4265,7 +4322,7 @@
 14CC : B7                       or      a
 14CD                    L14CD:
 14CD : E1                       pop     hl
-14CE : F2 C3 12                 jp      p,L12C3
+14CE : F2 C3 12                 jp      p,ZERO
 14D1 : C3 D3 03                 jp      OVERR         ;[M80] OVERFLOW
                         ;
 14D4                    MUL10:
@@ -4545,7 +4602,7 @@
 15EA : FE 2B                    cp      '+'             ;IGNORE MINUS SIGN
 15EC : 28 01                    jr      z,FIN1          ;IGNORE A LEADING SIGN
 15EE : 2B                       dec     hl              ;SET CHARACTER POINTER BACK ONE
-15EF : CD C3 12   (M80) FIN1:   call    L12C3
+15EF : CD C3 12   (M80) FIN1:   call    ZERO
 15F2 : 47                       ld      b,a
 15F3 : 57                       ld      d,a
 15F4 : 5F                       ld      e,a
@@ -4738,7 +4795,7 @@
 1701 : 2B                       dec     hl
 1702 : 2B                       dec     hl
 1703 : D2 F5 16                 jp      nc,L16F5
-1706 : CD 10 13                 call    L1310
+1706 : CD 10 13                 call    FADDA
 1709 : 23                       inc     hl
 170A : CD 23 15                 call    MOVFR
 170D : EB                       ex      de,hl
@@ -4932,7 +4989,7 @@
 1806 : F2 0E 18                 jp      p,EXP115        ;NEED STACK RIGHT
 1809 : F1                       pop     af              
 180A : F1                       pop     af              
-180B : C3 C3 12                 jp      L12C3           ;GO ZERO THE FAC
+180B : C3 C3 12                 jp      ZERO           ;GO ZERO THE FAC
 180E : C3 D3 03   [M80] EXP115: jp      OVERR          ;OVERFLOW
 1811 : 01 00 81   [M80] EXP200: ld      bc,$8100
 1814 : 11 00 00                 ld      de,$0000       
