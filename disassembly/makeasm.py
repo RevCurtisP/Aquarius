@@ -48,7 +48,9 @@ def makeasm(iname, oname):
     llblock = False
         
     #Remove Unreferenced Labels
-    if line[18:19] == '{': line = line[:24] + '        ' + line[32:]
+    if line[18:19] == '{': 
+      if line[32:40].rstrip() in ["=", "equ"]: continue
+      else: line = line[:24] + '        ' + line[32:]
     
     #Remove Address and Object Code Prefix
     line = line[24:]
