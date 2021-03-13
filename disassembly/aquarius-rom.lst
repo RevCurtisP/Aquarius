@@ -138,20 +138,16 @@
                         ERROS   equ     $001A
                         X0020   equ     $0020   
                         L01DC   equ     $01DC
-                        L071B   equ     $071B
                         L0768   equ     $0768  
                         L790A   equ     $790A
                         L07C1   equ     $07C1
                         L08AA   equ     $08AA  
                         L08C3   equ     $08C3
                         L08DA   equ     $08DA   
-                        REASON  equ     $0BA9
                         L0C26   equ     $0C26
                         L184F   equ     $184F
                         L1A64   equ     $1A64
                         L1B10   equ     $1B10
-                        L1C39   equ     $1C39
-                        L1C3A   equ     $1C3A
                         L2010   equ     $2010
                         X2157   equ     $2157   
                         X3177   equ     $3177   
@@ -397,12 +393,12 @@
 00ED                  | ;;Clears the screen, resets I/O port $FF, initializes
 00ED                  | ;;the hardware stack, 
 00ED                  | ;;***then does other stuff.
-00ED : 3E 0B            WARMST: ld      a,11            
-00EF : CD 72 1D                 call    TTYCHR
-00F2 : 3A 09 38                 ld      a,(LASTFF)
-00F5 : D3 FF                    out     ($FF),a
-00F7 : CD E5 0B                 call    STKINI
-00FA : CD 40 1A                 call    L1A40
+00ED : 3E 0B            WARMST: ld      a,11            ;
+00EF : CD 72 1D                 call    TTYCHR          ;;Clear Scree,
+00F2 : 3A 09 38                 ld      a,(LASTFF)      ;
+00F5 : D3 FF                    out     ($FF),a         ;;Reset I/O Port 255 
+00F7 : CD E5 0B                 call    STKINI          ;;Initialize stack
+00FA : CD 40 1A                 call    WRMCON          ;;Finish Up
 
 00FD : 21 87 01         COLDST: ld      hl,DEFALT       ;Set System Variable Default Vslues
 0100 : 01 51 00                 ld      bc,81
@@ -1018,7 +1014,7 @@
 0434 : D5                       push    de              ;
 0435 : C5                       push    bc              ;[M80] SAVE LINE # AND CHARACTER COUNT
 0436 : AF                       xor     a               ;
-0437 : 32 CC 38                 ld      (USFLG),a       ;
+0437 : 32 CC 38                 ld      (USFLG),a       ;;Set Undefined Statement Flag to 0
 043A : D7                       rst     CHRGET          ;[M80] REMEMBER IF THIS LINE IS
 043B : B7                       or      a               ;[M80] SET THE ZERO FLAG ON ZERO
 043C : F5                       push    af              ;[M80] BLANK SO WE DON'T INSERT IT
@@ -1491,7 +1487,7 @@
 0677 : 3C                       inc     a               ;ALSO, SETZ IF NULL.
 0678 : 3D                       dec     a               ;
 0679 : C9               CHRRTS: ret                     ;RETURN TO CALLER.
-067A                    ;
+067A
 067A                  + ;[M80] INTIDX READS A FORMULA FROM THE CURRENT POSITION AND
 067A                  | ;[M80] TURNS IT INTO A POSITIVE INTEGER
 067A                  | ;[M80] LEAVING THE RESULT IN [D,E].  NEGATIVE ARGUMENTS
@@ -1513,15 +1509,14 @@
 0694 : E1                       pop     hl              ;
 0695 : 51                       ld      d,c             ;
 0696 : C8                       ret     z               ;[M65] NO, FAC IS TOO BIG.
-
+0697
 0697 : 1E 08      [M80] FCERR:  ld      e,ERRFC         ;[M65] "FUNCTION CALL" ERROR
 0699 : C3 DB 03                 jp      ERROR           ;
-
-;
-; SCNLIN SCANS A LINE RANGE O
-; THE FORM  #-# OR # OR #- OR -# OR BLANK
-; AND THEN FINDS THE FIRST LINE IN THE RANGE
-;
+069C
+069C                  + ;[M80] SCNLIN SCANS A LINE RANGE O
+069C                  | ;[M80] THE FORM  #-# OR # OR #- OR -# OR BLANK
+069C                  | ;[M80] AND THEN FINDS THE FIRST LINE IN THE RANGE
+069C                  | ;
 069C : 2B         [M80] SCNLIN: dec     hl              
 069D : 11 00 00   [M65] LINGET: ld      de,0            ;[M80] ASSUME START LIST AT ZERO
 06A0 : D7         [M65] MORGET: rst     CHRGET          ;;Get next character
@@ -1557,19 +1552,19 @@
 06C3 : CD CF 0B   [M80] CONRUN: call    CLEARC          ;RESET THE STACK,DATPTR,VARIABLES ...
 06C6 : 01 2C 06                 ld      bc,NEWSTT       ;
 06C9 : 18 10                    jr      RUNC2           ;[M80] PUT "NEWSTT" ON AND FALL INTO "GOTO"
-
-                      + ;[M80] GOSUB STATEMENT
-                      | ;[M80] A "GOSUB" ENTRY ON THE STACK HAS THE FOLLOWING FORMAT
-                      | ;[M80]
-                      | ;[M80] LOW ADDRESS
-                      | ;[M80]
-                      | ;[M80]  A TOKEN EQUAL TO $GOSUB 1 BYTE
-                      | ;[M80]  THE LINE # OF THE THE "GOSUB" STATEMENT 2 BYTES
-                      | ;[M80]  A POINTER INTO THE TEXT OF THE "GOSUB" 2 BYTES
-                      | ;[M80]
-                      | ;[M80] HIGH ADDRESS
-                      | ;[M80]
-                      | ;[M80] TOTAL 5 BYTES
+06CB
+06CB                  + ;[M80] GOSUB STATEMENT
+06CB                  | ;[M80] A "GOSUB" ENTRY ON THE STACK HAS THE FOLLOWING FORMAT
+06CB                  | ;[M80]
+06CB                  | ;[M80] LOW ADDRESS
+06CB                  | ;[M80]
+06CB                  | ;[M80]  A TOKEN EQUAL TO $GOSUB 1 BYTE
+06CB                  | ;[M80]  THE LINE # OF THE THE "GOSUB" STATEMENT 2 BYTES
+06CB                  | ;[M80]  A POINTER INTO THE TEXT OF THE "GOSUB" 2 BYTES
+06CB                  | ;[M80]
+06CB                  | ;[M80] HIGH ADDRESS
+06CB                  | ;[M80]
+06CB                  | ;[M80] TOTAL 5 BYTES
 06CB : 0E 03      [M80] GOSUB:  ld      c,3             ;[M80] "GOSUB" ENTRIES ARE 5 BYTES LONG
 06CD : CD A0 0B                 call    GETSTK          ;[M80] MAKE SURE THERE IS ROOM
 06D0 : C1                       pop     bc              ;[M80] POP OFF RETURN ADDRESS OF "NEWSTT"
@@ -1580,9 +1575,9 @@
 06D7 : 3E 8C                    ld      a,$8C           ;;$GOSUB, GOSUTK
 06D9 : F5                       push    af              ;[M80] PUT GOSUB TOKEN ON THE STACK
 06DA : 33                       inc     sp              ;[M80] THE GOSUB TOKEN TAKES ONLY ONE BYTE
-
+06DB
 06DB : C5         [M80] RUNC2:  push    bc              ;[M80] RESTORE RETURN ADDRESS OF "NEWSTT"
-
+06DC
 06DC : CD 9C 06   [M80] GOTO:   call    SCNLIN          ;[M80] PICK UP THE LINE # AND PUT IT IN [D,E]
 06DF : CD 1E 07                 call    REM             ;[M80] SKIP TO THE END OF THIS LINE
 06E2 : 23                       inc     hl              ;[M80] POINT AT THE LINK BEYOND IT
@@ -1615,17 +1610,16 @@
 0707 : 22 4D 38                 ld      (CURLIN),hl     ;PUT IT INTO CURLIN
 070A : 23                       inc     hl
 070B : 7C                       ld      a,h
-070C : B5                       or      l
-070D : 20 07                    jr      nz,L0716
+070C : B5                       or      l               ;;Is line number $FFFF
+070D : 20 07                    jr      nz,RETUR2        ;;No, carry on
 070F : 3A CC 38                 ld      a,(USFLG)
-0712 : B7                       or      a
-0713 : C2 01 04                 jp      nz,STPRDY
-
-0716                    L0716:
-0716 : 21 2C 06                 ld      hl,NEWSTT       ;[M80] PUT RETURN ADDRESS OF "NEWSTT" BACK ON STACK
+0712 : B7                       or      a               ;;Check undefined statement flag
+0713 : C2 01 04                 jp      nz,STPRDY       ;;If set, abort to direct mode
+0716                    
+0716 : 21 2C 06         RETUR2: ld      hl,NEWSTT       ;[M80] PUT RETURN ADDRESS OF "NEWSTT" BACK ON STACK
 0719 : E3                       ex      (sp),hl         ;[M80] GET TEXT POINTER FROM "GOSUB"
-071A : 3E E1                    ld      a,$E1
-
+071A : 3E                       byte    $3E             ;;"LD A," skips next instruction
+071B : E1               L071B:  pop     hl              
 071C : 01         [M80] DATA:   byte    $01             ;[M80] "LD BC," TO PICK UP ":" INTO C AND SKIP
 071D : 3A                       byte    ':'
 071E : 0E         [M80] REM:    byte    $0E             ;[M80] "LD C,"   THE ONLY TERMINATOR IS ZERO
@@ -2487,11 +2481,12 @@
                       | ;
 0BA0 : E5               GETSTK: push    hl              ;[M80] SAVE [H,L]
 0BA1 : 2A DA 38                 ld      hl,(STREND)     ;
-0BA4 : 06 00                    ld      b,000H          ;
+0BA4 : 06 00                    ld      b,0             ;
 0BA6 : 09                       add     hl,bc           ;
 0BA7 : 09                       add     hl,bc           ;[M80] SEE IF WE CAN HAVE THIS MANY
-0BA8 : 3E E5                    ld      a,0E5H          ;;used in calculation below
-0BAA : 3E D0                    ld      a,208           ;[M80] EXAMINE [H,L] TO MAKE SURE
+0BA8 : 3E                       byte    $3E             ;;"LD A," ober next instruction
+0BA9 : E5               REASON: push    hl              ;;Save text pointer
+0BAA : 3E D0                    ld      a,208           ;[M80]  EXAMINE [H,L] TO MAKE SURE
 0BAC : 95                       sub     l               ;[M80]  AT LEAST 104 LOCATIONS
 0BAD : 6F                       ld      l,a             ;[M80]  REMAIN BETWEEN IT AND THE
 0BAE : 3E FF                    ld      a,$FF           ;[M80]  TOP OF THE STACK
@@ -2620,69 +2615,64 @@
 0C5F : C3 97 06                 jp      FCERR
 0C62
 0C62                    ;;CSAVE* and CLOAD*
-0C62   3E               CSAVES: byte    $3E             ;"LD A,$AF"
-0C63 : AF               CLOADS: byte    $AF             ;"XOR A"
-0C64 : B7                       or      a
-0C65 : F5                       push    af
-0C66 : D7                       rst     CHRGET
-0C67 : 3E 01                    ld      a,1
-0C69 : 32 CB 38                 ld      (SUBFLG),a
-0C6C : CD D1 10                 call    PTRGET
-0C6F : C2 97 06                 jp      nz,FCERR
-0C72 : 32 CB 38                 ld      (SUBFLG),a
-0C75 : CD 75 09                 call    CHKNUM
-0C78 : F1                       pop     af
-0C79 : E5                       push    hl
-0C7A : F5                       push    af
-0C7B : C5                       push    bc
-0C7C : 06 23                    ld      b,023H
-0C7E : 28 12                    jr      z,L0C92
-0C80 : CD 7F 1B                 call    L1B7F
-0C83 : CD BC 1B                 call    L1BBC
-0C86 : 78                       ld      a,b
-0C87 : CD 87 1B                 call    L1B87
-0C8A : CD 87 1B                 call    L1B87
-0C8D : CD 87 1B                 call    L1B87
-0C90 : 18 11                    jr      L0CA3
-                                ;
-0C92                    L0C92:
-0C92 : CD 2E 1B                 call    PPLAY
-0C95 : CD CE 1B                 call    L1BCE
-0C98                    L0C98:
-0C98 : 0E 06                    ld      c,006H
-0C9A                    L0C9A:
-0C9A : CD 4D 1B                 call    L1B4D
+0C62   3E               CSAVES: byte    $3E             ;;"LD A," sets A = 62 for CSAVE*
+0C63 : AF               CLOADS: xor     a               ;;Set A = 0 for CLOAD*
+0C64 : B7                       or      a               ;;Set flags
+0C65 : F5                       push    af              ;;and save them
+0C66 : D7                       rst     CHRGET          ;;Skip '*'
+0C67 : 3E 01                    ld      a,1             ;
+0C69 : 32 CB 38                 ld      (SUBFLG),a      ;;Don't look for '(' after variable name
+0C6C : CD D1 10                 call    PTRGET          ;;Get pointer to variable
+0C6F : C2 97 06                 jp      nz,FCERR        ;;Doesn't exist? FC Error
+0C72 : 32 CB 38                 ld      (SUBFLG),a      ;;Turn subscripts back on
+0C75 : CD 75 09                 call    CHKNUM          ;;Must be numeric variable or TM Error
+0C78 : F1                       pop     af              ;
+0C79 : E5                       push    hl              ;;
+0C7A : F5                       push    af              ;;Stack is now (from top) variable pointer,
+0C7B : C5                       push    bc              ;;CSAVE/CLOAD flag, text pointer
+0C7C : 06 23                    ld      b,$23           ;
+0C7E : 28 12                    jr      z,CLOADH        ;;If flag is 0, do CLOAD
+0C80                    ;;Write Array Header to Tape
+0C80 : CD 7F 1B   {~~~} CSAVEH: call    PRECRD          ;;"Press <RECORD>" and wait for RETURN
+0C83 : CD BC 1B                 call    WRSYNC          ;;Write SYNC to tape
+0C86 : 78                       ld      a,b             ;;Write filename "######"
+0C87 : CD 87 1B                 call    WRBYT2          ;
+0C8A : CD 87 1B                 call    WRBYT2          ;
+0C8D : CD 87 1B                 call    WRBYT2          ;
+0C90 : 18 11                    jr      RWARY           ;;Write Array 
+0C92                    ;;Read Array Header from Tape
+0C92 : CD 2E 1B   (~~~) CLOADH: call    PPLAY           ;;"Press <PLAY>", wait for RETURN`
+0C95 : CD CE 1B                 call    RDSYNC          ;;Wait for SYNC
+0C98 : 0E 06      (~~~) CLOADG: ld      c,6             ;;Look for filename "@@@@@@"
+0C9A : CD 4D 1B   (~~~) CLOADL: call    RDBYTE
 0C9D : B8                       cp      b
-0C9E : 20 F8                    jr      nz,L0C98
+0C9E : 20 F8                    jr      nz,CLOADG
 0CA0 : 0D                       dec     c
-0CA1 : 20 F7                    jr      nz,L0C9A
-0CA3                    L0CA3:
-0CA3 : E1                       pop     hl
-0CA4 : EB                       ex      de,hl
-0CA5 : 19                       add     hl,de
-0CA6 : EB                       ex      de,hl
-0CA7 : 4E                       ld      c,(hl)
-0CA8 : 06 00                    ld      b,000H
-0CAA : 09                       add     hl,bc
-0CAB : 09                       add     hl,bc
-0CAC : 23                       inc     hl
-0CAD                    L0CAD:
-0CAD : E7                       rst     COMPAR
-0CAE : 28 0D                    jr      z,L0CBD
-0CB0 : F1                       pop     af
-0CB1 : F5                       push    af
-0CB2 : 7E                       ld      a,(hl)
-0CB3 : C4 8A 1B                 call    nz,L1B8A
-0CB6 : CC 4D 1B                 call    z,L1B4D
-0CB9 : 77                       ld      (hl),a
-0CBA : 23                       inc     hl
-0CBB : 18 F0                    jr      L0CAD
-                        ;
-0CBD                    L0CBD:
-0CBD : F1                       pop     af
-0CBE : C2 1C 1C                 jp      nz,L1C1C
-0CC1 : E1                       pop     hl
-0CC2 : C3 7E 1B                 jp      L1B7E
+0CA1 : 20 F7                    jr      nz,CLOADL
+0CA3                    ;;Read Array from or Write Array to Tape
+0CA3 : E1               RWARY:  pop     hl              ;;DE = End of Array Data
+0CA4 : EB                       ex      de,hl           ;
+0CA5 : 19                       add     hl,de           ;
+0CA6 : EB                       ex      de,hl           ;
+0CA7 : 4E                       ld      c,(hl)          ;;HL = Beginning of Array Data
+0CA8 : 06 00                    ld      b,0             ;
+0CAA : 09                       add     hl,bc           ;
+0CAB : 09                       add     hl,bc           ;
+0CAC : 23                       inc     hl              ;
+0CAD : E7         (~~~) RWARYL: rst     COMPAR          ;;Are we there yet?
+0CAE : 28 0D                    jr      z,RWARYD        ;;Yes, you can get out
+0CB0 : F1                       pop     af              ;;Get CSAVE/CLOAD flag
+0CB1 : F5                       push    af              ;;And save it again
+0CB2 : 7E                       ld      a,(hl)          ;;Read byte from array
+0CB3 : C4 8A 1B                 call    nz,WRBYTE       ;;If CSAVE* write to tape
+0CB6 : CC 4D 1B                 call    z,RDBYTE        ;;If CLOAD* read from tape
+0CB9 : 77                       ld      (hl),a          ;;Write byte into array
+0CBA : 23                       inc     hl              ;;Bump pointer
+0CBB : 18 F0                    jr      RWARYL          ;;and do next byte
+0CBD : F1               RWARYD: pop     af              ;;Get CSAVE/CLOAD flag
+0CBE : C2 1C 1C                 jp      nz,CSAVEZ       ;;If CSAVE* write trailer and return
+0CC1 : E1                       pop     hl              ;;Restore text pointer
+0CC2 : C3 7E 1B                 jp      RWARYR          ;;and Return
 0CC5                    ;
 0CC5                  + ;[M80] TEST FOR A LETTER / CARRY ON=NOT A LETTER
 0CC5                  | ;[M80]               CARRY OFF=A LETTER
@@ -2890,7 +2880,7 @@
 0DE6 : DA 8E 0D                 jp      c,INLINC        ;
 0DE9                    
 0DE9 : 78         (M80) GOODCH: ld      a,b             ;[M80] GET CURRENT LENGTH
-0DEA : FE 49                    cp      ENDBUF-BUF       ;[M80] ;Set Carry if longer than Buffer
+0DEA : FE 49                    cp      ENDBUF-BUF      ;[M80] ;Set Carry if longer than Buffer
 0DEC : 3E 07                    ld      a,7             ;[M80] GET BELL CHAR
 0DEE : D2 F8 0D                 jp      nc,OUTBEL       ;[M80] NO CAUSE FOR BELL
 0DF1 : 79         {M80} OUTBND: ld      a,c             ;[M80] RESTORE  CURRENT CHARACTER INTO [A]
@@ -5462,10 +5452,9 @@
 1A39 : CD 7E 1E         CNTCCN: call    INCHRI          ;{M80} READ THE CHARACTER THAT WAS PRESSED
 1A3C : FE 03                    cp      3               ;[M80] ^C?
 1A3E : 20 0A                    jr      nz,L1A4A
-1A40                    L1A40:
-1A40 : 3A 5E 38                 ld      a,(X385E)
-1A43 : B7                       or      a
-1A44 : CC BE 0B                 call    z,SCRTCH
+1A40 : 3A 5E 38         WRMCON: ld      a,(X385E)       ;;Get CLOAD Status
+1A43 : B7                       or      a               ;;Is it 0?
+1A44 : CC BE 0B                 call    z,SCRTCH        ;;Bad CLOAD, do a NEW
 1A47 : C3 CE 1F                 jp      L1FCE
                         ;
 1A4A                    L1A4A:
@@ -5616,8 +5605,8 @@
 1B08 : 3E 00            OUTBIZ: ld      a,0              ;Write zero bit to printer port
 1B0A                    ;;Send bit 0 of A to printer port
 1B0A : D3 FE            OUTBIT: out     ($FE),a         ;;Write bit to printer port
-1B0C : 26 B1                    ld      h,177           ;;Wait 375,948 cycles
-1B0E : 25               OUTDLY: dec     h               ;;Wait [HL]*2124+17 cycles
+1B0C : 26 B1                    ld      h,177           ;;Wait 2,849 cycles (700 microseconds)
+1B0E : 25               OUTDLY: dec     h               ;;Wait [HL]*16+17 cycles
 1B0F : 20 FD                    jr      nz,OUTDLY       ;
 1B11 : 00                       nop                     ;
 1B12 : 00                       nop                     ;
@@ -5642,6 +5631,8 @@
 182E
 1B2E                  + ;;Display Tape Control Messages
 1B2E                  | ;;Displays control messages, then waits for RETURN key
+1B2E                  | ;;PPLAY displays CLOAD message
+1B2E                  | ;;PRECRD displays CSAVE message
 1B2E                  | ;;Preserves all registers
 1B2E : E5               PPLAY:  push    hl              ;;Save all Registers
 1B2F : D5                       push    de              ;
@@ -5660,129 +5651,147 @@
 1B4A : D1                       pop     de              ;
 1B4B : E1                       pop     hl              ;;Restore all Registers
 1B4C : C9                       ret                     ;
-                        ;
-1B4D                    L1B4D:
-1B4D : D9                       exx
-1B4E : 0E FC                    ld      c,$FC
-1B50                    L1B50:
-1B50 : CD 62 1B                 call    L1B62
-1B53 : 38 FB                    jr      c,L1B50
-1B55 : 26 08                    ld      h,008H
-1B57                    L1B57:
-1B57 : CD 62 1B                 call    L1B62
-1B5A : CB 15                    rl      l
-1B5C : 25                       dec     h
-1B5D : 20 F8                    jr      nz,L1B57
-1B5F : 7D                       ld      a,l
-1B60 : D9                       exx
-1B61 : C9                       ret
-                        ;
-1B62                    L1B62:
-1B62 : ED 78                    in      a,(c)
-1B64 : 1F                       rra
-1B65 : 38 FB                    jr      c,L1B62
-1B67                    L1B67:
-1B67 : ED 78                    in      a,(c)
-1B69 : 1F                       rra
-1B6A : 30 FB                    jr      nc,L1B67
-1B6C : AF                       xor     a
-1B6D                    L1B6D:
-1B6D : 3C                       inc     a
-1B6E : ED 40                    in      b,(c)
-1B70 : CB 18                    rr      b
-1B72 : 38 F9                    jr      c,L1B6D
-1B74                    L1B74:
-1B74 : 3C                       inc     a
-1B75 : ED 40                    in      b,(c)
-1B77 : CB 18                    rr      b
-1B79 : 30 F9                    jr      nc,L1B74
-1B7B : FE 49                    cp      049H
-1B7D : C9                       ret
-1B7E                    L1B7E:
-1B7E : C9                       ret
-                        ;
-1B7F                    L1B7F:
-1B7F : E5                       push    hl
-1B80 : D5                       push    de
-1B81 : C5                       push    bc
-1B82 : 21 F7 1B                 ld      hl,RECORT
-1B85 : 18 AD                    jr      PRETRN
-                        ;
-1B87                    L1B87:
-1B87 : CD 8A 1B                 call    L1B8A
-1B8A                    L1B8A:
-1B8A : F5                       push    af
-1B8B : D9                       exx
-1B8C : 0E FC                    ld      c,$FC
-1B8E : F5                       push    af
-1B8F : AF                       xor     a
-1B90 : 1E 01                    ld      e,001H
-1B92 : CD A5 1B                 call    L1BA5
-1B95 : F1                       pop     af
-1B96 : 1E 08                    ld      e,008H
-1B98 : CD A5 1B                 call    L1BA5
-1B9B : 3E FF                    ld      a,$FF
-1B9D : 1E 02                    ld      e,002H
-1B9F : CD A5 1B                 call    L1BA5
-1BA2 : D9                       exx
-1BA3 : F1                       pop     af
-1BA4 : C9                       ret
-                        ;
-1BA5                    L1BA5:
-1BA5 : 17                       rla
-1BA6 : 2E 40                    ld      l,040H
-1BA8 : 38 02                    jr      c,L1BAC
-1BAA : 2E 80                    ld      l,080H
-1BAC                    L1BAC:
-1BAC : 06 04                    ld      b,004H
-1BAE                    L1BAE:
-1BAE : ED 41                    out     (c),b
-1BB0 : 65                       ld      h,l
-1BB1                    L1BB1:
-1BB1 : 25                       dec     h
-1BB2 : 20 FD                    jr      nz,L1BB1
-1BB4 : 05                       dec     b
-1BB5 : 20 F7                    jr      nz,L1BAE
-1BB7 : 1D                       dec     e
-1BB8 : 20 EB                    jr      nz,L1BA5
-1BBA : C9                       ret
-1BBB : C9                       ret
-                        ;
-1BBC                    L1BBC:
-1BBC : F5                       push    af
-1BBD : C5                       push    bc
-1BBE : 06 0C                    ld      b,00CH
-1BC0                    L1BC0:
-1BC0 : 3E FF                    ld      a,$FF
-1BC2 : CD 8A 1B                 call    L1B8A
-1BC5 : 10 F9                    djnz    L1BC0
-1BC7 : AF                       xor     a
-1BC8 : CD 8A 1B                 call    L1B8A
-1BCB : C1                       pop     bc
-1BCC : F1                       pop     af
-1BCD : C9                       ret
-                        ;
-1BCE                    L1BCE:
-1BCE : F5                       push    af
+1B4D
+1B4D                  + ;;Read Byte from Tape
+1B4D                  | ;;Returns Byte in A
+1B4D                  | ;;All other registers preserved
+1B4D : D9               RDBYTE: exx                     ;;Save index registers
+1B4E : 0E FC                    ld      c,252           ;;Tape I/O Port
+1B50 : CD 62 1B   (~~~) RDBYT2: call    RDBIT           ;;Wait for Start Bit (0)
+1B53 : 38 FB                    jr      c,RDBYT2        ;
+1B55 : 26 08                    ld      h,8             ;;Now read 8 bits
+1B57 : CD 62 1B         RDBYT3: call    RDBIT           ;;Read next bit
+1B5A : CB 15                    rl      l               ;;Rotate into L
+1B5C : 25                       dec     h               ;
+1B5D : 20 F8                    jr      nz,RDBYT3       ;;Loop until done
+1B5F : 7D                       ld      a,l             ;;Copy byte into A
+1B60 : D9                       exx                     ;;Restore index registers
+1B61 : C9                       ret                     ;
+1B62
+1B62                  + ;;Read Bit from Tape
+1B62                  | ;;Looks for a pulse train of two square waves with leading
+1B62                  | ;;negative halves, then measures the total length of the
+1B62                  | ;;square waves in cycles and compares it to as threshold
+1B62                  | ;;of 2633 cycles, which (at a clock speed of 3.579545 MHz)
+1B62                  | ;;equates to 1369 microseconds, about halfway between the
+1B62                  | ;;1723 and 868 microseconds for a mark and space, respectively.
+1B62                  | ;
+1B62                    ;;First wait for the leading negative half of the pulse train
+1B62 : ED 78            RDBIT:  in      a,(c)           ;;Read tape port
+1B64 : 1F                       rra                     ;;Rotate low bit into Carry
+1B65 : 38 FB                    jr      c,RDBIT         ;;If 1, do it again
+1B66                  + ;;Then wait for the start of the positive half of the square wave
+1B67                  | ;;Ends 15 cycles after detection
+1B67 : ED 78      (~~~) RDBIT2: in      a,(c)           ;;Read tape port
+1B69 : 1F                       rra                     ;;Rotate low bit into Carry     
+1B6A : 30 FB                    jr      nc,RDBIT2       ;;If 0, do it again             
+1B6C : AF                       xor     a               ;;Start counter at 0            
+1B6D                  + ;;Now measure length of positive half
+1B6D                  | ;;Total cycles is iterations * 36 - 5
+1B6D : 3C         (~~~) RDBIT3: inc     a               ;;Increment counter            
+1B6E : ED 40                    in      b,(c)           ;;Read tape port               
+1B70 : CB 18                    rr      b               ;;Rotate low bit into Carry    
+1B72 : 38 F9                    jr      c,RDBIT3        ;;If 1, do it again            
+1B74                  + ;;Add length of negative half
+1B74                  | ;;Total cycles is iterations * 36 - 5
+1B74 : 3C         (~~~) RDBIT4: inc     a               ;;Increment counter             
+1B75 : ED 40                    in      b,(c)           ;;Read tape port
+1B77 : CB 18                    rr      b               ;;Rotate low bit into Carry
+1B79 : 30 F9                    jr      nc,RDBIT4       ;;If 0, do it again
+1B7B                  + ;;Check Total Length
+1B7B                  | ;;Total length in cycles is A*36+5. 
+1B7B : FE 49                    cp      73              ;;Set Carry if at least 2633 cycles
+1B7D : C9                       ret                     ;
+1B7E                    
+1B7E : C9         (~~~) RWARYR: ret                     ;;Return from RWARYD
+1B7F
+1B7F                    ;;CSAVE tape control
+1B7F : E5               PRECRD: push    hl              ;;Save Registers
+1B80 : D5                       push    de              ;
+1B81 : C5                       push    bc              ;
+1B82 : 21 F7 1B                 ld      hl,RECORT       ;;"Press <RECORD>"
+1B85 : 18 AD                    jr      PRETRN          ;;Wait for RETURN  
+1B87
+1B87                    ;;Write byte to tape twice
+1B87 : CD 8A 1B  {~~~}  WRBYT2: call    WRBYTE          ;;Call WRBYTE, then drop into it
+1B8A                    
+1B8A                    ;;Write framed byte to tape                    
+1B8A                    ;;Writes a start bit (0) , the bits of the byte, then two stop bits (1)
+1B8A : F5               WRBYTE: push    af              ;;Save all registers
+1B8B : D9                       exx                     ;
+1B8C : 0E FC                    ld      c,252           ;;Tape I/O Port           
+1B8E : F5                       push    af              ;;Save byte
+1B8F : AF                       xor     a               ;
+1B90 : 1E 01                    ld      e,1             ;
+1B92 : CD A5 1B                 call    WRBITS          ;;Write start bit ($00) 
+1B95 : F1                       pop     af              ;;Restore byte
+1B96 : 1E 08                    ld      e,8             ;
+1B98 : CD A5 1B                 call    WRBITS          ;;Write 8 bits of byte
+1B9B : 3E FF                    ld      a,$FF           ;
+1B9D : 1E 02                    ld      e,2             ;
+1B9F : CD A5 1B                 call    WRBITS          ;;Writw stop bits (2 x $FF)
+1BA2 : D9                       exx                     ;
+1BA3 : F1                       pop     af              ;;Restore all registers
+1BA4 : C9                       ret                     ;
+1BA5
+1BA5                  + ;;Write E most significant bits of A to Tape
+1BA5                  | ;;Each bit is written as two full square waves, negative half first
+1BA5                  | ;;The leading negative half and trailing positive half frame the
+1BA5                  | ;;(positive half first) square wave (that RDBITS looks for 
+1BA5                  | ;;A mark (1) and space (0) have wave lengths of 2078 and 4126 cycles,
+1BA5                  | ;;respectively. At a clock speed of 3.579545 MHz, these equate to
+1BA5                  | ;;1723 and 868 microseconds, resulting in approximate frequencies
+1BA5                  | ;;of 1723 Hz for a mark and 868 Hz for a space. 
+1BA5 : 17               WRBITS: rla                     ;;Rotate MSB into Carry
+1BA6 : 2E 40                    ld      l,64            ;;Preset Pulse Length 1,039 cycles for a 1
+1BA8 : 38 02                    jr      c,WRBIT2        ;;Was bit a 1?
+1BAA : 2E 80                    ld      l,128           ;;No, set Pulse Length 2,063 cycles for a 0
+1BAC                    ;;Write Bit with Pulse Length L ;
+1BAC : 06 04            WRBIT2: ld      b,4             ;;Countdown - + - +                  
+1BAE : ED 41            WRBIT3: out     (c),b           ;;Writing 0, 1, 0, 1  
+1BB0 : 65                       ld      h,l             ;;Each pulse is L*16+15 cycles      
+1BB1 : 25               WRBIT4: dec     h               ;                4     
+1BB2 : 20 FD                    jr      nz,WRBIT4       ;                                   
+1BB4 : 05                       dec     b               ;                                   
+1BB5 : 20 F7                    jr      nz,WRBIT3       ;;Write next pulse                  
+1BB7 : 1D                       dec     e               ;
+1BB8 : 20 EB                    jr      nz,WRBITS       ;;Write next bit
+1BBA : C9                       ret                     ;
+1BBB : C9                       ret                     ;;Orphan instruction
+1BBC
+1BBC                  + ;;Write SYNC to tape
+1BBC                  | ;;Writes 12 $FF then a $00
+1BBC                  | ;;All registers preserved
+1BBC : F5               WRSYNC: push    af              ;;Save registers
+1BBD : C5                       push    bc              ;
+1BBE : 06 0C                    ld      b,12            ;
+1BC0 : 3E FF            WRSYN2: ld      a,$FF           ;
+1BC2 : CD 8A 1B                 call    WRBYTE          ;;Write $FF to tape
+1BC5 : 10 F9                    djnz    WRSYN2          ;;Do it 11 more times
+1BC7 : AF                       xor     a               ;
+1BC8 : CD 8A 1B                 call    WRBYTE          ;;Write $00 to tape
+1BCB : C1                       pop     bc              ;
+1BCC : F1                       pop     af              ;;Restore registers
+1BCD : C9                       ret                     ;
+1BCE
+1BCE                  + ;;Read SYNC from tape
+1BCE                  | ;;Reads bytes until it gets 6 $FF followed by a $00
+1BCE                  | ;;All registers preserved
+1BCE : F5               RDSYNC: push    af              ;;Save registers
 1BCF : C5                       push    bc
-1BD0                    L1BD0:
-1BD0 : 06 06                    ld      b,006H
-1BD2                    L1BD2:
-1BD2 : CD 4D 1B                 call    L1B4D
+1BD0 : 06 06      (~~~) RDSYN1: ld      b,6             ;;Do 6 times
+1BD2 : CD 4D 1B   (~~~) RDSYN2: call    RDBYTE          
 1BD5 : 3C                       inc     a
-1BD6 : 20 F8                    jr      nz,L1BD0
-1BD8 : 10 F8                    djnz    L1BD2
-1BDA                    L1BDA:
-1BDA : CD 4D 1B                 call    L1B4D
+1BD6 : 20 F8                    jr      nz,RDSYN1       ;;If not $FF, start all over
+1BD8 : 10 F8                    djnz    RDSYN2          ;;Repeat until 6 $FF read
+1BDA : CD 4D 1B   (~~~) RDSYN3: call    RDBYTE
 1BDD : B7                       or      a
-1BDE : 28 05                    jr      z,L1BE5
+1BDE : 28 05                    jr      z,RDSYN4        ;;If $00, we are done
 1BE0 : 3C                       inc     a
-1BE1 : 28 F7                    jr      z,L1BDA
-1BE3 : 18 EB                    jr      L1BD0
-                        ;
-1BE5                    L1BE5:
-1BE5 : C1                       pop     bc
-1BE6 : F1                       pop     af
+1BE1 : 28 F7                    jr      z,RDSYN3        ;;If $FF, read another byte
+1BE3 : 18 EB                    jr      RDSYN1          ;;Otherwise, start all over
+1BE5 : C1         (~~~) RDSYN4: pop     bc
+1BE6 : F1                       pop     af              ;;Restore registers
 1BE7 : C9                       ret
 1BE8
 1BE8 : 50 72 65 73      PLAYT:  byte    "Press <PLAY>",13,10,0          ;
@@ -5795,102 +5804,96 @@
 1BFF : 45 43 4F 52
 1C03 : 44 3E 0D 0A
 1C07 : 00         
-
-1C08 : F7               CSAVE:  rst     HOOKDO          
-1C09 : 15                       dec     d
+1C08
+1C08 : F7               CSAVE:  rst     HOOKDO          ;
+1C09 : 15                       .byte   21              ;
 1C0A : FE AA                    cp      MULTK           ;;If * Token
 1C0C : CA 62 0C                 jp      z,CSAVES        ;;Do CSAVE*
 1C0F : CD B8 1C                 call    NAMFIL          ;;Scan filename
 1C12 : E5                       push    hl              ;;Save text pointer
-1C13 : CD 25 1D                 call    L1D25
-1C16 : 2A 4F 38                 ld      hl,(TXTTAB)
-1C19 : CD 38 1D                 call    L1D38
-1C1C                    L1C1C:
-1C1C : 06 0F                    ld      b,00FH
-1C1E : AF                       xor     a
-1C1F                    L1C1F:
-1C1F : CD 8A 1B                 call    L1B8A
-1C22 : 10 FB                    djnz    L1C1F
-1C24 : 01 40 1F                 ld      bc,01F40H
-1C27 : CD 4B 1D                 call    L1D4B
-1C2A : E1                       pop     hl
-1C2B                    L1C2B:
-1C2B : C9                       ret
-                                ;
+1C13 : CD 25 1D                 call    WRHEAP           ;
+1C16 : 2A 4F 38                 ld      hl,(TXTTAB)     ;
+1C19 : CD 38 1D                 call    CSAVEP          ;
+1C1C : 06 0F            CSAVEZ: ld      b,15            ;;Write 16 $00 to tape
+1C1E : AF                       xor     a               ;
+1C1F : CD 8A 1B         CSAVE3: call    WRBYTE          ;
+1C22 : 10 FB                    djnz    CSAVE3          ;
+1C24 : 01 40 1F                 ld      bc,8000         ;
+1C27 : CD 4B 1D                 call    SLEEP           ;;Delay 200,000 cycles ~ 50 milliseconds
+1C2A : E1                       pop     hl              ;;Restore Text Pointer
+1C2B : C9                       ret                     ;
+1C2C
 1C2C : F7               CLOAD:  rst     HOOKDO
-1C2D : 14                       inc     d
-1C2E : FE AA                    cp      MULTK
-1C30 : CA 63 0C                 jp      z,CLOADS
-1C33 : D6 95                    sub     095H
-1C35 : 28 02                    jr      z,L1C39
-1C37 : AF                       xor     a
-1C38 : 01 2F 23                 ld      bc,0232FH
-1C3B : FE 01                    cp      1
-1C3D : F5                       push    af
-1C3E : 3E FF                    ld      a,$FF
-1C40 : 32 5E 38                 ld      (X385E),a
-1C43 : CD B1 1C                 call    L1CB1
-1C46                    L1C46:
-1C46 : AF                       xor     a
-1C47 : 32 5D 38                 ld      (X385D),a
-1C4A : D5                       push    de
-1C4B : CD 2E 1B                 call    PPLAY
-1C4E : CD D9 1C                 call    L1CD9
-1C51 : 21 57 38                 ld      hl,FILNAF
-1C54 : CD ED 1C                 call    L1CED
-1C57 : D1                       pop     de
-1C58 : 28 12                    jr      z,L1C6C
-1C5A : 21 06 1D                 ld      hl,SKIPT
-1C5D : CD 0D 1D                 call    OUTNAM
-1C60                    L1C60:
-1C60 : 06 0A                    ld      b,00AH
-1C62                    L1C62:
-1C62 : CD 4D 1B                 call    L1B4D
-1C65 : B7                       or      a
-1C66 : 20 F8                    jr      nz,L1C60
-1C68 : 10 F8                    djnz    L1C62
-1C6A : 18 DA                    jr      L1C46
-                                ;
-1C6C                    L1C6C:
-1C6C : 21 FE 1C                 ld      hl,FOUNDT
-1C6F : CD 0D 1D                 call    OUTNAM
-1C72 : F1                       pop     af
-1C73 : 32 E4 38                 ld      (FACLO),a
-1C76 : DC BE 0B                 call    c,SCRTCH
-1C79 : 3A E4 38                 ld      a,(FACLO)
-1C7C : FE 01                    cp      001H
-1C7E : 32 5E 38                 ld      (X385E),a
-1C81 : 2A 4F 38                 ld      hl,(TXTTAB)
-1C84 : CD 51 1D                 call    L1D51
-1C87 : 20 11                    jr      nz,L1C9A
-1C89 : 22 D6 38                 ld      (VARTAB),hl
-1C8C                    L1C8C:
-1C8C : 21 6E 03                 ld      hl,REDDY
-1C8F : CD 9D 0E                 call    STROUT          ;PRINT "OK" PREMATURELY
-1C92 : 3E FF                    ld      a,$FF           
-1C94 : 32 5E 38                 ld      (X385E),a
-1C97 : C3 80 04                 jp      FINI
-                        ;
-1C9A                    L1C9A:
-1C9A : 23                       inc     hl
-1C9B : EB                       ex      de,hl
-1C9C : 2A D6 38                 ld      hl,(VARTAB)
-1C9F : E7                       rst     COMPAR
-1CA0 : 38 EA                    jr      c,L1C8C
-1CA2 : 21 AB 1C                 ld      hl,BADT
-1CA5 : CD 9D 0E                 call    STROUT
-1CA8 : C3 01 04                 jp      STPRDY
-                        ;
+1C2D : 14                       byte    20
+1C2E : FE AA                    cp      MULTK           ;;Check for token after CLOAD
+1C30 : CA 63 0C                 jp      z,CLOADS        ;;If *, CLOAD variable
+1C33 : D6 95                    sub     PRINTK          ;
+1C35 : 28 02                    jr      z,CLOADQ        ;;If ?, A will be $FF (verify)
+1C37 : AF                       xor     a               ;;otherwise it will be 0 (load)
+1C38 : 01                       byte    $01             ;;"LD BC," over two instructions
+1C39 : 2F               CLOADQ: cpl                     ;;A = $FF
+1C3A : 23                       inc     hl              ;;Bump text pointer
+1C3B : FE 01                    cp      1               ;;If A is 0, set C, else clear C 
+1C3D : F5                       push    af              ;;Save A and C
+1C3E : 3E FF                    ld      a,$FF           ;
+1C40 : 32 5E 38                 ld      (X385E),a       ;;Set FlagE to $FF
+1C43 : CD B1 1C                 call    NAMFIN          ;;Get FILNAM if present
+1C46                  + ;;Look for Filename
+1C46                  | ;;Reads tape until a file matching FILNAM is found
+1C46                  | ;;If first character of FILNAM is NUL, matches next file on tape
+1C46 : AF         (~~~) CLOADF: xor     a               ;
+1C47 : 32 5D 38                 ld      (X385D),a       ;;Clear FlagD
+1C4A : D5                       push    de              ;
+1C4B : CD 2E 1B                 call    PPLAY           ;;"Press <PLAY>", wait for RETURN`
+1C4E : CD D9 1C                 call    RDHEAD           ;
+1C51 : 21 57 38                 ld      hl,FILNAF       ;;Filename found on tape`
+1C54 : CD ED 1C                 call    CMPNAM          ;;Compare with FILNAM
+1C57 : D1                       pop     de              ;
+1C58 : 28 12                    jr      z,CLOADC        ;;If they match, continue CLOAD
+1C5A : 21 06 1D                 ld      hl,SKIPT        ;
+1C5D : CD 0D 1D                 call    OUTNAM          ;;"Skip: " + NAMFIL
+1C60 : 06 0A      (~~~) CLOADE: ld      b,10            ;;???Skip to end of file
+1C62 : CD 4D 1B   (~~~) CLOAD2: call    RDBYTE          ;
+1C65 : B7                       or      a               ;
+1C66 : 20 F8                    jr      nz,CLOADE       ;;Not $00, start over
+1C68 : 10 F8                    djnz    CLOAD2          ;;Loop until 10 in a row
+1C6A : 18 DA                    jr      CLOADF          ;;Check next file
+1C6C : 21 FE 1C   (~~~) CLOADC: ld      hl,FOUNDT       ;
+1C6F : CD 0D 1D                 call    OUTNAM          ;;"Found:" + NAMFIL
+1C72 : F1                       pop     af              ;;Restore mode
+1C73 : 32 E4 38                 ld      (FACLO),a       ;;and aave it
+1C76 : DC BE 0B                 call    c,SCRTCH        ;;If not CLOAD?, do a NEW
+1C79 : 3A E4 38                 ld      a,(FACLO)       ;;Get mode back
+1C7C : FE 01                    cp      1               ;;and check it
+1C7E : 32 5E 38                 ld      (X385E),a       ;;Store in FlagE
+1C81 : 2A 4F 38                 ld      hl,(TXTTAB)     ;;Set pointer to BASIC program
+1C84 : CD 51 1D                 call    CLOADP          ;;Load/verify program
+1C87 : 20 11                    jr      nz,CLOADV       ;;Check CLOAD? status
+1C89 : 22 D6 38                 ld      (VARTAB),hl     ;;Set end of program
+1C8C : 21 6E 03   (~~~) CLOADR: ld      hl,REDDY        ;
+1C8F : CD 9D 0E                 call    STROUT          ;[M80] PRINT "OK" PREMATURELY
+1C92 : 3E FF                    ld      a,$FF           ;
+1C94 : 32 5E 38                 ld      (X385E),a       ;;Set FlagE to $FF
+1C97 : C3 80 04                 jp      FINI            ;
+1C9A : 23         (~~~) CLOADV: inc     hl              ;
+1C9B : EB                       ex      de,hl           ;
+1C9C : 2A D6 38                 ld      hl,(VARTAB)     ;
+1C9F : E7                       rst     COMPAR          ;;Text pointer past end of program?
+1CA0 : 38 EA                    jr      c,CLOADR        ;;Yes, CLOAD? successful
+1CA2 : 21 AB 1C                 ld      hl,BADT         ;
+1CA5 : CD 9D 0E                 call    STROUT          ;;"Bad"
+1CA8 : C3 01 04                 jp      STPRDY          ;;Abort to direct mode
+1CAB
 1CAB : 42 61 64 0D      BADT:   byte    "Bad",13,10,0
 1CAF : 0A 00
-1CB1                    L1CB1:
-1CB1 : AF                       xor     a
-1CB2 : 32 51 38                 ld      (FILNAM),a
-1CB5 : 2B                       dec     hl
-1CB6 : D7                       rst     CHRGET
-1CB7 : C8                       ret     z
+1CB1                    ;;Scan a Filename for CLOAD command
+1CB1 : AF               NAMFIN: xor     a               ;;Store 0
+1CB2 : 32 51 38                 ld      (FILNAM),a      ;;in first character of FILNAM
+1CB5 : 2B                       dec     hl              ;;Backup text pointer
+1CB6 : D7                       rst     CHRGET          ;;Check for terminator
+1CB7 : C8                       ret     z               ;;If found, return
 1CB8
-1CB8                    ;{GWB} Scan a file name for CSAVE or CLOAD command                    
+1CB8                    ;{GWB} Scan a Filename for CSAVE command                    
 1CB8 : CD 85 09   [GWB] NAMFIL: call    FRMEVL          ;[GWB] Evaluate string
 1CBB : E5                       push    hl              ;[GWB] save text pointer
 1CBC : CD 06 10                 call    ASC2            ;;DE = Pointer to File Name
@@ -5913,36 +5916,37 @@
 1CD5 : 10 FB                    djnz    NAMFL2          ;
 1CD7 : E1         (~~~) NAMFL3: pop     hl              ;
 1CD8 : C9                       ret                     ;
-                        ;
-1CD9                    L1CD9:
-1CD9 : CD CE 1B                 call    L1BCE
-1CDC : AF                       xor     a
-1CDD : 32 5D 38                 ld      (X385D),a
-1CE0 : 21 57 38                 ld      hl,FILNAF
-1CE3 : 06 06                    ld      b,6
-1CE5                    L1CE5:
-1CE5 : CD 4D 1B                 call    L1B4D
-1CE8 : 77                       ld      (hl),a
-1CE9 : 23                       inc     hl
-1CEA : 10 F9                    djnz    L1CE5
-1CEC : C9                       ret
-                        ;
-1CED                    L1CED:
-1CED : 01 51 38                 ld      bc,FILNAM
-1CF0 : 1E 06                    ld      e,006H
-1CF2 : 0A                       ld      a,(bc)
-1CF3 : B7                       or      a
-1CF4 : C8                       ret     z
-1CF5                    L1CF5:
-1CF5 : 0A                       ld      a,(bc)
-1CF6 : BE                       cp      (hl)
-1CF7 : 23                       inc     hl
-1CF8 : 03                       inc     bc
-1CF9 : C0                       ret     nz
-1CFA : 1D                       dec     e
-1CFB : 20 F8                    jr      nz,L1CF5
-1CFD : C9                       ret
-                        ;
+1CD9
+1CD9                    ;;Read File Header from Tape
+1CD9 : CD CE 1B         RDHEAD: call    RDSYNC          ;;Wait for SYNC
+1CDC : AF                       xor     a               ;
+1CDD : 32 5D 38                 ld      (X385D),a       ;;Set Flag to 0
+1CE0 : 21 57 38                 ld      hl,FILNAF       ;
+1CE3 : 06 06                    ld      b,6             ;;Read 6 bytes into FINLAF
+1CE5 : CD 4D 1B         RDHEAL: call    RDBYTE          ;
+1CE8 : 77                       ld      (hl),a          ;
+1CE9 : 23                       inc     hl              ;
+1CEA : 10 F9                    djnz    RDHEAL          ;
+1CEC : C9                       ret                     ;
+
+1CED                    ;;Compare Filename
+1CED                    ;;Compares the 6 bytes string to by HL to FILNAM
+1CED                    ;;Returns Z Set if the two are equal or FILNAM is an empty string
+1CED                    ;;Otherwise, return Z Clear
+1CED : 01 51 38         CMPNAM: ld      bc,FILNAM       ;
+1CF0 : 1E 06                    ld      e,6             ;;Check 6 characters
+1CF2 : 0A                       ld      a,(bc)          ;
+1CF3 : B7                       or      a               ;;First character of FILNAM
+1CF4 : C8                       ret     z               ;;If NUL return Equsl
+1CF5 : 0A         (~~~) CMPNAL: ld      a,(bc)          ;;Compare FILNAM character
+1CF6 : BE                       cp      (hl)            ;;with FILNAF character
+1CF7 : 23                       inc     hl              ;;Bump pointers
+1CF8 : 03                       inc     bc              ;
+1CF9 : C0                       ret     nz              ;;If different, return Not Equal
+1CFA : 1D                       dec     e               ;
+1CFB : 20 F8                    jr      nz,CMPNAL       ;;Decrememt counter and loop
+1CFD : C9                       ret                     ;
+1CFE
 1CFE : 46 6F 75 6E      FOUNDT: byte    "Found: ",0
 1D02 : 64 3A 20 00 
 1D06 : 53 6B 69 70      SKIPT:  byte    "Skip: ",0        
@@ -5964,62 +5968,63 @@
 1D22 : F1                       pop     af              ;
 1D23 : D1                       pop     de              ;;Restore AF and DE
 1D24 : C9                       ret                     ;
-                        ;
-1D25                    L1D25:
-1D25 : CD 7F 1B                 call    L1B7F
-1D28 : CD BC 1B                 call    L1BBC
-1D2B : 06 06                    ld      b,006H
-1D2D : 21 51 38                 ld      hl,FILNAM
-1D30                    L1D30:
-1D30 : 7E                       ld      a,(hl)
+1D25    
+1D25                    ;;Prompt User, Wait for RETURN, and Write Header
+1D25 : CD 7F 1B         WRHEAP: call    PRECRD          ;;"Press <RECORD>", wait for RETURN`
+1D28                    ;;Write File Header to Tape
+1D28 : CD BC 1B   {~~~} WRHEAD: call    WRSYNC          ;;Write SYNC to tape
+1D2B : 06 06                    ld      b,6
+1D2D : 21 51 38                 ld      hl,FILNAM       ;;Write Filename to tape 
+1D30 : 7E         (~~~) WRHEAL: ld      a,(hl)
 1D31 : 23                       inc     hl
-1D32 : CD 8A 1B                 call    L1B8A
-1D35 : 10 F9                    djnz    L1D30
+1D32 : CD 8A 1B                 call    WRBYTE
+1D35 : 10 F9                    djnz    WRHEAL
 1D37 : C9                       ret
-                        ;
-1D38                    L1D38:
-1D38 : CD BC 1B                 call    L1BBC
-1D3B : EB                       ex      de,hl
-1D3C : 2A D6 38                 ld      hl,(VARTAB)
-1D3F                    L1D3F:
-1D3F : 1A                       ld      a,(de)
-1D40 : 13                       inc     de
-1D41 : CD 8A 1B                 call    L1B8A
-1D44 : E7                       rst     COMPAR
-1D45 : 20 F8                    jr      nz,L1D3F
-1D47 : C9                       ret
+1D38                        ;
+1D38                    ;;Save Program Text to tape 
+1D38 : CD BC 1B         CSAVEP: call    WRSYNC          ;;Write SYNC to tape
+1D3B : EB                       ex      de,hl           ;;Save from TXTTAB
+1D3C : 2A D6 38                 ld      hl,(VARTAB)     ;;to VARTAB
+1D3F
+1D3F                    ;;Save RAM from DE to HL on tape
+1D3F : 1A               CSAVEB: ld      a,(de)          ;;Get byte from memory
+1D40 : 13                       inc     de              ;;Bump pointer
+1D41 : CD 8A 1B                 call    WRBYTE          ;;Write byte to text
+1D44 : E7                       rst     COMPAR          ;;Are we there yet?
+1D45 : 20 F8                    jr      nz,CSAVEB       ;;No, write another
+1D47 : C9                       ret                     ;
                         ;
 1D48 : 01 00 00                 ld      bc,00000H
-1D4B                    L1D4B:
-1D4B : 0B                       dec     bc
-1D4C : 78                       ld      a,b
-1D4D : B1                       or      c
-1D4E : 20 FB                    jr      nz,L1D4B
-1D50 : C9                       ret
-                        ;
-1D51                    L1D51:
-1D51 : CD CE 1B                 call    L1BCE
+1D4B                    
+1D4B                    ;;Pause program execution
+1D4B                    ;;Delays BC*25-5 cycles
+1D4B : 0B               SLEEP:  dec     bc              ;;Decrement Counter
+1D4C : 78                       ld      a,b             ;                  
+1D4D : B1                       or      c               ;;Is it 0?         
+1D4E : 20 FB                    jr      nz,SLEEP        ;;If not, loop     
+1D50 : C9                       ret                     ;                  
+
+1D51                    ;;Load Program Text from tape 
+1D51 : CD CE 1B         CLOADP: call    RDSYNC          ;;Wait for SYNC
 1D54 : 3E FF                    ld      a,$FF
-1D56 : 32 5D 38                 ld      (X385D),a
-1D59 : 9F                       sbc     a,a
-1D5A : 2F                       cpl
-1D5B : 57                       ld      d,a
-1D5C                    L1D5C:
-1D5C : 06 0A                    ld      b,00AH
-1D5E                    L1D5E:
-1D5E : CD 4D 1B                 call    L1B4D
-1D61 : 5F                       ld      e,a
-1D62 : 96                       sub     (hl)
-1D63 : A2                       and     d
-1D64 : C0                       ret     nz
-1D65 : 73                       ld      (hl),e
-1D66 : CD A9 0B                 call    REASON
-1D69 : 7E                       ld      a,(hl)
-1D6A : B7                       or      a
-1D6B : 23                       inc     hl
-1D6C : 20 EE                    jr      nz,L1D5C
-1D6E : 10 EE                    djnz    L1D5E
-1D70 : AF                       xor     a
+1D56 : 32 5D 38                 ld      (X385D),a       ;;FlagD = $FF
+1D59 : 9F                       sbc     a,a             ;;A = 0
+1D5A : 2F                       cpl                     ;;A = $FF ???WHY?
+1D5B : 57                       ld      d,a             ;;D = $FF
+1D5C : 06 0A            CLOADB: ld      b,10            ;
+1D5E : CD 4D 1B         CLOADN: call    RDBYTE          ;;Get Byte
+1D61 : 5F                       ld      e,a             ;;Save it
+1D62 : 96                       sub     (hl)            ;;Compare with byte in memory
+1D63 : A2                       and     d               ;;If CLOAD?
+1D64 : C0                       ret     nz              ;;and different, return with Zero cleared
+1D65 : 73                       ld      (hl),e          ;;Store byte in memory
+1D66 : CD A9 0B                 call    REASON          ;;If no space left, OM error
+1D69 : 7E                       ld      a,(hl)          ;;Get byte back
+1D6A : B7                       or      a               ;;Set flags
+1D6B : 23                       inc     hl              ;;Bump text pointer
+1D6C : 20 EE                    jr      nz,CLOADB       ;;Not 0, reset counter
+1D6E : 10 EE                    djnz    CLOADN          ;;Loop until 256 $00 are read 
+1D70 : AF                       xor     a               ;;Return with Zero set
 1D71 : C9                       ret
                         ;
 1D72              [M80] TTYCHR: ;Print character to screen
