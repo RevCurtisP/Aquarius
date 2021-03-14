@@ -49,13 +49,14 @@
                   [M65] USRPOK  equ     $3803   ;;JP instruction for USR() routine
                         USRADD  equ     $3804   ;;Address of USR routine
                         HOOK    equ     $3806   ;;Extended ROM Hook Vector
-                  [M80] CNTOFL  equ     $3808   ;[M80] SUPRESS OUTPUT FLAG ;;Line Count
-                        LASTFF  equ     $3809   ;;Last value last outpUt to port #FF
+                  [M80] CNTOFL  equ     $3808   ;;Line Counter. If not 0,  
+                        LASTFF  equ     $3809   ;;Last value last output to port #FF
                         CHARC   equ     $380A   ;[M80] ISCNTC STORES EATEN CHAR HERE WHEN NOT A ^C
-                        X380B   equ     $380B       
+                        RESADR  equ     $380B       
                         X380C   equ     $380C       
                         CURCHR  equ     $380D   ;;Character under Cursor
-                        X380F   equ     $380F   
+                  [M64] LSTX    equ     $380E   ;[M64] Matrix Coordinate of Last Key Pressed
+                        KCOUNT  equ     $380F   ;;Keyboard debounce counter
                   [M80] FDIVC   equ     $3810   ;    
                   [M80] FDIVB   equ     $3814   ;    
                   [M80] FDIVA   equ     $3818   ;    
@@ -129,17 +130,18 @@
                   {M65} RESLO   equ     $38F8   ;
                   [M80] SAVSTK  equ     $38F9   ;[M80] NEWSTT SAVES STACK HERE BEFORE SO THAT ERROR REVERY CAN
                                                 ;[M80] CAN RESTORE THE STACK WHEN AN ERROR OCCURS
-                        X3900   equ     $3900   ;    
+                        ;;              $3900   ;;This is always 0
+                        TEXT    equ     $3901   ;;Start of Basic Program 
+                        X3964   equ     $3964
                         X3B0D   equ     $3B0D   ;    
+                        
                         XB395   equ     $B395   ;    
                         X400D   equ     $400D   ;    
 
                         ;;Temporary Fix-Up Labels
                         ERROS   equ     $001A
                         X0020   equ     $0020   
-                        L01DC   equ     $01DC
                         L0768   equ     $0768  
-                        L790A   equ     $790A
                         L07C1   equ     $07C1
                         L08AA   equ     $08AA  
                         L08C3   equ     $08C3
@@ -151,12 +153,14 @@
                         L2010   equ     $2010
                         X2157   equ     $2157   
                         X3177   equ     $3177   
+                        L790A   equ     $790A
                         L92C3   equ     $92C3
                         LCA19   equ     $CA19
                         LD698   equ     $D698
                         LE1C1   equ     $E1C1
                          
                         ;;External Addresses
+                        EXTBAS  equ     $2000   ;;Start of Extended Basic
                         XINIT   equ     $E010   ;;ROM Cartridge Initialization Entry Point
 
                                 .org    0       ;;Starting Address of ROM
@@ -377,7 +381,7 @@
 00D5 : FE 38                    cp      $38             ;;which are after the end of Color memory.
 00D7 : 20 F9                    jr      nz,COLOR1       ;
 00D9 : 21 00 40                 ld      hl,$4000        ;;Loop 12,288 times
-00DC : CD 80 1E   (~~~) COLOR2: call    L1E80           ;;Check for keypress
+00DC : CD 80 1E   (~~~) COLOR2: call    INCHRX           ;;Check for keypress
 00DF : FE 0D                    cp      13              ;;Is it RETURN?
 00E1 : 28 1A                    jr      z,COLDST        ;;Cold Start
 00E3 : FE 03                    cp      3               ;;Is it CTRL-C?
@@ -400,67 +404,63 @@
 00F7 : CD E5 0B                 call    STKINI          ;;Initialize stack
 00FA : CD 40 1A                 call    WRMCON          ;;Finish Up
 
-00FD : 21 87 01         COLDST: ld      hl,DEFALT       ;Set System Variable Default Vslues
-0100 : 01 51 00                 ld      bc,81
-0103 : 11 03 38                 ld      de,USRPOK
-0106 : ED B0                    ldir
-0108 : AF                       xor     a
-0109 : 32 A9 38                 ld      (ENDBUF),a
-010C : 32 00 39                 ld      (X3900),a
-010F : 21 64 39                 ld      hl,03964H
-
-0112                    L0112:
-0112 : 23                       inc     hl
-0113 : 4E                       ld      c,(hl)
-0114 : 7C                       ld      a,h
-0115 : B5                       or      l
-0116 : 28 0B                    jr      z,L0123
-0118 : A9                       xor     c
-0119 : 77                       ld      (hl),a
-011A : 46                       ld      b,(hl)
-011B : 2F                       cpl
-011C : 77                       ld      (hl),a
-011D : 7E                       ld      a,(hl)
-011E : 2F                       cpl
-011F : 71                       ld      (hl),c
-0120 : B8                       cp      b
-0121 : 28 EF                    jr      z,L0112
-
-0123                    L0123:
-0123 : 2B                       dec     hl
-0124 : 11 2C 3A                 ld      de,03A2CH
-0127 : E7                       rst     COMPAR
-0128 : DA B7 0B                 jp      c,OMERR
-012B : 11 CE FF                 ld      de,$FFCE
-012E                    L012E:
-012E : 22 AD 38                 ld      (MEMSIZ),hl
+00FD : 21 87 01         COLDST: ld      hl,DEFALT       ;Set System Variable Default Values
+0100 : 01 51 00                 ld      bc,81           ;
+0103 : 11 03 38                 ld      de,USRPOK       ;;Copy 80 bytes starting at DEFALT
+0106 : ED B0                    ldir                    ;;to the first 80 bytes of System Variables
+0108 : AF                       xor     a               ;
+0109 : 32 A9 38                 ld      (ENDBUF),a      ;;Clear byte after end of BUF
+010C : 32 00 39                 ld      (TEXT-1),a      ;;Clear byte before start of basic program
+010F                    ;;Test Memory to Find Top of RAM
+010F : 21 64 39                 ld      hl,TEXT+99      ;;Set RAM Test starting address
+0112 : 23               MEMTST: inc     hl              ;;Bump pointer
+0113 : 4E                       ld      c,(hl)          ;;Save contents of location
+0114 : 7C                       ld      a,h             ;
+0115 : B5                       or      l               ;;Wrapped around to $0000?
+0116 : 28 0B                    jr      z,MEMCHK        ;;Yes, go on to check memory
+0118 : A9                       xor     c               ;;Scramble bits into A 
+0119 : 77                       ld      (hl),a          ;;and write to location
+011A : 46                       ld      b,(hl)          ;;Read back into B
+011B : 2F                       cpl                     ;;Invert scrambled bits
+011C : 77                       ld      (hl),a          ;;Write to location
+011D : 7E                       ld      a,(hl)          ;;read it back
+011E : 2F                       cpl                     ;;and revert back
+011F : 71                       ld      (hl),c          ;;Write original byte to location
+0120 : B8                       cp      b               ;;Did reads match writes?
+0121 : 28 EF                    jr      z,MEMTST        ;;Yes, check next location
+0123                    ;;Check Memory Size             ;
+0123 : 2B         (~~~) MEMCHK: dec     hl              ;;Back up to last good address
+0124 : 11 2C 3A                 ld      de,TEXT+299     ;
+0127 : E7                       rst     COMPAR          ;;Is there enough RAM?
+0128 : DA B7 0B                 jp      c,OMERR         ;;No, Out of Memory error
+012B                    ;;Set Top of memory 
+012B : 11 CE FF   {~~~} MEMSET: ld      de,$FFCE        
+012E : 22 AD 38                 ld      (MEMSIZ),hl     ;;Set MEMSIZ to last RAM location
 0131 : 19                       add     hl,de
-0132 : 22 4B 38                 ld      (TOPMEM),hl
-0135 : CD BE 0B                 call    SCRTCH
-0138 : CD F2 1F                 call    PRNTIT
-
-013B                    L013B:
-013B : 31 65 38                 ld      sp,03865H
-013E : CD E5 0B                 call    STKINI
-0141 : 21 05 20                 ld      hl,02005H
-0144 : 11 82 00                 ld      de,00082H
-0147                    L0147:
-0147 : 1A                       ld      a,(de)
-0148 : B7                       or      a
-0149 : CA E8 1F                 jp      z,XBASIC
-014C : BE                       cp      (hl)
-014D : 20 04                    jr      nz,L0153
-014F : 2B                       dec     hl
-0150 : 13                       inc     de
-0151 : 18 F4                    jr      L0147
+0132 : 22 4B 38                 ld      (TOPMEM),hl     ;;Set TOPMEM t0 MEMSIZ-50
+0135 : CD BE 0B                 call    SCRTCH          ;;Perform NEW
+0138 : CD F2 1F                 call    PRNTIT          ;;Print copyright message
+013B : 31 65 38                 ld      sp,$03865       ;;Top of of stack used to be here 
+013E : CD E5 0B                 call    STKINI          ;;Set stack pointer to TOPMEM
+0141                    ;;Check for Extended BASIC
+0141 : 21 05 20                 ld      hl,EXTBAS+5     ;;End of signature in Extended BASIC
+0144 : 11 82 00                 ld      de,CRTSIG       ;;Text to check signature against
+0147 : 1A         (~~~) EXTCHK: ld      a,(de)          ;;Get byte from signature
+0148 : B7                       or      a               ;;Did we reach a terminator?
+0149 : CA E8 1F                 jp      z,XBASIC        ;;Yes, start Extended BASIC
+014C : BE                       cp      (hl)            ;;Does it match byte in ROM?
+014D : 20 04                    jr      nz,INITFF       ;;No, move on
+014F : 2B                       dec     hl              ;;Move backward in Extended BASIC
+0150 : 13                       inc     de              ;;and forward in test signature 
+0151 : 18 F4                    jr      EXTCHK          ;;Compare next character
                                 ;
-0153                    L0153:
-0153 : ED 5F                    ld      a,r
-0155 : 17                       rla
-0156 : 81                       add     a,c
-0157 : D3 FF                    out     ($FF),a
-0159 : 32 09 38                 ld      (LASTFF),a
-015C : C3 02 04                 jp      READY
+0153                    ;;Initialize I/O Port 255
+0153 : ED 5F      (~~~) INITFF: ld      a,r             ;;Read random number from Refresh Register
+0155 : 17                       rla                     ;;Rotate left
+0156 : 81                       add     a,c             ;;Copy in bit that was rotated out
+0157 : D3 FF                    out     ($FF),a         ;;Write it to I/O Port 255
+0159 : 32 09 38                 ld      (LASTFF),a      ;;and save it for later
+015C : C3 02 04                 jp      READY           ;;Enter direct mode
                         ;
 015F : 0B         [GWB] HEDING: byte    11
 0160 : 43 6F 70 79              byte    "Copyright ",5," "
@@ -502,47 +502,49 @@
 01AA : 1C                       byte    $1C             ;;3826
 01AB : 76                       byte    $76             ;;3827
 01AC : 98                       byte    $98             ;;3828
+01AD : 22                       byte    $22             ;;3829
+01AE : 95                       byte    $95             ;;382A
+01AF : B3                       byte    $B3             ;;382B
+01B0 : 98                       byte    $98             ;;382C
+01B1 : 0A                       byte    $0A             ;;382D
+01B2 : DD                       byte    $DD             ;;382E
+01B3 : 47                       byte    $47             ;;382F
+01B4 : 98                       byte    $98             ;;3830
+01B5 : 53                       byte    $53             ;;3831
+01B6 : D1                       byte    $D1             ;;3832
+01B7 : 99                       byte    $99             ;;3833
+01B8 : 99                       byte    $99             ;;3834
+01B9 : 0A                       byte    $0A             ;;3835
+01BA : 1A                       byte    $1A             ;;3836
+01BB : 9F                       byte    $9F             ;;3837
+01BC : 98                       byte    $98             ;;3838
+01BD : 65                       byte    $65             ;;3839
+01BE : BC                       byte    $BC             ;;383A
+01BF : CD                       byte    $CD             ;;383B
+01C0 : 98                       byte    $98             ;;383C
+01C1 : D6                       byte    $D6             ;;383D
+01C2 : 77                       byte    $77             ;;383E
+01C3 : 3E                       byte    $3E             ;;383F
+01C4 : 98                       byte    $98             ;;3840
+01C5 : 52                       byte    $52             ;;3841
+01C6 : C7                       byte    $C7             ;;3842
+01C7 : 4F                       byte    $4F             ;;3843
+01C8 : 80                       byte    $80             ;;3844
+01C9 : 00                       byte    $00             ;;3845
+01CA : 00                       byte    $00             ;;3846
+01CB : 00                       byte    $00             ;;3847
+01CC : 28                       byte    $28             ;;3848
+01CD : 0E                       byte    $0E             ;;3849
+01CE : 00                       byte    $00             ;;384A
+01CF : 64                       byte    $64             ;;384B
+01D0 : 39                       byte    $39             ;;384C
+01D1 : FE                       byte    $FE             ;;384D
+01D2 : FF                       byte    $FF             ;;384E
+01D3 : 01                       byte    $01,$39         ;;384F  
 
-01AD                    L01AD:
-01AD : 22 95 B3                 ld      (XB395),hl
-01B0 : 98                       sbc     a,b
-01B1 : 0A                       ld      a,(bc)
-                        ;
-01B2 : DD                       byte    0DDH
-                        ;
-01B3 : 47                       ld      b,a
-01B4 : 98                       sbc     a,b
-01B5 : 53                       ld      d,e
-01B6 : D1                       pop     de
-01B7 : 99                       sbc     a,c
-01B8 : 99                       sbc     a,c
-01B9 : 0A                       ld      a,(bc)
-01BA : 1A                       ld      a,(de)
-01BB : 9F                       sbc     a,a
-01BC : 98                       sbc     a,b
-01BD : 65                       ld      h,l
-01BE : BC                       cp      h
-01BF : CD 98 D6                 call    LD698
-01C2                    L01C2:
-01C2 : 77                       ld      (hl),a
-01C3 : 3E 98                    ld      a,098H
-01C5 : 52                       ld      d,d
-01C6                    L01C6:
-01C6 : C7                       rst     START
-01C7 : 4F                       ld      c,a
-01C8                    L01C8:
-01C8 : 80                       add     a,b
-01C9 : 00                       nop
-01CA : 00                       nop
-01CB : 00                       nop
-01CC : 28 0E                    jr      z,L01DC
-01CE : 00                       nop
-01CF : 64                       ld      h,h
-01D0 : 39                       add     hl,sp
-01D1 : FE FF                    cp      $FF
-01D3 : 01 39                    byte    $01,$39 
+;;???End of DEFALT
 
-01D0                  + ;[M65] STATEMENT DISPATCH ADDRESSES
+01D5                  + ;[M65] STATEMENT DISPATCH ADDRESSES
 01D5                  | ;[M65] WHEN A STATEMENT IS TO BE EXECUTED, THE FIRST
 01D5                  | ;[M65] CHARACTER OF THE STATEMENT IS EXAMINED
 01D5                  | ;[M65] TO SEE IF IT IS LESS THAN THE RESERVED
@@ -806,8 +808,9 @@
 035C : A9 0A                    word    ANDOP           ;
 035E : 46                       byte     70             ;OR
 035F : A8 0A                    word    OROP            ;    
-
-;;;*** More Comments Here?
+0361
+0361                    ;{M80} NEEDED FOR MESSAGES
+0361
 0361 : 20 45 72 72[M65] ERR:    byte    " Error",7,0    
 0365 : 6F 72 07 00
 
@@ -1190,13 +1193,8 @@
 0500 : 30 03                    jr      nc,RESCON       ;[M80] TEST
 0502 : E6 5F                    and     $5F             ;[M80] MAKE UPPER CASE
 0504 : 77                       ld      (hl),a          ;;and put it back
-
-;;; *** The following code differs completely from any of the official source code
-;;; *** I'll need to compare to unofficial 8080/Z80 disassemblies, particularly
-;;; *** Altair and TRS-80, and possibly 6800 and/or 6809
-
 0505 : 4E         [N65] RESCON: ld      c,(hl)          ;[M80 SAVE CHAR IN [C]
-                        ;;Find next Reserved Word that starts with this character
+0506                    ;;Find next Reserved Word that starts with this character
 0506 : EB                       ex      de,hl           ;;HL=RESLST Pointer, DE=Text Pointer
 0507 : 23         (M80) LOPPSI: inc     hl              ;[M80] BUMP RESLST POINTER
 0508 : B6                       or      (hl)            ;[M80] SET CC'S
@@ -1209,6 +1207,9 @@
 0512 : 20 F3                    jr      nz,LOPPSI       ;[M80] IF NO MATCH, SEARCH FOR NEXT RESWRD
 0514 : EB                       ex      de,hl           ;;DE=RESLST Pointer, HL=Text Pointer
 0515 : E5                       push    hl              ;;Save Text Pointer
+;;; *** The following code differs completely from any of the official source code
+;;; *** I'll need to compare to unofficial 8080/Z80 disassembles, particularly
+;;; *** Altair and TRS-80, and possibly 6800 and/or 6809
 0516                    L0516:
 0516 : 13                       inc     de
 0517 : 1A                       ld      a,(de)
@@ -1238,14 +1239,14 @@
 0534 : EB                       ex      de,hl
 0535 : C9                       ret
                         ;
-0536 : F7         [M80] NOTGOS: rst     HOOKDO
-0537 : 0A                       ld      a,(bc)
-0538 : EB                       ex      de,hl
-0539 : 79                       ld      a,c             
+0536 : F7         [M80] NOTGOS: rst     HOOKDO          ;
+0537 : 0A                       byte    10              ;
+0538 : EB                       ex      de,hl           ;;HL=text pointer, DE=krunch pointer 
+0539 : 79                       ld      a,c             ;;Get token
 053A : C1                       pop     bc              
 053B : D1                       pop     de              
-
-                        ;;Copy character to crunch buffer
+053C
+053C                    ;;Copy character to crunch buffer
 053C : 23         [M80] STUFFH: inc     hl              ;[M80] ENTRY TO BUMP [H,L]
 053D : 12         {M80} KRNSAV: ld      (de),a          ;[M80] SAVE BYTE IN KRUNCH BUFFER
 053E : 13                       inc     de              ;[M80] BUMP POINTER
@@ -1278,11 +1279,11 @@
 0564 : 13                       inc     de              ;[M80] SINCE IF THIS IS A DIRECT STATEMENT
 0565 : 12                       ld      (de),a          ;[M80] ITS END MUST LOOK LIKE THE END OF A PROGRAM
 0566 : C9                       ret                     ;[M80] END OF CRUNCHING
-
+0567
+0567                    ;;The LLIST and LIST commands
 0567 : 3E 01      [M80] LLIST:  ld      a,1             ;[M80] PRTFLG=1 FOR REGULAR LIST
 0569 : 32 47 38                 ld      (PRTFLG),a      ;[M80] SAVE IN I/O FLAG (END OF LPT)
-
-056C : 3E 17      [M80] LIST:   ld      a,23            ;
+056C : 3E 17      [M80] LIST:   ld      a,23            ;;Set line count to 23
 056E : 32 08 38                 ld      (CNTOFL),a      ;
 0571 : CD 9C 06                 call    SCNLIN          ;[M80] SCAN LINE RANGE
 0574 : C0                       ret     nz              ;
@@ -1431,7 +1432,7 @@
 062C                  | ;[M80] LEFT ON THE STACK WHEN A STATEMENT IS EXECUTED SO
 062C                  | ;[M80] IT CAN MERELY DO A RETURN WHEN IT IS DONE.
 062C : 22 CE 38   [M80] NEWSTT: ld      (SAVTXT),hl     ;USED BY CONTINUE AND INPUT AND CLEAR AND PRINT USING
-062F : CD C2 1F                 call    L1FC2           ;;*** might be [M65] ISCNTC
+062F : CD C2 1F                 call    INCNTC           ;;*** might be [M65] ISCNTC
 0632 : 7E                       ld      a,(hl)          ;;Get Terminator
 0633 : FE 3A                    cp      ':'             ;[M80] IS IT A COLON?
 0635 : 28 14                    jr      z,GONE          ;
@@ -2339,45 +2340,41 @@
 0B0A : CD 75 09                 call    CHKNUM          ;[M65] MUST BE NUMBER
 0B0D : CD 82 06                 call    FRCINT          ;[M80] COERCE THE ARGUMENT TO INTEGER
 0B10 : 7B                       ld      a,e             ;[M80] COMPLEMENT [D,E]
-0B11 : 2F                       cpl
-0B12 : 4F                       ld      c,a
-0B13 : 7A                       ld      a,d
-0B14 : 2F                       cpl
-0B15 : CD 21 0B                 call    L0B21           ;;*** Not in any of the sources
-0B18 : C1                       pop     bc
-0B19 : C3 94 09                 jp      RETAOP
+0B11 : 2F                       cpl                     ;
+0B12 : 4F                       ld      c,a             ;
+0B13 : 7A                       ld      a,d             ;
+0B14 : 2F                       cpl                     ;
+0B15 : CD 21 0B                 call    FLOATC          ;;;Float [D,E]
+0B18 : C1                       pop     bc              
+0B19 : C3 94 09                 jp      RETAOP          
 0B1C                            
 ;;Named GIVDBL in [M80] and [GWB] but Aquarius only supports floats
 0B1C :                  ;[M80] THIS ROUTINE SUBTRACTS [D,E] FROM [H,L]
 0B1C :                  ;[M80] AND FLOATS THE RESULT LEAVING IT IN FAC.
 0B1C : 7D               GIVFLT: ld      a,l             ;[H,L]=[H,L]-[D,E]
-0B1D : 93                       sub     e
-0B1E : 4F                       ld      c,a
-0B1F : 7C                       ld      a,h
-0B20 : 9A                       sbc     a,d
-
-;;*** This code is not in any of the source assemblies
-0B21                    L0B21:                          ;;Called from NOT
-0B21 : 41                       ld      b,c
-0B22                    L0B22:                          ;;Called from POS()
-0B22 : 50                       ld      d,b
-0B23                    L0B23:                          ;;Called from POINT()
-0B23 : 1E 00                    ld      e,0             ;[M80] SET VALTYP TO "FLOATING POINT"
-0B25 : 21 AB 38                 ld      hl,VALTYP       
-0B28 : 73                       ld      (hl),e          
-0B29 : 06 90                    ld      b,144
-0B2B : C3 FB 14                 jp      FLOATR           ;;INEG2 in M80
-
+0B1D : 93                       sub     e               ;
+0B1E : 4F                       ld      c,a             ;
+0B1F : 7C                       ld      a,h             ;
+0B20 : 9A                       sbc     a,d             ;
+0B21 : 41               FLOATC: ld      b,c             ;;Float [D,E], entered from NOTER
+0B22 : 50               FLOATB: ld      d,b             ;;Float [B], entered from SNGFLT
+0B23 : 1E 00            FLOATD: ld      e,0             ;;Float [D], entered from POINT
+0B25 : 21 AB 38                 ld      hl,VALTYP       ;
+0B28 : 73                       ld      (hl),e          ;[M80] SET VALTYP TO "FLOATING POINT"
+0B29 : 06 90                    ld      b,144           ;;Set exponent
+0B2B : C3 FB 14                 jp      FLOATR          ;;INEG2 in M80
+02BE
 0B2E :                          ;;Get Printer Column
 0B2E : 3A 46 38   [M80] LPOS:   ld      a,(LPTPOS)      ;;Get current printhead position
 0B31 : 18 03                    jr      SNGFLT
-
+0B33
 0B33 :                          ;;Get Screen Column     
 0B33 : 3A 00 38   [M80] POS:    ld      a,(TTYPOS)      ;;;GET TELETYPE POSITION
 0B36                    
-0B36 : 47         [M80] SNGFLT: ld      b,a             ;;MAKE [A] AN UNSIGNED INTEGER
+0B36                    ;;[M80]MAKE [A] AN UNSIGNED INTEGER
+0B36 : 47         [M80] SNGFLT: ld      b,a             
 0B37 : AF                       xor     a
-0B38 : C3 22 0B                 jp      L0B22
+0B38 : C3 22 0B                 jp      FLOATB
                         ;
 0B3B : F7             ? DEF:    rst     HOOKDO
 0B3C : 0F                       byte    15
@@ -2576,7 +2573,7 @@
 0C1D : EB                       ex      de,hl           ;[M80] GET THE TEXT POINTER BACK
 0C1E : C9                       ret
                         ;;The STOP and END Statements
-                        ;;STOPC is entry point to END from L1FD1
+                        ;;STOPC is entry point to END from WARMST
 0C1F : C0         [M80] STOP:   ret     nz              ;[M80] MAKE SURE "STOP" STATEMENTS HAVE A TERMINATOR
 0C20 : F6         [M65] STOPC:  byte    $F6             ;;"OR" to skip next instruction
 0C21 : C0         [M80] ENDS:   ret     nz              ;[M80] MAKE SURE "END" STATEMENTS HAVE A TERMINATOR
@@ -5442,83 +5439,84 @@
 1A2C : FE 13                    cp      $13             ;[M80] PAUSE? (^S)
 1A2E : C0                       ret     nz              ;{M80} IF PAUSE, READ NEXT CHAR
 
-1A2F : AF         [M65[ CQINCH: xor     a
+1A2F : AF         [M65] CQINCH: xor     a               ;
 1A30 : 32 0A 38                 ld      (CHARC),a       ;{M80} CLEAR SAVED CHAR
-1A33 : CD 39 1A         CQINC1: call    CNTCCN
-1A36 : 28 FB                    jr      z,CQINC1
-1A38 : C9                       ret
-
-1A39                    
-1A39 : CD 7E 1E         CNTCCN: call    INCHRI          ;{M80} READ THE CHARACTER THAT WAS PRESSED
+1A33 : CD 39 1A   (~~~) CQINC1: call    CNTCCN          ;
+1A36 : 28 FB                    jr      z,CQINC1        ;
+1A38 : C9                       ret                     ;
+1A39
+1A39 : CD 7E 1E   (~~~) CNTCCN: call    INCHRH          ;{M80} READ THE CHARACTER THAT WAS PRESSED
 1A3C : FE 03                    cp      3               ;[M80] ^C?
-1A3E : 20 0A                    jr      nz,L1A4A
+1A3E : 20 0A                    jr      nz,CNTCCR       ;;No, set flags and return
 1A40 : 3A 5E 38         WRMCON: ld      a,(X385E)       ;;Get CLOAD Status
 1A43 : B7                       or      a               ;;Is it 0?
 1A44 : CC BE 0B                 call    z,SCRTCH        ;;Bad CLOAD, do a NEW
-1A47 : C3 CE 1F                 jp      L1FCE
-                        ;
-1A4A                    L1A4A:
-1A4A : B7                       or      a
-1A4B : C9                       ret
-
-1A4C : AF               PRESET: xor     a
-1A4D : 18 02                    jr      PPRSET          ;[EUB] PSET FLAG
+1A47 : C3 CE 1F                 jp      WRMFIN          ;;Finish Warm Start
+1A4A : B7         (~~~) CNTCCR: or      a               ;;Set flags
+1A4B : C9                       ret                     ;
+1A4C
+1A4C : AF               PRESET: xor     a               ;[EUB] PRESET FLAG
+1A4D : 18 02                    jr      PPRSET          ;
 1A4F : 3E 01            PSET:   ld      a,1             ;[EUB] PSET FLAG
 1A51 : 08               PPRSET: ex      af,af'          ;;Save PSET/PRESET flag
-1A52 : CD 7F 1A                 call    SCAND
-1A55 : CD 8E 1A                 call    SCALXY            
-1A58 : 28 02                    jr      z,SETC
-1A5A : 36 A0                    ld      (hl),$A0
-1A5C                    
-1A5C : 08         [GWB] SETC:   ex      af,af'          ;[GWB] ACTUALLY DO THE SET
-1A5D : B7                       or      a
-1A5E : 1A                       ld      a,(de)
-1A5F : 20 03                    jr      nz,L1A64
-1A61 : 2F                       cpl
-1A62 : A6                       and     (hl)
-1A63 : 06 B6                    ld      b,0B6H
-1A65 : 77                       ld      (hl),a
-1A66 : E1                       pop     hl
-1A67 : C9                       ret
-                        ;;
-1A68                    POINT:
-1A68 : D7                       rst     CHRGET
-1A69 : CD 7F 1A                 call    SCAND
-1A6C : CD 8E 1A                 call    SCALXY
-1A6F : 20 06                    jr      nz,L1A77
-1A71 : 1A                       ld      a,(de)
-1A72 : A6                       and     (hl)
-1A73 : 16 01                    ld      d,1
-1A75 : 20 02                    jr      nz,L1A79
-1A77                    L1A77:
-1A77 : 16 00                    ld      d,0
-1A79                    L1A79:
-1A79 : AF                       xor     a
-1A7A : CD 23 0B                 call    L0B23
-1A7D : E1                       pop     hl
-1A7E : C9                       ret
-                                ;
+1A52 : CD 7F 1A                 call    SCAND           ;;Parse (X,Y)
+1A55 : CD 8E 1A                 call    SCALXY          ;;Convert X,Y
+1A58 : 28 02                    jr      z,SETC          ;;Semigraphics at screen location?
+1A5A : 36 A0                    ld      (hl),$A0        ;;No, store base semigraphic
+1A5C : 08         (GWB) SETC:   ex      af,af'          ;;Restore PSET/PRESET flag 
+1A5D : B7                       or      a               ;;Set flags
+1A5E : 1A                       ld      a,(de)          ;;Get semigraphic offset
+1A5F : 20 03                    jr      nz,PSETC        ;;PRESET?
+1A61 : 2F                       cpl                     ;;Invert to create mask
+1A62 : A6                       and     (hl)            ;;and clear offset bit
+1A63 : 06                       byte    $06             ;;"LD B," around next instruction
+1A64 : B6         (~~~) PSETC:  or      (hl)            ;;If PRESET, set offset bit
+1A65 : 77                       ld      (hl),a          ;;Store at screen location
+1A66 : E1                       pop     hl              ;;Restore text pointer
+1A67 : C9                       ret                     ;
+1A68
+1A68                    ;;The PPOINT function
+1A68 : D7               POINT:  rst     CHRGET          ;;Eat character
+1A69 : CD 7F 1A                 call    SCAND           ;;Parse (X,Y)
+1A6C : CD 8E 1A                 call    SCALXY          ;;Convert X,Y
+1A6F : 20 06                    jr      nz,POINTZ       ;;Not semigraphics? Return 0
+1A71 : 1A                       ld      a,(de)          ;;Get bit offset
+1A72 : A6                       and     (hl)            ;;Mask with screen character
+1A73 : 16 01                    ld      d,1             ;
+1A75 : 20 02                    jr      nz,POINTR       ;;Bit set? Return 1
+1A77 : 16 00            POINTZ: ld      d,0             ;
+1A79 : AF               POINTR: xor     a               ;;Clear Accumulator 
+1A7A : CD 23 0B                 call    FLOATD           ;
+1A7D : E1                       pop     hl              ;;Restore text pointer
+1A7E : C9                       ret                     ;
 1A7F
+1A7F                    ;;Get parameters for PSET, PRESET, POINT, and SOUND
 1A7F : CF         [GWB] SCAND:  rst     SYNCHK
-1A80 : 28                       byte    '('             ;SKIP OVER OPEN PAREN
-1A81 : CD D0 1A                 call    $1AD0
-1A84 : D5                       push    de
-1A85 : CF                       rst     SYNCHK
-1A86 : 2C                       byte    ','
-1A87 : CD D0 1A                 call    L1AD0
-1A8A : CF                       rst     SYNCHK
-1A8B : 29                       byte    ')'
-1A8C : C1                       pop     bc
-1A8D : C9                       ret
-                                ;
-                        ;;Convert PSET Coordinates to Screen Position and Character Mask
+1A80 : 28                       byte    '('             ;[GWB] SKIP OVER OPEN PAREN
+1A81 : CD D0 1A                 call    GETINT          ;[GWB] SCAN X INTO [D,E]
+1A84 : D5                       push    de              ;[GWB] SAVE WHILE SCANNING Y
+1A85 : CF                       rst     SYNCHK          ;
+1A86 : 2C                       byte    ','             ;[GWB] SCAN COMMA
+1A87 : CD D0 1A                 call    GETINT          ;[GWB] GET Y INTO [D,E]
+1A8A : CF                       rst     SYNCHK          ;
+1A8B : 29                       byte    ')'             ;{GWB} SKIP OVER CLOSE PAREN
+1A8C : C1                       pop     bc              ;[GWB] GET BACK X INTO [B,C]
+1A8D : C9                       ret                     ;
+1A8E
+1A8E                  + ;;Convert PSET Coordinates to Screen Position and Character Mask
+1A8E                  | ;;On entry: BC = X-Coordinate 
+1A8E                  | ;;          DE = Y-Coordinate
+1A8E                  | ;;If BC > 71 or DE > 79, generates an FC error
+1A8E                  | ;;On exit: A = Masked Character at Screen Offset
+1A8E                  | ;;        DE = Address of Character Offset
+1A8E                  | ;;        HL = Offset into Screen
 1A8E : E3         [GWB] SCALXY: ex      (sp),hl         ;;Save Registers
 1A8F : E5                       push    hl
 1A90 : C5                       push    bc              ;;BC=X Coordinate
 1A91 : D5                       push    de              ;;DE=Y Coordinate
 1A92 : 21 47 00                 ld      hl,71           
 1A95 : E7                       rst     COMPAR          ;;If Y greater than 71
-1A96 : DA 97 06         FCERRP: jp      c,FCERR         ;;Function Call error
+1A96 : DA 97 06   (~~~) FCERRP: jp      c,FCERR         ;;Function Call error
 1A99 : 21 4F 00                 ld      hl,79
 1A9C : C5                       push    bc
 1A9D : D1                       pop     de              
@@ -5526,46 +5524,39 @@
 1A9F : 38 F5                    jr      c,FCERRP        ;;Function Call error
 1AA1 : D1                       pop     de              
 1AA2 : C1                       pop     bc
-1AA3 : 21 28 30                 ld      hl,$3028        ;;Screen Offset?
+1AA3 : 21 28 30                 ld      hl,SCREEN+40    ;;Starting screen offset
 1AA6 : 7B                       ld      a,e             ;;A=Y Coordinate
-1AA7 : 11 28 00                 ld      de,$0028
-1AAA                    L1AAA:
-1AAA : FE 03                    cp      3
-1AAC : 38 06                    jr      c,L1AB4
-1AAE : 19                       add     hl,de
-1AAF : 3D                       dec     a
-1AB0 : 3D                       dec     a
-1AB1 : 3D                       dec     a
-1AB2 : 18 F6                    jr      L1AAA
-                                ;
-1AB4                    L1AB4:
-1AB4 : 07                       rlca
-1AB5 : CB 29                    sra     c
-1AB7 : 30 01                    jr      nc,L1ABA
-1AB9 : 3C                       inc     a
-1ABA                    L1ABA:
-1ABA : 09                       add     hl,bc
-1ABB : 11 CA 1A                 ld      de,01ACAH
-1ABE                    L1ABE:
-1ABE : B7                       or      a
-1ABF : 28 04                    jr      z,L1AC5
-1AC1 : 13                       inc     de
-1AC2 : 3D                       dec     a
-1AC3 : 18 F9                    jr      L1ABE
-                        ;
-1AC5                    L1AC5:
-1AC5 : 7E                       ld      a,(hl)
-1AC6 : F6 A0                    or      0A0H
-1AC8 : AE                       xor     (hl)
-1AC9 : C9                       ret
-                        ;
-1ACA : 01 02 04                 ld      bc,00402H
-1ACD : 08                       ex      af,af'
-1ACE : 10 40                    djnz    L1B10
-1AD0                    L1AD0:
-1AD0 : CD 85 09                 call    FRMEVL
-1AD3 : C3 82 06                 jp      FRCINT
-                        ;
+1AA7 : 11 28 00                 ld      de,40           ;;Screen width
+1AAA : FE 03            SCALEY: cp      3               ;;Less than 3?
+1AAC : 38 06                    jr      c,SCALEX        ;;Convert X
+1AAE : 19                       add     hl,de           ;;Add a line to offset
+1AAF : 3D                       dec     a               ;;Subtract 3
+1AB0 : 3D                       dec     a               ;
+1AB1 : 3D                       dec     a               ;
+1AB2 : 18 F6                    jr      SCALEY          ;;Repeat
+1AB4 : 07               SCALEX: rlca                    ;;Multiply remainder by 2
+1AB5 : CB 29                    sra     c               ;;Column = X-Coordinate / 2 
+1AB7 : 30 01                    jr      nc,SCALES       ;;Was it odd?
+1AB9 : 3C                       inc     a               ;;Yes, add one to remainder
+1ABA : 09               SCALES: add     hl,bc           ;;Add column to screen offset
+1ABB : 11 CA 1A                 ld      de,BITTAB       ;
+1ABE : B7               SCALEB: or      a               ;;Check bit#
+1ABF : 28 04                    jr      z,SCALEC        ;;0? Mask screen character
+1AC1 : 13                       inc     de              ;;Bump table pointer
+1AC2 : 3D                       dec     a               ;;Decrement bit#
+1AC3 : 18 F9                    jr      SCALEB          ;;and repeat
+1AC5 : 7E               SCALEC: ld      a,(hl)          ;;Get character at screen offset
+1AC6 : F6 A0                    or      $A0             ;
+1AC8 : AE                       xor     (hl)            ;;Flip bits 5 and 7
+1AC9 : C9                       ret                     ;
+1ACA                         
+1ACA : 01 02 04 08      BITTAB: byte    $01,$02,$04,$08,$10,$40
+1ACE : 10 40                    
+1AD0                    
+1AD0                    ;;Parse an Integer                     
+1AD0 : CD 85 09         GETINT: call    FRMEVL          ;;Get a number
+1AD3 : C3 82 06                 jp      FRCINT          ;;Convert to an Integer
+1AD6
 1AD6 : D5               SOUND:  push    de
 1AD7 : CD 7F 1A                 call    SCAND
 1ADA : E5                       push    hl
@@ -5575,9 +5566,9 @@
 1AE0 : C9                       ret
 1AE1
 1AE1                    ;;Print CR/LF to printer
-1AE1 : 3E 0D            LPCRLF: ld      a,13
-1AE3 : CD E8 1A                 call    LPTOUT
-1AE6 : 3E 0A                    ld      a,10
+1AE1 : 3E 0D            LPCRLF: ld      a,13            ;;Send CR to printer
+1AE3 : CD E8 1A                 call    LPTOUT          ;
+1AE6 : 3E 0A                    ld      a,10            ;;Send LF to printer
 1AE8              [M80] LPTOUT: ;Primitive print character to printer routine
 1AE8 : F7                       rst     HOOKDO          ;;Call Extended ROM Hook Routine
 1AE9 : 11                       byte    17              ;
@@ -5642,7 +5633,7 @@
 1B35 : CD 9D 0E                 call    STROUT          ;
 1B38 : 21 B5 00                 ld      hl,STARTT       ;
 1B3B : CD 9D 0E                 call    STROUT          ;;Print "Press RETURN key to start"
-1B3E : CD 7E 1E         PRETRL: call    INCHRI          ;
+1B3E : CD 7E 1E         PRETRL: call    INCHRH          ;
 1B41 : FE 0D                    cp      13              ;
 1B43 : 20 F9                    jr      nz,PRETRL       ;;Wait for RETURN key
 1B45 : CD EA 19                 call    CRDO            ;Print CR/LF
@@ -5778,21 +5769,21 @@
 1BCE                  | ;;Reads bytes until it gets 6 $FF followed by a $00
 1BCE                  | ;;All registers preserved
 1BCE : F5               RDSYNC: push    af              ;;Save registers
-1BCF : C5                       push    bc
+1BCF : C5                       push    bc              ;
 1BD0 : 06 06      (~~~) RDSYN1: ld      b,6             ;;Do 6 times
-1BD2 : CD 4D 1B   (~~~) RDSYN2: call    RDBYTE          
-1BD5 : 3C                       inc     a
+1BD2 : CD 4D 1B   (~~~) RDSYN2: call    RDBYTE          ;
+1BD5 : 3C                       inc     a               ;
 1BD6 : 20 F8                    jr      nz,RDSYN1       ;;If not $FF, start all over
 1BD8 : 10 F8                    djnz    RDSYN2          ;;Repeat until 6 $FF read
-1BDA : CD 4D 1B   (~~~) RDSYN3: call    RDBYTE
-1BDD : B7                       or      a
+1BDA : CD 4D 1B   (~~~) RDSYN3: call    RDBYTE          ;
+1BDD : B7                       or      a               ;
 1BDE : 28 05                    jr      z,RDSYN4        ;;If $00, we are done
-1BE0 : 3C                       inc     a
+1BE0 : 3C                       inc     a               ;
 1BE1 : 28 F7                    jr      z,RDSYN3        ;;If $FF, read another byte
 1BE3 : 18 EB                    jr      RDSYN1          ;;Otherwise, start all over
-1BE5 : C1         (~~~) RDSYN4: pop     bc
+1BE5 : C1         (~~~) RDSYN4: pop     bc              ;
 1BE6 : F1                       pop     af              ;;Restore registers
-1BE7 : C9                       ret
+1BE7 : C9                       ret                     ;
 1BE8
 1BE8 : 50 72 65 73      PLAYT:  byte    "Press <PLAY>",13,10,0          ;
 1BEC : 73 20 3C 50
@@ -5993,8 +5984,9 @@
 1D44 : E7                       rst     COMPAR          ;;Are we there yet?
 1D45 : 20 F8                    jr      nz,CSAVEB       ;;No, write another
 1D47 : C9                       ret                     ;
-                        ;
-1D48 : 01 00 00                 ld      bc,00000H
+1D48
+1D48                    ;;;Orphan code?
+1D48 : 01 00 00         SLEEPS: ld      bc,0            ;Sleep maximum amount
 1D4B                    
 1D4B                    ;;Pause program execution
 1D4B                    ;;Delays BC*25-5 cycles
@@ -6003,7 +5995,7 @@
 1D4D : B1                       or      c               ;;Is it 0?         
 1D4E : 20 FB                    jr      nz,SLEEP        ;;If not, loop     
 1D50 : C9                       ret                     ;                  
-
+1D51
 1D51                    ;;Load Program Text from tape 
 1D51 : CD CE 1B         CLOADP: call    RDSYNC          ;;Wait for SYNC
 1D54 : 3E FF                    ld      a,$FF
@@ -6011,8 +6003,8 @@
 1D59 : 9F                       sbc     a,a             ;;A = 0
 1D5A : 2F                       cpl                     ;;A = $FF ???WHY?
 1D5B : 57                       ld      d,a             ;;D = $FF
-1D5C : 06 0A            CLOADB: ld      b,10            ;
-1D5E : CD 4D 1B         CLOADN: call    RDBYTE          ;;Get Byte
+1D5C : 06 0A      (~~~) CLOADB: ld      b,10            ;
+1D5E : CD 4D 1B   (~~~) CLOADN: call    RDBYTE          ;;Get Byte
 1D61 : 5F                       ld      e,a             ;;Save it
 1D62 : 96                       sub     (hl)            ;;Compare with byte in memory
 1D63 : A2                       and     d               ;;If CLOAD?
@@ -6029,24 +6021,25 @@
                         ;
 1D72              [M80] TTYCHR: ;Print character to screen
 1D72 : F7                       rst     HOOKDO          ;;Call Extended BASIC Hook Routine
-1D73 : 13                       byte    19
+1D73 : 13                       byte    19              ;
 1D74 : F5                       push    af              ;;Save character
 1D75 : FE 0A                    cp      10              ;[M80] LINE FEED?
-1D77 : 28 1A                    jr      z,ISLF         
-1D79 : 3A 00 38                 ld      a,(TTYPOS)      
+1D77 : 28 1A                    jr      z,ISLF          ;
+1D79 : 3A 00 38                 ld      a,(TTYPOS)      ;
 1D7C : B7                       or      a               ;;At beginning of line?
-1D7D : 20 14                    jr      nz,ISLF         ;;Skip Ahead
-1D7F : 3A 08 38                 ld      a,(CNTOFL)      
-1D82 : B7                       or      a               ;;Is Line Counter 0?
-1D83 : 28 0E                    jr      z,ISLF          ;;Skip Ahead
-1D85 : 3D                       dec     a
+1D7D : 20 14                    jr      nz,ISLF         ;;No, skip line counter check
+1D7F : 3A 08 38                 ld      a,(CNTOFL)      ;
+1D82 : B7                       or      a               ;;Is line Counter 0?
+1D83 : 28 0E                    jr      z,ISLF          ;;Then no pauses
+1D85 : 3D                       dec     a               ;
 1D86 : 32 08 38                 ld      (CNTOFL),a      ;;Decrement Line Counter
-1D89 : 20 08                    jr      nz,ISLF         ;;If zero
-1D8B : 3E 17                    ld      a,23            ;;Set to 23
-1D8D : 32 08 38                 ld      (CNTOFL),a      
-1D90 : CD 2F 1A                 call    CQINCH           ;;do a thing
+1D89 : 20 08                    jr      nz,ISLF         ;;Not 0, don't pause
+1D8B : 3E 17                    ld      a,23            ;
+1D8D : 32 08 38                 ld      (CNTOFL),a      ;;Reset line counter
+1D90 : CD 2F 1A                 call    CQINCH          ;;Wait for character from keyboard
 1D93 : F1         (~~~) ISLF:   pop     af              ;;Retrieve Character
-1D94 : F5               TTYOUT: push    af              
+1D94                    ;;Print Character, bypassing Extended Hook and Line Counter checks
+1D94 : F5               TTYOUT: push    af              ;
 1D95 : D9                       exx                     ;;Save HL on Stack
 1D96 : FE 07                    cp      7               ;;Is it BEL!
 1D98 : CA 14 1E                 jp      z,BEEP          ;;Make Beep Sound
@@ -6067,7 +6060,6 @@
 1DB8 : 77                       ld      (hl),a          ;;current position on screen
 1DB9 : CD 1F 1E                 call    TTYMOV          ;;Move Cursor Right
 1DBC : 18 2C                    jr      TTYFIN          ;;Finish Up
-1DBE                            ;
 1DBE                    ;;Carriage Return: Move Cursor to Beginning of Current Line
 1DBE : ED 5B 00 38(~~~) CR:     ld      de,(TTYPOS)     ;
 1DC2 : AF                       xor     a               ;
@@ -6078,7 +6070,7 @@
 1DC8 : 11 C0 33   (~~~) LF:     ld      de,SCREEN+960   ;
 1DCB : E7                       rst     COMPAR          ;;Cursor on Last Row?
 1DCC : D2 D8 1D                 jp      nc,LFS          ;;Yes, Scroll and Finish Up
-1DCF : 11 28 00                 ld      de,40           ;
+1DCF : 11 28 00                 ld      de,40           ;       
 1DD2 : 19                       add     hl,de           ;;Add 40 to Move Down One Line
 1DD3 : 22 01 38                 ld      (CURRAM),hl     ;;Save New Screen Position
 1DD6 : 18 12                    jr      TTYFIN          ;
@@ -6188,270 +6180,183 @@
 1E7B : 2B                       dec     hl              ;
 1E7C : 18 FA                    jr      SDELAL          ;;Decrement and loop
 1E7E                    
-1E7E : F7               INCHRI: rst     HOOKDO
+1E7E                    ;;INCHRH, INCHRX, and INCHRI - Get Character from Keyboard 
+1E7E : F7               INCHRH: rst     HOOKDO
 1E7F : 12                       byte    18
-1E80                    L1E80:
-1E80 : D9                       exx
-1E81                    L1E81:
-1E81 : 2A 0B 38                 ld      hl,(X380B)
+1E80 : D9               INCHRX: exx     ;;Save Registers        
+1E81 : 2A 0B 38         INCHRI: ld      hl,(RESADR)
 1E84 : 7C                       ld      a,h
 1E85 : B7                       or      a
-1E86 : 28 1A                    jr      z,L1EA2
-1E88 : EB                       ex      de,hl
-1E89 : 21 0F 38                 ld      hl,X380F
-1E8C : 34                       inc     (hl)
-1E8D : 7E                       ld      a,(hl)
-1E8E : FE 0F                    cp      15
-1E90 : 38 3C                    jr      c,L1ECE
-1E92 : 36 05                    ld      (hl),5
-1E94 : EB                       ex      de,hl
+1E86 : 28 1A                    jr      z,KEYSCN
+1E88 : EB                       ex      de,hl           ;;Save HL
+1E89 : 21 0F 38                 ld      hl,KCOUNT
+1E8C : 34                       inc     (hl)            ;;Increment debounce counter
+1E8D : 7E                       ld      a,(hl)          ;;Get Value
+1E8E : FE 0F                    cp      15              ;;Less than 15?
+1E90 : 38 3C                    jr      c,KEYFIN        ;;Yes, finish up
+1E92 : 36 05                    ld      (hl),5          ;;Set debounce counter to 5
+1E94 : EB                       ex      de,hl           ;;Restore HL
 1E95 : 23                       inc     hl
 1E96 : 7E                       ld      a,(hl)
-1E97 : 22 0B 38                 ld      (X380B),hl
+1E97 : 22 0B 38                 ld      (RESADR),hl
 1E9A : B7                       or      a
-1E9B : F2 36 1F                 jp      p,L1F36
+1E9B : F2 36 1F                 jp      p,KEYRET
 1E9E : AF                       xor     a
 1E9F : 32 0C 38                 ld      (X380C),a
-1EA2                    L1EA2:
-1EA2 : 01 FF 00                 ld      bc,255
-1EA5 : ED 78                    in      a,(c)
-1EA7 : 2F                       cpl
-1EA8 : E6 3F                    and     63
-1EAA : 21 0E 38                 ld      hl,0380EH
-1EAD : 28 16                    jr      z,L1EC5
-1EAF : 06 7F                    ld      b,07FH
-1EB1 : ED 78                    in      a,(c)
+1EA2                    ;;Scan Keyboard
+1EA2 : 01 FF 00         KEYSCN: ld      bc,$FF          ;;B=0 to scan all columns
+1EA5 : ED 78                    in      a,(c)           ;;Read rows from I/O Port 255
+1EA7 : 2F                       cpl                     ;;and Invert
+1EA8 : E6 3F                    and     $3F             ;;Check all rows
+1EAA : 21 0E 38                 ld      hl,LSTX         ;;Pointer to last scan code
+1EAD : 28 16                    jr      z,NOKEYS        ;;No key pressed? ???do a thing
+1EAF                            ;;???Check for Shift and Control Keys
+1EAF : 06 7F                    ld      b,$7F           ;;Scanning column 7 - %01111111
+1EB1 : ED 78                    in      a,(c)           ;;Read rows and invert
 1EB3 : 2F                       cpl
-1EB4 : E6 0F                    and     00FH
-1EB6 : 20 1F                    jr      nz,L1ED7
-1EB8 : 06 BF                    ld      b,0BFH
-1EBA                    L1EBA:
-1EBA : ED 78                    in      a,(c)
-1EBC : 2F                       cpl
-1EBD : E6 3F                    and     03FH
-1EBF : 20 16                    jr      nz,L1ED7
-1EC1 : CB 08                    rrc     b
-1EC3 : 38 F5                    jr      c,L1EBA
-1EC5                    L1EC5:
-1EC5 : 23                       inc     hl
-1EC6 : 3E 46                    ld      a,046H
-1EC8 : BE                       cp      (hl)
-1EC9 : 38 03                    jr      c,L1ECE
-1ECB : 28 04                    jr      z,L1ED1
-1ECD : 34                       inc     (hl)
-1ECE                    L1ECE:
-1ECE : AF                       xor     a
-1ECF : D9                       exx
-1ED0 : C9                       ret
-                        ;
-1ED1                    L1ED1:
-1ED1 : 34                       inc     (hl)
-1ED2 : 2B                       dec     hl
-1ED3 : 36 00                    ld      (hl),000H
-1ED5 : 18 F7                    jr      L1ECE
-                        ;
-1ED7                    L1ED7:
-1ED7 : 11 00 00                 ld      de,00000H
-1EDA                    L1EDA:
-1EDA : 1C                       inc     e
-1EDB : 1F                       rra
-1EDC : 30 FC                    jr      nc,L1EDA
-1EDE : 7B                       ld      a,e
-1EDF                    L1EDF:
-1EDF : CB 18                    rr      b
-1EE1 : 30 04                    jr      nc,L1EE7
-1EE3 : C6 06                    add     a,006H
-1EE5 : 18 F8                    jr      L1EDF
-                        ;
-1EE7                    L1EE7:
-1EE7 : 5F                       ld      e,a
-1EE8 : BE                       cp      (hl)
-1EE9 : 77                       ld      (hl),a
-1EEA : 23                       inc     hl
-1EEB : 20 0F                    jr      nz,L1EFC
-1EED : 3E 04                    ld      a,004H
-1EEF : BE                       cp      (hl)
-1EF0 : 38 05                    jr      c,L1EF7
-1EF2 : 28 0C                    jr      z,L1F00
-1EF4 : 34                       inc     (hl)
-1EF5 : 18 02                    jr      L1EF9
-                        ;
-1EF7                    L1EF7:
-1EF7 : 36 06                    ld      (hl),006H
-1EF9                    L1EF9:
-1EF9 : AF                       xor     a
-1EFA : D9                       exx
-1EFB : C9                       ret
-                        ;
-1EFC                    L1EFC:
-1EFC : 36 00                    ld      (hl),000H
-1EFE : 18 F9                    jr      L1EF9
-                        ;
-1F00                    L1F00:
-1F00 : 34                       inc     (hl)
-1F01 : 06 7F                    ld      b,07FH
-1F03 : ED 78                    in      a,(c)
-1F05 : CB 6F                    bit     5,a
-1F07 : DD 21 93 1F              ld      ix,01F93H
-1F0B : 28 0C                    jr      z,L1F19
-1F0D : CB 67                    bit     4,a
-1F0F : DD 21 65 1F              ld      ix,01F65H
-1F13 : 28 04                    jr      z,L1F19
-1F15 : DD 21 37 1F              ld      ix,01F37H
-1F19                    L1F19:
-1F19 : DD 19                    add     ix,de
-1F1B : DD 7E 00                 ld      a,(ix+000H)
-1F1E : B7                       or      a
-1F1F : F2 36 1F                 jp      p,L1F36
-1F22 : D6 7F                    sub     07FH
-1F24 : 4F                       ld      c,a
-1F25 : 21 44 02                 ld      hl,00244H
-1F28                    L1F28:
-1F28 : 23                       inc     hl
-1F29 : 7E                       ld      a,(hl)
-1F2A : B7                       or      a
-1F2B : F2 28 1F                 jp      p,L1F28
-1F2E : 0D                       dec     c
-1F2F : 20 F7                    jr      nz,L1F28
-1F31 : 22 0B 38                 ld      (X380B),hl
-1F34 : E6 7F                    and     07FH
-1F36                    L1F36:
-1F36 : D9                       exx
+1EB4 : E6 0F                    and     $0F             ;;Check rows 0 through 3 - %00001111
+1EB6 : 20 1F                    jr      nz,KEYDN        ;;Key down? Process it
+1EB6                            ;;Scan the Rest of the Columns
+1EB8 : 06 BF                    ld      b,$BF           ;;Start with column 6 - %10111111 
+1EBA : ED 78      (~~~) KEYSCL: in      a,(c)           ;;Read rows and invert
+1EBC : 2F                       cpl                     ;
+1EBD : E6 3F                    and     $3F             ;;Check rows 0 through 5 - %00111111
+1EBF : 20 16                    jr      nz,KEYDN        ;;Key down? Process it
+1EC1 : CB 08                    rrc     b               ;;Next column
+1EC3 : 38 F5                    jr      c,KEYSCL        ;;Loop if not out of columns
+1EC5 : 23               NOKEYS: inc     hl              ;;Point to KCOUNT           
+1EC6 : 3E 46                    ld      a,70            ;
+1EC8 : BE                       cp      (hl)            ;
+1EC9 : 38 03                    jr      c,KEYFIN        ;;Less than 70? Clean up and return
+1ECB : 28 04                    jr      z,SCNINC        ;;0? Increment KCOUNT and return
+1ECD : 34                       inc     (hl)            ;
+1ECE : AF               KEYFIN: xor     a               ;;Clear A
+1ECF : D9                       exx                     ;;Restore Registers
+1ED0 : C9                       ret                     ;
+1ED1 : 34               SCNINC: inc     (hl)            ;;Increment KCOUNT
+1ED2 : 2B                       dec     hl              ;
+1ED3 : 36 00                    ld      (hl),0          ;;Clear LSTX 
+1ED5 : 18 F7                    jr      KEYFIN          ;;Clean up and Return
+1ED7
+1ED7                    ;;Process Key Currently Pressed
+1ED7 : 11 00 00         KEYDN:  ld      de,0            ;
+1EDA : 1C               KEYROW: inc     e               ;;Get row number (1-5) 
+1EDB : 1F                       rra                     ;
+1EDC : 30 FC                    jr      nc,KEYROW       ;
+1EDE : 7B                       ld      a,e             ;
+1EDF : CB 18            KEYCOL: rr      b               ;;Add column number times 6
+1EE1 : 30 04                    jr      nc,KEYCHK       ;
+1EE3 : C6 06                    add     a,6             ;
+1EE5 : 18 F8                    jr      KEYCOL          ;
+1EE7 : 5F               KEYCHK: ld      e,a             ;
+1EE8 : BE                       cp      (hl)            ;;Compare scan code to LSTX
+1EE9 : 77                       ld      (hl),a          ;;Update LSTX with scan code
+1EEA : 23                       inc     hl              ;;Point to KCOUNT
+1EEB : 20 0F                    jr      nz,KEYCLR       ;;Not the same? Clesr KCOUNT snd exit
+1EED : 3E 04                    ld      a,4             
+1EEF : BE                       cp      (hl)            ;;Check KCOUNT
+1EF0 : 38 05                    jr      c,KEYFN6        ;;Greater than 4? Set to 6 and return
+1EF2 : 28 0C                    jr      z,KEYASC        ;;Equal to 4? Convert scan code
+1EF4 : 34                       inc     (hl)            ;;Increment KCOUNT
+1EF5 : 18 02                    jr      KEYFN2          ;;Clean up and exit
+1EF7 : 36 06            KEYFN6: ld      (hl),6          ;;Set KCOUNT to 6
+1EF9 : AF               KEYFN2: xor     a               ;;Clear A
+1EFA : D9                       exx                     ;;Restore registers
+1EFB : C9                       ret                     ;
+1EFC : 36 00            KEYCLR: ld      (hl),0          ;;Clear KCOUNT
+1EFE : 18 F9                    jr      KEYFN2          ;;Clean up and return
+1EFF                    ;;Convert Keyboard Scan Code to ASCII Character
+1F00 : 34               KEYASC: inc     (hl)            ;;Increment KCOUNT
+1F01 : 06 7F                    ld      b,$7F           ;;Read column 7
+1F03 : ED 78                    in      a,(c)           ;;Get row
+1F05 : CB 6F                    bit     5,a             ;;Check Control key
+1F07 : DD 21 93 1F              ld      ix,CTLTAB-1     ;;Point to control table
+1F0B : 28 0C                    jr      z,KEYLUP        ;;Control? Do lookup
+1F0D : CB 67                    bit     4,a             ;;Check Shift key
+1F0F : DD 21 65 1F              ld      ix,SHFTAB-1     ;;Point to shift table
+1F13 : 28 04                    jr      z,KEYLUP        ;;Shift? Do lookup
+1F15 : DD 21 37 1F              ld      ix,KEYTAB-1       
+1F19 : DD 19            KEYLUP: add     ix,de           ;;Get pointer into table
+1F1B : DD 7E 00                 ld      a,(ix+0)        ;;Load ASCII value
+1F1E : B7                       or      a               ;;Reserved Word? 
+1F1F : F2 36 1F                 jp      p,KEYRET        ;;No, return ASCII code
+1F22 : D6 7F                    sub     $7F             ;;Convert to Reserved Word Count
+1F24 : 4F                       ld      c,a             ;;and copy to C
+1F25 : 21 44 02                 ld      hl,RESLST-1     ;;Point to Reserved Word List
+1F28 : 23               KEYRES: inc     hl              ;;Bump pointer
+1F29 : 7E                       ld      a,(hl)          ;;Get next character
+1F2A : B7                       or      a               ;;First letter of reserved word?
+1F2B : F2 28 1F                 jp      p,KEYRES        ;;No, loop
+1F2E : 0D                       dec     c               ;;Decrement Count
+1F2F : 20 F7                    jr      nz,KEYRES       ;;Not 0? Find next word
+1F31 : 22 0B 38                 ld      (RESADR),hl     ;;Save Keyword Address
+1F34 : E6 7F                    and     $7F             ;;Strip high bit from first character
+1F36 : D9               KEYRET: exx                     ;;Restore Registers
 1F37 : C9                       ret
-                        ;
-1F38 : 3D                       dec     a
-1F39 : 08                       ex      af,af'
-1F3A : 3A 0D 3B                 ld      a,(X3B0D)
-1F3D : 2E 2D                    ld      l,02DH
-1F3F : 2F                       cpl
-1F40 : 30 70                    jr      nc,L1FB2
-1F42 : 6C                       ld      l,h
-1F43                    L1F43:
-1F43 : 2C                       inc     l
-1F44 : 39                       add     hl,sp
-1F45 : 6F                       ld      l,a
-1F46 : 6B                       ld      l,e
-1F47 : 6D                       ld      l,l
-1F48 : 6E                       ld      l,(hl)
-1F49 : 6A                       ld      l,d
-1F4A : 38 69                    jr      c,L1FB5
-1F4C : 37                       scf
-1F4D : 75                       ld      (hl),l
-1F4E : 68                       ld      l,b
-1F4F : 62                       ld      h,d
-1F50 : 36 79                    ld      (hl),079H
-1F52 : 67                       ld      h,a
-1F53 : 76                       halt
-1F54 : 63                       ld      h,e
-1F55 : 66                       ld      h,(hl)
-1F56 : 35                       dec     (hl)
-1F57 : 74                       ld      (hl),h
-1F58 : 34                       inc     (hl)
-1F59 : 72                       ld      (hl),d
-1F5A : 64                       ld      h,h
-1F5B : 78                       ld      a,b
-1F5C : 33                       inc     sp
-1F5D : 65                       ld      h,l
-1F5E : 73                       ld      (hl),e
-1F5F : 7A                       ld      a,d
-1F60 : 20 61                    jr      nz,L1FC3
-1F62 : 32 77 31                 ld      (X3177),a
-1F65 : 71                       ld      (hl),c
-1F66 : 2B                       dec     hl
-1F67 : 5C                       ld      e,h
-1F68 : 2A 0D 40                 ld      hl,(X400D)
-1F6B : 3E 5F                    ld      a,05FH
-1F6D : 5E                       ld      e,(hl)
-1F6E : 3F                       ccf
-1F6F : 50                       ld      d,b
-1F70 : 4C                       ld      c,h
-1F71 : 3C                       inc     a
-1F72 : 29                       add     hl,hl
-1F73 : 4F                       ld      c,a
-1F74 : 4B                       ld      c,e
-1F75 : 4D                       ld      c,l
-1F76 : 4E                       ld      c,(hl)
-1F77 : 4A                       ld      c,d
-1F78 : 28 49                    jr      z,L1FC3
-1F7A : 27                       daa
-1F7B : 55                       ld      d,l
-1F7C : 48                       ld      c,b
-1F7D : 42                       ld      b,d
-1F7E : 26 59                    ld      h,059H
-1F80 : 47                       ld      b,a
-1F81 : 56                       ld      d,(hl)
-1F82 : 43                       ld      b,e
-1F83 : 46                       ld      b,(hl)
-1F84 : 25                       dec     h
-1F85 : 54                       ld      d,h
-1F86 : 24                       inc     h
-1F87 : 52                       ld      d,d
-1F88 : 44                       ld      b,h
-1F89 : 58                       ld      e,b
-1F8A : 23                       inc     hl
-1F8B : 45                       ld      b,l
-1F8C : 53                       ld      d,e
-1F8D : 5A                       ld      e,d
-1F8E : 20 41                    jr      nz,L1FD1
-1F90 : 22 57 21                 ld      (X2157),hl
-1F93 : 51                       ld      d,c
-1F94 : 82                       add     a,d
-1F95 : 1C                       inc     e
-1F96 : C1                       pop     bc
-1F97 : 0D                       dec     c
-1F98 : 94                       sub     h
-1F99 : C4 81 1E                 call    nz,L1E81
-1F9C : 30 10                    jr      nc,L1FAE
-1F9E : CA C3 92                 jp      z,L92C3
-1FA1 : 0F                       rrca
-1FA2 : 9D                       sbc     a,l
-1FA3 : 0D                       dec     c
-1FA4 : C8                       ret     z
-1FA5 : 9C                       sbc     a,h
-1FA6 : 8D                       adc     a,l
-1FA7 : 09                       add     hl,bc
-1FA8 : 8C                       adc     a,h
-1FA9 : 15                       dec     d
-1FAA : 08                       ex      af,af'
-1FAB : C9                       ret
-                        ;
-1FAC : 90                       sub     b
-1FAD : 19                       add     hl,de
-1FAE                    L1FAE:
-1FAE : 07                       rlca
-1FAF : C7                       rst     START
-1FB0 : 03                       inc     bc
-1FB1 : 83                       add     a,e
-1FB2                    L1FB2:
-1FB2 : 88                       adc     a,b
-1FB3 : 84                       add     a,h
-1FB4 : A5                       and     l
-1FB5                    L1FB5:
-1FB5 : 12                       ld      (de),a
-1FB6 : 86                       add     a,(hl)
-1FB7 : 18 8A                    jr      L1F43
-                        ;
-1FB9 : 85                       add     a,l
-1FBA : 13                       inc     de
-1FBB : 9A                       sbc     a,d
-1FBC : C6 9B                    add     a,09BH
-1FBE : 97                       sub     a
-1FBF : 8E                       adc     a,(hl)
-1FC0 : 89                       adc     a,c
-1FC1 : 11                       byte    $11             ;;"LD BC,"
-1FC2 : E5               L1FC2:  push    hl 
-1FC3 : 21 04 00         L1FC3:  ld      hl,4
-1FC6 : 39                       add     hl,sp
-1FC7 : 22 F9 38                 ld      (SAVSTK),hl
-1FCA : E1                       pop     hl
-1FCB : C3 25 1A                 jp      ISCNTC
-                        ;
-1FCE                    L1FCE:
-1FCE : 2A F9 38                 ld      hl,(SAVSTK)
-1FD1                    L1FD1:
-1FD1 : F9                       ld      sp,hl
-1FD2 : 2A CE 38                 ld      hl,(SAVTXT)
-1FD5 : CD 20 0C                 call    STOPC
+1F38
+1F38                    ;;Unmodified Key Lookup Table
+1F38 : 3D 08 3A 0D      KEYTAB: byte    '=',$08,':',$0D,';','.' ;;Backspace and Return
+1F3C : 3B 2E                                                    
+1F3E : 2D 2F 30 70              byte    '-','/','0','p','l',',' ;
+1F42 : 6C 2C                                                    
+1F44 : 39 6F 6B 6D              byte    '9','o','k','m','n','j' ;
+1F48 : 6E 6A                                                    
+1F4A : 38 69 37 75              byte    '8','i','7','u','h','b' ;
+1F4E : 68 62                                                    
+1F50 : 36 79 67 76              byte    '6','y','g','v','c','f' ;
+1F54 : 63 66                                                    
+1F56 : 35 74 34 72              byte    '5','t','4','r','d','x' ;
+1F5A : 64 78                                                    
+1F5C : 33 65 73 7A              byte    '3','e','s','z',' ','a' ;
+1F60 : 20 61                                                    
+1F62 : 32 77 31 71              byte    '2','w','1','q'         ;
+                        ;;Shifted Key Lookup Table
+1F66 : 2B 5C 2A 0D      SHFTAB: byte    '+',$5C,'*',$0D,'@','>' ;;Backslash, Return
+1F6A : 40 3E                                                    
+1F6C : 5F 5E 3F 50              byte    '_','^','?','P','L','<' ;
+1F70 : 4C 3C                                                    
+1F72 : 29 4F 4B 4D              byte    ')','O','K','M','N','J' ;
+1F76 : 4E 4A                                                    
+1F78 : 28 49 27 55              byte    '(','I',$27,'U','H','B' ;;Apostrophe
+1F7C : 48 42                                                    
+1F7E : 26 59 47 56              byte    '&','Y','G','V','C','F' ;
+1F82 : 43 46                                                    
+1F84 : 25 54 24 52              byte    '%','T','$','R','D','X' ;
+1F88 : 44 58                                                    
+1F8A : 23 45 53 5A              byte    '#','E','S','Z',' ','A' ;
+1F8E : 20 41                                                    
+1F90 : 22 57 21 51              byte    $22,'W','!','Q'         ;;Quotation Mark
+
+                        ;;Control Key Lookup Table
+1F94 : 82 1C C1 0D      CTLTAB: byte    $82,$1C,$C1,$0D,$94,$C4 ;;NEXT ^\ PEEK Return POKE VAL
+1F98 : 94 C4                                                    ;; 
+1F9A : 81 1E 30 10              byte    $81,$1E,$30,$10,$CA,$C3 ;;FOR ^^ 0 ^P POINT STR$
+1F9E : CA C3                                                    ;; 
+1FA0 : 92 0F 9D 0D              byte    $92,$0F,$9D,$0D,$C8,$9C ;;COPY ^O PRESET ^M RIGHT$, SET
+1FA4 : C8 9C                                                    ;; 
+1FA6 : 8D 09 8C 15              byte    $8D,$09,$8C,$15,$08,$C9 ;;RETURN ^I GOSUB ^U ^H MID$
+1FAA : 08 C9                                                    ;; 
+1FAC : 90 19 07 C7              byte    $90,$19,$07,$C7,$03,$83 ;;ON ^Y ^G LEFT$ ^C DATA
+1FB0 : 03 83                                                    ;; 
+1FB2 : 88 84 A5 12              byte    $88,$84,$A5,$12,$86,$18 ;;GOTO INPUT THEN ^R READ ^X
+1FB6 : 86 18                                                    ;; 
+1FB8 : 8A 85 13 9A              byte    $8A,$85,$13,$9A,$C6,$9B ;;IF DIM ^S CLOAD CHR$ CSAVE
+1FBC : C6 9B                                                    ;; 
+1FBE : 97 8E 89 11              byte    $97,$8E,$89,$11         ;;LIST REM RUN ^Q
+1FC2
+1FC2                    ;;Check for Ctrl-C, called from NEWSTT
+1FC2 : E5               INCNTC: push    hl                      ;;Save text pointer
+1FC3 : 21 04 00                 ld      hl,4                    ;
+1FC6 : 39                       add     hl,sp                   ;
+1FC7 : 22 F9 38                 ld      (SAVSTK),hl             ;;Save stack pointer less 2 entries
+1FCA : E1                       pop     hl                      ;;Restore text pointer
+1FCB : C3 25 1A                 jp      ISCNTC                  ;;Check for Ctrl-C
+1FCE
+1FCE                    ;;Finish up Warm Start
+1FCE : 2A F9 38         WRMFIN: ld      hl,(SAVSTK)             ;;Restore stack pointer
+1FD1 : F9                       ld      sp,hl                   ;
+1FD2 : 2A CE 38                 ld      hl,(SAVTXT)             ;;Restore text pointer
+1FD5 : CD 20 0C                 call    STOPC                   ;;Enter direct mode
 1FD8
 1FD8                  + ;;Save Stack Pointer
 1FD8                  | ;;Called from STKINI. Stores stack pointer in TEMPST
