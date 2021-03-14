@@ -391,8 +391,7 @@
 00E9 : B5                       or      l               ;
 00EA : 20 F0                    jr      nz,COLOR2       ;;If not 0, loop
 00EC : C9                       ret                     ;;Back to CYCLE
-
-
+00ED
 00ED                  + ;;Basic Interpreter Warm Start
 00ED                  | ;;Clears the screen, resets I/O port $FF, initializes
 00ED                  | ;;the hardware stack, 
@@ -403,7 +402,7 @@
 00F5 : D3 FF                    out     ($FF),a         ;;Reset I/O Port 255 
 00F7 : CD E5 0B                 call    STKINI          ;;Initialize stack
 00FA : CD 40 1A                 call    WRMCON          ;;Finish Up
-
+00FD
 00FD : 21 87 01         COLDST: ld      hl,DEFALT       ;Set System Variable Default Values
 0100 : 01 51 00                 ld      bc,81           ;
 0103 : 11 03 38                 ld      de,USRPOK       ;;Copy 80 bytes starting at DEFALT
@@ -1497,7 +1496,7 @@
 067A                  | ;
 067A : D7               INTIDX: rst     CHRGET          ;
 067B : CD 72 09         INTID2: call    FRMNUM          ;{M80} READ FORMULA AND GET RESULT AS NTEGER IN [D,E]
-067E : EF               L067E:  rst     FSIGN           ;[M80] DON'T ALLOW NEGATIVE NUMBERS
+067E : EF               INTFR2: rst     FSIGN           ;[M80] DON'T ALLOW NEGATIVE NUMBERS
 067F : FA 97 06                 jp      m,FCERR         ;[M80] TOO BIG. FUNCTION CALL ERROR
 0682
 0682 : 3A E7 38   [M80] FRCINT: ld      a,(FAC)         ;
@@ -1808,7 +1807,7 @@
                         ;
 083A                    L083A:
 083A : F5                       push    af
-083B : CD 53 0B                 call    L0B53
+083B : CD 53 0B                 call    GTBYTC
 083E : CF                       rst     SYNCHK
 083F : 29                       byte    ')'
 0840 : 2B                       dec     hl
@@ -2103,10 +2102,10 @@
 09B5 : 3D                       dec     a               ;[M80] SEE IF LEFT PART IS STRING
 09B6 : 7B                       ld      a,e             ;[M80] REFETCH OP-VALUE
 09B7 : CA 7C 0F                 jp      z,CAT           ;[M80] MUST BE CAT
-09BA : 07         [M80] NTPLUS: rlca                    ;[M65] MULTIPLY BY 2
+09BA : 07         (M80) NTPLUS: rlca                    ;[M65] MULTIPLY BY 2
 09BB : 83                       add     a,e             ;[M65] BY THREE.
 09BC : 5F                       ld      e,a             ;[M65] SET UP FOR LATER
-09BD : 21 4C 03   [M65] QPREC1: ld      hl,OPTAB        ;[M80] CREATE INDEX INTO OPTAB
+09BD : 21 4C 03   {M65} QPREC1: ld      hl,OPTAB        ;[M80] CREATE INDEX INTO OPTAB
 09C0 : 16 00                    ld      d,0             ;[M80] MAKE HIGH BYTE OF OFFSET=0
 09C2 : 19                       add     hl,de           ;[M80] ADD IN CALCULATED OFFSET
 09C3 : 78                       ld      a,b             ;[M80] [A] GETS OLD PRECEDENCE
@@ -2131,23 +2130,22 @@
 09DB : C5                       push    bc
 09DC : 2A C3 38                 ld      hl,(TENP3)
 09DF : C3 88 09                 jp      LPOPER
-                                ;
-09E2                    DORELS:
-09E2 : 16 00                    ld      d,000H
-09E4                    L09E4:
-09E4 : D6 AF                    sub     0AFH
-09E6 : DA D0 0A                 jp      c,L0AD0
-09E9 : FE 03                    cp      003H
-09EB : D2 D0 0A                 jp      nc,L0AD0
-09EE : FE 01                    cp      001H
-09F0 : 17                       rla
-09F1 : AA                       xor     d
-09F2 : BA                       cp      d
-09F3 : 57                       ld      d,a
-09F4 : DA C4 03                 jp      c,SNERR
-09F7 : 22 C3 38                 ld      (TENP3),hl
-09FA : D7                       rst     CHRGET
-09FB : 18 E7                    jr      L09E4
+09E2
+09E2                    ;;Evaluate Logical Operators
+09E2 : 16 00      [M80] DORELS: ld      d,0             ;{M80} ASSUME NO RELATION OPS, SETUP HIGH ORDER OF INDEX INTO OPTAB
+09E4 : D6 AF      (M80) LOPREL: sub     GREATK          ;[M80] IS THIS ONE RELATION?
+09E6 : DA D0 0A                 jp      c,FINREL        ;[M80] RELATIONS ALL THROUGH
+09E9 : FE 03                    cp      LESSTK-GREATK+1 ;[M80] IS IT REALLY RELATIONAL?
+09EB : D2 D0 0A                 jp      nc,FINREL       ;[M80] NO JUST BIG
+09EE : FE 01                    cp      1               ;[M80] SET UP BITS BY MAPPING
+09F0 : 17                       rla                     ;[M80] 0 TO 1 1 TO 2 AND 2 TO 4
+09F1 : AA                       xor     d               ;[M80] BRING IN THE OLD BITS
+09F2 : BA                       cp      d               ;[M80] MAKE SURE RESULT IS BIGGER
+09F3 : 57                       ld      d,a             ;[M80] SAVE THE MASK
+09F4 : DA C4 03                 jp      c,SNERR         ;[M80] DON'T ALLOW TWO OF THE SAME
+09F7 : 22 C3 38                 ld      (TENP3),hl      ;[M80] SAVE CHARACTER POINTER
+09FA : D7                       rst     CHRGET          ;[M80] GET THE NEXT CANDIDATE
+09FB : 18 E7                    jr      LOPREL          ;
                         ;
 09FD                    ;[M80] EVALUATE VARIABLE, CONSTANT, FUNCTION CALL
 09FD : F7         [M80] EVAL:   rst     HOOKDO
@@ -2257,61 +2255,63 @@
 0AA5 : C8                       ret     z               ;
 0AA6 : 2B                       dec     hl              ;[M80] CHECK IF LAST CHARACTER WAS A DIGIT
 0AA7 : C9                       ret                     ;[M80] RETURN WITH NON-ZERO SET
-
-                      + ;;AND and OR Operators
-                      | ;
-                      | ;[M80] DANDOR APPLIES THE "AND" AND "OR" OPERATOR`
-                      | ;[M80] AND SHOULD BE USED TO IMPLEMENT ALL LOGICAL OPERATORS.
-                      | ;[M80] WHENEVER AN OPERATOR IS APPLIED, ITS PRECEDENCE IS IN [B].
-                      | ;[M80] THIS FACT IS USED TO DISTINGUISH BETWEEN "AND" AND "OR".
-                      | ;[M80] THE RIGHT HAND ARGUMENT IS COERCED TO INTEGER, JUST AS
-                      | ;[M80] THE LEFT HAND ONE WAS WHEN IT WAS PUSHED ON THE STACK.
+0AA8
+0AA8                  + ;;AND and OR Operators
+0AA8                  | ;
+0AA8                  | ;[M80] DANDOR APPLIES THE "AND" AND "OR" OPERATOR`
+0AA8                  | ;[M80] AND SHOULD BE USED TO IMPLEMENT ALL LOGICAL OPERATORS.
+0AA8                  | ;[M80] WHENEVER AN OPERATOR IS APPLIED, ITS PRECEDENCE IS IN [B].
+0AA8                  | ;[M80] THIS FACT IS USED TO DISTINGUISH BETWEEN "AND" AND "OR".
+0AA8                  | ;[M80] THE RIGHT HAND ARGUMENT IS COERCED TO INTEGER, JUST AS
+0AA8                  | ;[M80] THE LEFT HAND ONE WAS WHEN IT WAS PUSHED ON THE STACK.
 0AA8 : F6         [M65] OROP:   byte    $F6             ;[M80] OR $AF" TO SET THE PRECEDENCE "OR"=70
 0AA9 : AF         [M65] ANDOP:  xor     a               ;;leave 0 in A for AND
-
-                        ;; *** This code doesn't match any of the Original sources ***
 0AAA : F5         [M80] DANDOR: push    af              ;[M80] SAVE THE PRECEDENCE or Operator...
 0AAB : CD 75 09                 call    CHKNUM          ;[M65] MUST BE NUMBER
 0AAE : CD 82 06                 call    FRCINT          ;COERCE RIGHT HAND ARGUMENT TO INTEGER
 0AB1 : F1                       pop     af              ;GET BACK THE PRECEDENCE TO DISTINGUISH "AND" AND "OR"
-0AB2 : EB                       ex      de,hl
-0AB3 : C1                       pop     bc
-0AB4 : E3                       ex      (sp),hl
-0AB5 : EB                       ex      de,hl
-0AB6 : CD 23 15                 call    MOVFR
-0AB9 : F5                       push    af
-0ABA : CD 82 06                 call    FRCINT
-0ABD : F1                       pop     af
-0ABE : C1                       pop     bc
-0ABF : 79                       ld      a,c
-0AC0 : 21 21 0B                 ld      hl,00B21H
-0AC3 : C2 CB 0A                 jp      nz,L0ACB
-0AC6 : A3                       and     e
-0AC7 : 4F                       ld      c,a
-0AC8 : 78                       ld      a,b
-0AC9 : A2                       and     d
-0ACA : E9                       jp      (hl)
-                                ;
-0ACB                    L0ACB:
-0ACB : B3                       or      e
-0ACC : 4F                       ld      c,a
-0ACD : 78                       ld      a,b
-0ACE : B2                       or      d
-0ACF : E9                       jp      (hl)
-                        ;
-0AD0                    L0AD0:
-0AD0 : 21 E2 0A                 ld      hl,00AE2H
+0AB2 : EB                       ex      de,hl           ;
+0AB3 : C1                       pop     bc              ;
+0AB4 : E3                       ex      (sp),hl         ;
+0AB5 : EB                       ex      de,hl           ;
+0AB6 : CD 23 15                 call    MOVFR           ;
+0AB9 : F5                       push    af              ;
+0ABA : CD 82 06                 call    FRCINT          ;
+0ABD : F1                       pop     af              ;
+0ABE : C1                       pop     bc              ;
+0ABF : 79                       ld      a,c             ;
+0AC0 : 21 21 0B                 ld      hl,GIVINT       ;{M80} PLACE TO JUMP WHEN DONE
+0AC3 : C2 CB 0A                 jp      nz,NOTAND       ;
+0AC6 : A3                       and     e               ;
+0AC7 : 4F                       ld      c,a             ;
+0AC8 : 78                       ld      a,b             ;
+0AC9 : A2                       and     d               ;
+0ACA : E9                       jp      (hl)            ;[M80] RETURN THE INTEGER [A,L]
+0ACB : B3         [M80] NOTAND: or      e               ;
+0ACC : 4F                       ld      c,a             ;
+0ACD : 78                       ld      a,b             ;
+0ACE : B2                       or      d               ;
+0ACF : E9                       jp      (hl)            ;[M80] RETURN THE INTEGER [A,L]
+0AD0                    
+0AD0                  + ;[M80] HERE TO BUILD AN ENTRY FOR A RELATIONAL OPERATOR
+0AD0                  | ;[M80] STRINGS ARE TREATED SPECIALLY. NUMERIC COMPARES ARE DIFFERENT
+0AD0                  | ;[M80] FROM MOST OPERATOR ENTRIES ONLY IN THE FACT THAT AT THE
+0AD0                  | ;[M80] BOTTOM INSTEAD OF HAVING RETAOP, DOCMP AND THE RELATIONAL
+0AD0                  | ;[M80] BITS ARE STORED. STRINGS HAVE STRCMP,THE POINTER AT THE STRING DESCRIPTOR,
+0AD0                  | ;[M80] DOCMP AND THE RELATIONAL BITS.
+0AD0                  | ;                   
+0AD0 : 21 E2 0A   [M80] FINREL: ld      hl,00AE2H
 0AD3 : 3A AB 38                 ld      a,(VALTYP)
-0AD6 : 1F                       rra
+0AD6 : 1F                       rra                     ;{M65} GET VALUE TYPE INTO CARRY
 0AD7 : 7A                       ld      a,d
-0AD8 : 17                       rla
+0AD8 : 17                       rla                     ;{M65} PUT VALTYP INTO LOW ORDER BIT OF MASK
 0AD9 : 5F                       ld      e,a
-0ADA : 16 64                    ld      d,064H
-0ADC : 78                       ld      a,b
-0ADD : BA                       cp      d
-0ADE : D0                       ret     nc
+0ADA : 16 64                    ld      d,100           
+0ADC : 78                       ld      a,b             ;[M80] [A]=OLD PRECEDENCE
+0ADD : BA                       cp      d               ;[M80] RELATIONALS HAVE PRECEDENCE 100
+0ADE : D0                       ret     nc              ;[M80] APPLY EARLIER OPERATOR IF IT HAS HIGHER PRECEDENCE
 0ADF : C3 CB 09                 jp      L09CB
-                        ;
+
 0AE2 : E4 0A 79                 call    po,L790A
 0AE5 : B7                       or      a
 0AE6 : 1F                       rra
@@ -2333,8 +2333,7 @@
 0AFF : C6 FF                    add     a,$FF
 0B01 : 9F                       sbc     a,a
 0B02 : C3 F6 14                 jp      FLOAT
-                        ;
-                        ;;
+0B05
 0B05 : 16 5A      [M80] NOTER:  ld      d,90            ;[M80] "NOT" HAS PRECEDENCE 90, SO FORMULA EVALUATION
 0B07 : CD 88 09                 call    LPOPER          ;[M80] IS ENTERED WITH A DUMMY ENTRY OF 90 ON THE STACK
 0B0A : CD 75 09                 call    CHKNUM          ;[M65] MUST BE NUMBER
@@ -2344,51 +2343,62 @@
 0B12 : 4F                       ld      c,a             ;
 0B13 : 7A                       ld      a,d             ;
 0B14 : 2F                       cpl                     ;
-0B15 : CD 21 0B                 call    FLOATC          ;;;Float [D,E]
-0B18 : C1                       pop     bc              
-0B19 : C3 94 09                 jp      RETAOP          
+0B15 : CD 21 0B                 call    GIVINT          ;[M80] UPDATE THE FAC
+0B18                            ;[M80] FRMEVL, AFTER SEEING THE PRECEDENCE OF 90 THINKS IT IS APPLYING AN OPERATOR
+0B18                            ;[M80] SO IT HAS THE TEXT POINTER IN TEMP2 SO RETURN TO REFETCH IT
+0B18 : C1                       pop     bc              ;
+0B19 : C3 94 09                 jp      RETAOP          ; 
 0B1C                            
-;;Named GIVDBL in [M80] and [GWB] but Aquarius only supports floats
-0B1C :                  ;[M80] THIS ROUTINE SUBTRACTS [D,E] FROM [H,L]
-0B1C :                  ;[M80] AND FLOATS THE RESULT LEAVING IT IN FAC.
-0B1C : 7D               GIVFLT: ld      a,l             ;[H,L]=[H,L]-[D,E]
+0B1C                    ;{M80} SUBTRACTS [D,E] FROM [H,L] AND FLOAT THE RESULT LEAVING IT IN FAC
+0B1C                    ;;;Named GIVDBL in [M80] and [GWB] but Aquarius only supports floats
+0B1C : 7D               GIVFLT: ld      a,l             ;[M80] [H,L]=[H,L]-[D,E]
 0B1D : 93                       sub     e               ;
 0B1E : 4F                       ld      c,a             ;
-0B1F : 7C                       ld      a,h             ;
+0B1F : 7C                       ld      a,h             ;[M80] SAVE HIGH BYTE IN [H]
 0B20 : 9A                       sbc     a,d             ;
-0B21 : 41               FLOATC: ld      b,c             ;;Float [D,E], entered from NOTER
+0B21 : 41         [M80] GIVINT: ld      b,c             ;;Float [D,E], entered from NOTER
 0B22 : 50               FLOATB: ld      d,b             ;;Float [B], entered from SNGFLT
 0B23 : 1E 00            FLOATD: ld      e,0             ;;Float [D], entered from POINT
 0B25 : 21 AB 38                 ld      hl,VALTYP       ;
 0B28 : 73                       ld      (hl),e          ;[M80] SET VALTYP TO "FLOATING POINT"
-0B29 : 06 90                    ld      b,144           ;;Set exponent
-0B2B : C3 FB 14                 jp      FLOATR          ;;INEG2 in M80
+0B29 : 06 90      {M80} INEGAD: ld      b,144           ;{M80} SET EXPONENT
+0B2B : C3 FB 14                 jp      FLOATR          ;[M80] GO FLOAT THE NUMBER
 02BE
-0B2E :                          ;;Get Printer Column
-0B2E : 3A 46 38   [M80] LPOS:   ld      a,(LPTPOS)      ;;Get current printhead position
-0B31 : 18 03                    jr      SNGFLT
+0B2E : 3A 46 38   [M80] LPOS:   ld      a,(LPTPOS)      ;{M80} GET PRINT HEAD POSITION
+0B31 : 18 03                    jr      SNGFLT          ;
 0B33
-0B33 :                          ;;Get Screen Column     
-0B33 : 3A 00 38   [M80] POS:    ld      a,(TTYPOS)      ;;;GET TELETYPE POSITION
+0B33 : 3A 00 38   [M80] POS:    ld      a,(TTYPOS)      ;[M80] GET TELETYPE POSITION
 0B36                    
-0B36                    ;;[M80]MAKE [A] AN UNSIGNED INTEGER
-0B36 : 47         [M80] SNGFLT: ld      b,a             
-0B37 : AF                       xor     a
-0B38 : C3 22 0B                 jp      FLOATB
-                        ;
-0B3B : F7             ? DEF:    rst     HOOKDO
+0B36 : 47         [M80] SNGFLT: ld      b,a             ;[M80] MAKE [A] AN UNSIGNED INTEGER          
+0B37 : AF                       xor     a               ;
+0B38 : C3 22 0B                 jp      FLOATB          ;
+0B3B
+0B3B                  + ;{M80} SIMPLE USER DEFINED FUNCTION CODE
+0B3B                  | ;[M80] NOTE ONLY SINGLE ARGUMENTS ARE ALLOWED TO FUNCTIONS
+0B3B                  | ;[M80] AND FUNCTIONS MUST BE OF THE SINGLE LINE FORM:
+0B3B                  | ;[M80] DEF FNA(X)=X^2+X-2
+0B3B                  | ;[M80] NO STRINGS CAN BE INVOLVED WITH THESE FUNCTIONS
+0B3B                  | ;[M80]
+0B3B                  | ;[M80] IDEA: CREATE A FUNNY SIMPLE VARIABLE ENTRY
+0B3B                  | ;[M80] WHOSE FIRST CHARACTER (SECOND WORD IN MEMORY)
+0B3B                  | ;[M80] HAS THE 200 BIT SET.
+0B3B                  | ;[M80] THE VALUE WILL BE:
+0B3B                  | ;[M80]
+0B3B                  | ;[M80]       A TXTPTR TO THE FORMULA
+0B3B                  | ;[M80]       THE NAME OF THE PARAMETER VARIABLE
+0B3B                  | ;[M80]
+0B3B                  | ;[M80] FUNCTION NAMES CAN BE LIKE "FNA4"
+0B3B                  | ;[M80]
+0B3B                    ;;Not Implemented in 8K BASIC
+0B3B : F7         [M80] DEF:    rst     HOOKDO          ;;If not hooked
 0B3C : 0F                       byte    15
-0B3D : C3 C4 03                 jp      SNERR
-                                ;
+0B3D : C3 C4 03                 jp      SNERR           ;;Syntax Error
 0B40                    ;                    
-0B40 : F7         [M80] FNDOER: rst     HOOKDO
-0B41 : 10                       byte    16
-0B42 : C3 C4 03                 jp      SNERR
-
-                        ;
-                        ; [M65] SUBROUTINE TO SEE IF WE ARE IN DIRECT MODE.
-                        ; [M65] AND COMPLAIN IF SO.
-                        ;
+0B40 : F7         [M80] FNDOER: rst     HOOKDO          ;;If not hooked
+0B41 : 10                       byte    16              
+0B42 : C3 C4 03                 jp      SNERR           ;;Syntax Error
+0B45
+0B45                    ;[M65] SUBROUTINE TO SEE IF WE ARE IN DIRECT MODE AND COMPLAIN IF SO.
 0B45 : E5               ERRDIR: push    hl              ;
 0B46 : 2A 4D 38                 ld      hl,(CURLIN)     ;[M65] DIR MODE HAS [CURLIN]=$FFFF
 0B49 : 23                       inc     hl              ;[M65] SO NOW, IS RESULT ZERO?
@@ -2398,90 +2408,95 @@
 0B4D : C0                       ret     nz              ;[M65] YES
 0B4E : 1E 16                    ld      e,ERRID         ;[M65] INPUT DIRECT ERROR CODE
 0B50 : C3 DB 03                 jp      ERROR           ;
-                                ;
-0B53                    L0B53:
-0B53 : D7                       rst     CHRGET
-0B54                    GETBYT:
-0B54 : CD 72 09                 call    FRMNUM
-0B57                    CONINT:
-0B57 : CD 7E 06                 call    L067E
-0B5A : 7A                       ld      a,d
-0B5B : B7                       or      a
-0B5C : C2 97 06                 jp      nz,FCERR
-0B5F : 2B                       dec     hl
-0B60 : D7                       rst     CHRGET
-0B61 : 7B                       ld      a,e
-0B62 : C9                       ret
-
-0B63                    ;PEEK AND POKE
-0B63                    ;
+0B53                    
+0B53 : D7         [M80] GTBYTC: rst     CHRGET          ;
+0B54 : CD 72 09   [M80] GETBYT: call    FRMNUM          ;[M80] EVALUATE A FORMULA
+0B57 : CD 7E 06   [M80] CONINT: call    INTFR2          ;[M80] CONVERT THE FAC TO AN INTEGER IN [D,E]
+0B5A : 7A                       ld      a,d             ;[M80] SET THE CONDITION CODES BASED ON THE HIGH ORDER
+0B5B : B7                       or      a               ;
+0B5C : C2 97 06                 jp      nz,FCERR        ;[M80] WASN'T ERROR
+0B5F : 2B                       dec     hl              ;[M80] fUNCTIONS CAN GET HERE WITH BAD [H,L] BUT NOT SERIOUS
+0B60 : D7                       rst     CHRGET          ;[M80] SET CONDITION CODES ON TERMINATOR
+0B61 : 7B                       ld      a,e             ;[M80] RETURN THE RESULT IN [A] AND [E]
+0B62 : C9                       ret                     ;
+0B63
 0B63 : CD 82 06   [M80] PEEK:   call    FRCINT          ;[M80] GET AN INTEGER IN [D,E]
-0B66 : CD 88 0B                 call    PROMEM          ;;DONT ALLOW IF PROTECTED MEMORY
+0B66 : CD 88 0B                 call    PROMEM          ;{M80} DONT ALLOW IF PROTECTED MEMORY
 0B69 : 1A                       ld      a,(de)          ;[M80] GET THE VALUE TO RETURN
 0B6A : C3 36 0B                 jp      SNGFLT          ;[M80] AND FLOAT IT
                                 
-0B6D : CD 72 09   [M80] POKE:   call    FRMNUM
-0B70 : CD 82 06                 call    FRCINT
-0B73 : CD 88 0B                 call    PROMEM
-0B76 : D5                       push    de
-0B77 : CF                       rst     SYNCHK
-0B78 : 2C                       byte    ','
+0B6D : CD 72 09   [M80] POKE:   call    FRMNUM          ;[M80] READ A FORMULA
+0B70 : CD 82 06                 call    FRCINT          ;{M80} FORCE VALUE INTO INT IN [D,E]
+0B73 : CD 88 0B                 call    PROMEM          ;{M80} DONT ALLOW IF PROTECTED MEMORY
+0B76 : D5                       push    de              ;[M80] PUT VALUE ON STACK
+0B77 : CF                       rst     SYNCHK          ;
+0B78 : 2C                       byte    ','             ;[M80] CHECK FOR A COMMA
 0B79 : CD 54 0B                 call    GETBYT
-0B7C : D1                       pop     de
-0B7D : 12                       ld      (de),a
-0B7E : C9                       ret
-                                ;
-0B7F : CD 85 09                 call    FRMEVL
+0B7C : D1                       pop     de              ;[M80] GET THE ADDRESS BACK
+0B7D : 12                       ld      (de),a          ;[M80] STORE IT AWAY
+0B7E : C9                       ret                     ;[M80] SCANNED EVERYTHING
+0B7F
+0B7F : CD 85 09         L0B7F:  call    FRMEVL          ;;*** More Orphan Code?
 0B82 : E5                       push    hl
 0B83 : CD 82 06                 call    FRCINT
 0B86 : E1                       pop     hl
 0B87 : C9                       ret
-                                ;
-
-                      + ;;CHECK FOR ILLEGAL ADDRESS
-0B88 : E5               PROMEM: push    hl              ;;;Label based on {M80] PRODIR
+0B88                            
+0B88                  + ;;Check for illegal Address in PEEK and POKE
+0B88                  | ;;;Label based on {M80] PRODIR
+0B88 : E5               PROMEM: push    hl              ;
 0B89 : 21 FF 2F                 ld      hl,$2FFF        ;   
-0B8C : E7                       rst     COMPAR          ;;IS [D.E] LESS THAN 3000H?
+0B8C : E7                       rst     COMPAR          ;{M80} IS [D.E] LESS THAN 3000H?
 0B8D : E1                       pop     hl              ;
-0B8E : D2 97 06                 jp      nc,FCERR        ;[M80] YES, BLOW HIM UP NOW
+0B8E : D2 97 06                 jp      nc,FCERR        ;{M80} YES, BLOW HIM UP NOW
 0B91 : C9                       ret                     ;
-                        ;
-0B92                    BLTU:
-0B92 : CD A9 0B                 call    REASON
-0B95                    BLTUC:
-0B95 : C5                       push    bc
-0B96 : E3                       ex      (sp),hl
-0B97 : C1                       pop     bc
-0B98                    L0B98:
-0B98 : E7                       rst     COMPAR
-0B99 : 7E                       ld      a,(hl)
-0B9A : 02                       ld      (bc),a
-0B9B : C8                       ret     z
-0B9C : 0B                       dec     bc
-0B9D : 2B                       dec     hl
-0B9E : 18 F8                    jr      L0B98
-                        ;
-                      + ;;Check Stack Size
-                      | ;[M80] THIS ROUTINE IS USED TO MAKE SURE A CERTAIN NUMBER
-                      | ;[M80] OF LOCATIONS REMAIN AVAILABLE FOR THE
-                      | ;[M80] STACK. THE CALL IS :
-                      | ;[M80]       LD      C,number of 2 byte entries necessary
-                      | ;[M80]       CALL    GETSTK
-                      | ;
-                      | ;[M80] THIS ROUTINE MUST BE CALLED BY ANY ROUTINE WHICH PUTS
-                      | ;[M80] AN ARBITRARY AMOUNT OF STUFF ON THE STACK
-                      | ;[M80] (I.E. ANY RECURSIVE ROUTINE LIKE FRMEVL)
-                      | ;[M80] IT IS ALSO CALLED BY ROUTINES SUCH AS "GOSUB" AND "FOR"
-                      | ;[M80] WHICH MAKE PERMANENT ENTRIES ON THE STACK
-                      | ;[M80] ROUTINES WHICH MERELY USE AND FREE UP THE GUARANTEED
-                      | ;[M80] NUMLEV STACK LOCATIONS NEED NOT CALL THIS
-                      | ;
+
+0B92                  + ;[M80] THIS IS THE BLOCK TRANSFER ROUTINE
+0B92                  | ;[M80] IT MAKES SPACE BY SHOVING EVERYTHING FORWARD
+0B92                  | ;[M80]
+0B92                  | ;[M80] [H,L] = DESTINATION OF HIGH ADDRESS
+0B92                  | ;[M80] [D,E] = LOW ADDRESS TO BE TRANSFERRED
+0B92                  | ;[M80] [B,C] = HIGH ADDRESS TO BE TRANSFERRED
+0B92                  | ;[M80]
+0B92                  | ;[M80] A CHECK IS MADE TO MAKE SURE A REASONABLE AMOUNT
+0B92                  | ;[M80] OF SPACE REMAINS BETWEEN THE TOP OF THE STACK AND
+0B92                  | ;[M80] THE HIGHEST LOCATION TRANSFERRED INTO
+0B92                  | ;[M80]
+0B92                  | ;[M80] ON EXIT [H,L]=[D,E]=LOW [B,C]=LOCATION LOW WAS MOVED INTO
+0B92                  | ;
+0B92 : CD A9 0B   [M80] BLTU:   call    REASON          ;[M80] CHECK DESTINATION TO MAKE SURE STACK WON'T BE OVERRUN
+0B95 : C5         [M80] BLTUC:  push    bc              ;[M80] EXCHANGE [B,C] AND [H,L]
+0B96 : E3                       ex      (sp),hl         ;
+0B97 : C1                       pop     bc              ;
+0B98 : E7         (M80) BLTLOP: rst     COMPAR          ;[M80] SEE IF WE ARE DONE
+0B99 : 7E                       ld      a,(hl)          ;[M80] GET THE WORD TO TRANSFER
+0B9A : 02                       ld      (bc),a          ;[M80] TRANSFER IT
+0B9B : C8                       ret     z               ;
+0B9C : 0B                       dec     bc              ;
+0B9D : 2B                       dec     hl              ;[M80] BACKUP FOR NEXT GUY
+0B9E : 18 F8                    jr      BLTLOP          ;
+0BA0
+0BA0                  + ;;Check Stack Size
+0BA0                  | ;[M80] THIS ROUTINE IS USED TO MAKE SURE A CERTAIN NUMBER
+0BA0                  | ;[M80] OF LOCATIONS REMAIN AVAILABLE FOR THE
+0BA0                  | ;[M80] STACK. THE CALL IS :
+0BA0                  | ;[M80]       LD      C,number of 2 byte entries necessary
+0BA0                  | ;[M80]       CALL    GETSTK
+0BA0                  | ;
+0BA0                  | ;[M80] THIS ROUTINE MUST BE CALLED BY ANY ROUTINE WHICH PUTS
+0BA0                  | ;[M80] AN ARBITRARY AMOUNT OF STUFF ON THE STACK
+0BA0                  | ;[M80] (I.E. ANY RECURSIVE ROUTINE LIKE FRMEVL)
+0BA0                  | ;[M80] IT IS ALSO CALLED BY ROUTINES SUCH AS "GOSUB" AND "FOR"
+0BA0                  | ;[M80] WHICH MAKE PERMANENT ENTRIES ON THE STACK
+0BA0                  | ;[M80] ROUTINES WHICH MERELY USE AND FREE UP THE GUARANTEED
+0BA0                  | ;[M80] NUMLEV STACK LOCATIONS NEED NOT CALL THIS
+0BA0                  | ;
 0BA0 : E5               GETSTK: push    hl              ;[M80] SAVE [H,L]
 0BA1 : 2A DA 38                 ld      hl,(STREND)     ;
 0BA4 : 06 00                    ld      b,0             ;
 0BA6 : 09                       add     hl,bc           ;
 0BA7 : 09                       add     hl,bc           ;[M80] SEE IF WE CAN HAVE THIS MANY
-0BA8 : 3E                       byte    $3E             ;;"LD A," ober next instruction
+0BA8 : 3E                       byte    $3E             ;;"LD A," over next instruction
 0BA9 : E5               REASON: push    hl              ;;Save text pointer
 0BAA : 3E D0                    ld      a,208           ;[M80]  EXAMINE [H,L] TO MAKE SURE
 0BAC : 95                       sub     l               ;[M80]  AT LEAST 104 LOCATIONS
@@ -2493,11 +2508,10 @@
 0BB4 : 39                       add     hl,sp           ;[M80] IF SO, CARRY WILL BE SET
 0BB5 : E1                       pop     hl              ;[M80] GET BACK ORIGINAL [H,L]
 0BB6 : D8                       ret     c               ;[M80] WAS OK?
-
-0BB7                    OMERR:
-0BB7 : 11 0C 00                 ld      de,ERROM
-0BBA : C3 DB 03                 jp      ERROR
-
+0BB7                    
+0BB7 : 11 0C 00   [M80] OMERR:  ld      de,ERROM        ;;"OUT OF MEMORY"
+0BBA : C3 DB 03                 jp      ERROR           ;
+0BBD
 0BBD                    ;[M80] THE "NEW" COMMAND CLEARS THE PROGRAM TEXT AS WELL AS VARIABLE SPACE                                
 0BBD                    ;;SCRATH is the entry point from the Statement Dispatch Table for the NEW command
 0BBD                    ;;SCRTCH is the entry point from an aborted CLOAD command
@@ -5416,7 +5430,7 @@
 1A06 : F1                       pop     af
 1A07 : 5F                       ld      e,a             ;[M80] CHAR TO [D]
 1A08 : CD 19 10                 call    SETSTR          ;[M80] STUFF IN DESCRIPTOR AND GOTO PUTNEW
-1A0B : 21 6D 03         NULRT:  ld      hl,REDDY-1
+1A0B : 21 6D 03   (M80) NULRT:  ld      hl,REDDY-1
 1A0E : 22 E4 38                 ld      (FACLO),hl
 1A11 : 3E 01                    ld      a,1
 1A13 : 32 AB 38                 ld      (VALTYP),a      ;;Set Type to String
@@ -5633,7 +5647,7 @@
 1B35 : CD 9D 0E                 call    STROUT          ;
 1B38 : 21 B5 00                 ld      hl,STARTT       ;
 1B3B : CD 9D 0E                 call    STROUT          ;;Print "Press RETURN key to start"
-1B3E : CD 7E 1E         PRETRL: call    INCHRH          ;
+1B3E : CD 7E 1E   (~~~) PRETRL: call    INCHRH          ;
 1B41 : FE 0D                    cp      13              ;
 1B43 : 20 F9                    jr      nz,PRETRL       ;;Wait for RETURN key
 1B45 : CD EA 19                 call    CRDO            ;Print CR/LF
