@@ -1,0 +1,65 @@
+Hex Address  Dec Address   Label   Description
+$3000-$33FF  12288-13311   SCREEN  Screen Character Matrix
+$3400-$37FF  13311-14335   COLOR   Screen Color Matrix
+   $3800        14336      TTYPOS  Cursor Screen Column
+$3801-$3892  14337-14348   CURRAM  Cursor Position in Screen Character Matrix
+$3803-$3805  14339-14341   USRPOK  USR Function Jump Instruction
+   $3806     14342-14343   HOOK    Extended ROM Hook Vector
+   $3808        14344      CNTOFL  LIST Statement Line Counter  
+   $3809        14345      LASTFF  Last Value Output to I/O Port 255
+   $380A        14346      CHARC   Character Read while Checking for Ctrl-C
+$380B-$380C  14347-14348   RESADR  Address of Ctrl-Key Reserved Word
+   $380D        14349      CURCHR  Character under Cursor
+   $380E        14350      LSTX    Matrix Coordinate of Last Key Pressed
+   $380F        14351      KCOUNT  Keyboard Debounce counter
+$3810-$381D  14352-14365   FDIV    Floating Point Division Routine       
+$381E-$3820  14366-14368   RNDCTR  RND Function Counters              
+$3821-$3840  14369-14400   RNDTAB  ;nused Random Number TABLE
+$3841-$3845  14401-14405   RNDX    Last Random Number Generated
+   $3846        14406      LPTPOS  Current Printer Column
+   $3847        14407      PRTFLG  Output to Screen or Printer
+   $3848        14408      LINLEN  Screen Line Length
+   $3849        14409      CLMLST  Last Position for Comma Printing
+   $384A        14410      RUBSW   Character Delete Flag
+$384B-$384C  14411-14412   TOPMEM  Top Location of Stack
+$384D-$384E  14413-14414   CURLIN  Pointer Line Number
+$384F-$3850  14415-14416   TXTTAB  Pointer to Start of Basic Program
+$3851-$3856  14417-14422   FILNAM  File Name for CSAVE and CLOAD    
+$3857-$385C  14423-14428   FILNAF  File Name Read from Cassette
+  $385D         14429      INSYNC  Cassette Read SYNC Flag         
+  $385E         14430      CLFLAG  CLOAD or CLOAD? Flag
+  $385F         14431      BUFMIN  Beginning of Text Nuffer
+$3860-$38A8  14432-14504   BUF     Text Input and Token Crunching Buffer 
+  $38A9         14505      ENDBUF  End of Text Buffer
+  $38AA         14506      DIMFLG  DIM Statement Flag
+  $38AB         14507      VALTYP  Value Type
+  $38AC         14508      DORES   Crunch Reserved Words Flag
+$38AD-$38AE  14509-14510   MEMSIZ  Highest Address of RAM
+$38AF-$38B0  14511-14512   TEMPPT  Pointer to First Free Temporary String Descriptor
+$38B1-$38BC  14512-14524   TEMPST  Temporary String Descriptors
+$38BD-$38C0  14525-14528   DSCTMP  String Literal Descriptor
+$38C1-$38C2  14529-14530   FRETOP  Top of Free String Space
+$38C3-$38C4  14531-14532   TENP3   Dimension Size and Text Pointer Storage
+$38C5-$38C6  14533-14534   TEMP8   Pointer to End of Array
+$38C7-$38C8  14535-14536   ENDFOR  Pointer to End of FOR Statement
+$38C9-$38CA  14537-14538   DATLIN  Line Number of Current DATA Statement
+   $38CB        14539      SUBFLG  Allow Subscripted Variables Flag
+   $38CC        14540      USFLG   Direct Mode Flag   
+   $38CD        14541      FLGINP  INPUT or READ Flag
+$38CE-$38CF  14542-14543   SAVTXT  Statement Fetcher Text Pointer Storage
+$38D0-$38D1  14544-14545   TENP2   Formula Evaluator Text Pointer Storage
+$38D2-$38D3  14546-14547   OLDLIN  Old Line Number
+$38D4-$38D5  14548-14549   OLDTXT  Old Text Pointer
+$38D6-$38D7  14450-14451   VARTAB  Pointer to Variable Space
+$38D8-$38D9  14452-14453   ARYTAB  Pointer to Array Space
+$38DA-$38DB  14454-14455   STREND  Pointer to End of Storage 
+$38DC-$38DD  14456-14457   DATPTR  Pointer to DATA Item
+$38DE-$38DF  14458-14459   VARNAM  Variable Name
+$38E0-$38E3  14560-14563           Unused in Standard Basic  
+$38E4-$38E7  14564-14567   FACC    Floating Point Accumulator
+$38E8-$38F5  14568-14581   FBUFFR  Floating Point Output Buffer
+$38F6-$38F8  14582-14584   RES     Floating Point Result
+$38F9-$38FA  14585-14586   SAVSTK  New Statement Fetcher Stack Pointer Storage
+$38FB-$38Ff  14587-14591           Unused in Standard Basic
+   $3900        14592              Always 0
+   $3901        14593      BASTXT  Start of Basic Program 
