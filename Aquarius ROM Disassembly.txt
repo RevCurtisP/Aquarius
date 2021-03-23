@@ -30,11 +30,11 @@
 ; COLRAM     #3400    Start of screen colour ram
 ; CURCOL     #3800    Current cursor column 
 ; CURRAM     #3801    Position in CHARACTER RAM of cursor
-; USRJMP     #3803    Location of JMP instruction for USR.
+; USRPOK     #3803    Location of JMP instruction for USR.
 ; UDFADDR    #3806    RST 30 User Defined Routine Address
 ; ROWCOUNT   #3808    Counter for number of screen lines printed.
 ; LASTFF     #3809    The value last sent out to ($FF)
-; LSTASCI    #380A    the ASCII value of last key pressed.
+; LSTASCI    #380A    The ASCII value of last key pressed.
 ; KWADDR     #380B    Address of the keyword in the keyword table.
 ; CURHOLD    #380D    Holder for the character behind the cursor.
 ; LASTKEY    #380E    The SCAN CODE of the last key pressed.
@@ -44,6 +44,7 @@
 ; CURLIN     #384D    The current BASIC line number.
 ; BASTART    #384F    Address in ram of first line of basic.
 ; LINBUF     #3860    Address of start of the line input buffer.
+; VALTYP     #38AB    Variable type: 0=Numeric, 1=String
 ; RAMTOP     #38AD    Address of top of physically working ram.
 ; TMPSTAT    #38CE    Temporary holder of next statement address
 ; CONTPOS    #38D4    Position in memory to CONTinue from.
@@ -51,7 +52,7 @@
 ; BASEND     #38D6    Address in ram of the last byte of the BASIC program.
 ; RESTORE    #38DC    Address in ram of line last RESTORE'd 
 ; FPACC1     #38E4    Floating Point Accumulator
-                #38E6    Floating Point Sign (and Exponent)
+             #38E6    Floating Point Sign (and Exponent)
                 
 ;             IO Ports
 ; NAME       Address Bit     DESCRIPTION
@@ -92,7 +93,7 @@ l0006:  defb    $0B             ; Undefined, possibly the revision number.
 ;*** RESTART FUNCTIONS ***
 ;*************************
 
-; RST08: (CHKNXT)
+; RST08: SYNCHK - Originally CHKNXT
 ; This routine compares the current character
 ; in the statement with the DEFB which follows
 ; the RST $08 instruction. 
@@ -106,20 +107,20 @@ RST08:  ld      a,(hl)                  ; Retrieve (HL)
         ex      (sp),hl                 ; on the stack.
         jp      nz,ERROR_SN,$03c4       ; If (HL) and (SP) are not equal, 
                                         ; report a SyNtax error.
-                                        ; Else return.
+                                        ; Else execute CHRGET.
 ;
 ; Get the next character,
 ; return with CARRY SET if it is between 0 and 9 incl.
-GETNEXT:
-RST10:  inc     hl              ; increment pointer     
-        ld      a,(hl)          ; retrieve character
-        cp      $3a             ; compare with ':'
-        ret     nc              ; return if it is above "9".
-        jp      $0670           ; else jump to $0670 to check if 
+RST10:                          ; [originally GETNEXT]
+CHRGET: inc     hl              ; increment pointer [from 6502 source]
+        ld      a,(hl)          ; retrieve character [
+        cp      $3a             ; compare with ':' 
+        ret     nc              ; return if it is above "9".  
+        jp      CHRCON            ; else jump to $0670 to check if 
                                 ; it is between '0' and '9'
                                 ; this function will return with carry set if it is.
 
-PRNCHAR:
+CHROUT: ;[from Commodore KERNAL], originally PRNCHAR:
 RST18:  jp      PRNTCHR         ; Print the character in A.
         nop     
         nop     
@@ -129,8 +130,8 @@ RST18:  jp      PRNTCHR         ; Print the character in A.
 ;
 ; Compare HL with DE to find greater.
 ; If DE is greater, CARRY will be set
-;CMPHLDE:
-CMPHLDE:
+
+COMPAR:  ;originally CMPHLDE:
 RST20:  ld      a,h     ; Compare MSB first.
         sub     d               ; subtract D from H
         ret     nz      ; Return with carry set if DE>HL
@@ -161,13 +162,13 @@ RST30:  ld      ix,($3806)      ;initially this contains $003b
         nop     
 
 ;
-; location USRJMP contains a JMP command followed by 2 bytes
+; location USRPOK contains a JMP command followed by 2 bytes
 ; initially these bytes point to ERROR_FC,$0697 (The UF error report)
 ; but are modified by the user when they prepare for a USR 
 ; command in basic to jump to his own routine.
 ;
 CALLUSR:
-RST38:  jp      USRJMP  ; initially this holds 0697
+RST38:  jp      USRPOK  ; initially this holds 0697
                         ; which just reports a NF error.
 ;
 ; This is the system default UDF which does nothing but chew up the DEFB
@@ -314,7 +315,7 @@ l00ed:  ld      a,$0b                   ; Preload A with the clear-screen charac
 COLDST:
 l00fd:  ld      hl,$0187                ; copy $51 bytes from $0187 to
         ld      bc,$0051                ; $3803, thereby initialising most
-        ld      de,USRJMP               ; system varibles.
+        ld      de,USRPOK               ; system varibles.
         ldir                            ; 
         xor     a                       ; Clear A
         ld      ($38a9),a               ; And initialise some 
@@ -384,7 +385,7 @@ l0153:  ld      a,r                     ; obtain a random value from Refresh reg
         jp      OKMAIN,$0402            ; print 'Ok' and enter immediate mode.
 
 
-HEDIN  ;$015f - Print Copyright Message
+FREMES  ;$015f - Copyright Message
         defb    CLS+"Copyright . 1982 by Microsoft Inc. S2" +CR
         defb    00
 
@@ -495,7 +496,8 @@ l0201   defb    $0c4b   ; CONT
 l0203   defb    $056c   ; LIST
 l0205   defb    $0567   ; LLIST
 l0207   defb    $0ccd   ; CLEAR
-l0209   defb    $1c2c   ; CLOAD
+l0209   defb    $1c2c   ; 
+
 l020b   defb    $1c08   ; CSAVE
 l020d   defb    $1a4f   ; PSET
 l020f   defb    $1a4c   ; PRESET
@@ -658,7 +660,7 @@ l03db:  call    CLRWSP,$0be5   ; Clear workspace and prepare to enter
 
         ld      a,(hl)          ; HL points to the start of a 2 digit error abbreviation.
         rst     $18             ; PRINT CHARACTER in A
-        rst     $10,GETNEXT     ; Get next character
+        rst     $10,CHRGET     ; Get next character
         rst     $18             ; Print character in A
         ld      hl,$0361        ; ' Error'+BEEP
 
@@ -715,7 +717,7 @@ l0414:  ld      hl,$ffff
                                         ; fall through to here if CTRL+C was not pressed
                                         ; during line entry.
 
-        rst     $10,GETNEXT             ; Get next character, which is actually 1st character
+        rst     $10,CHRGET             ; Get next character, which is actually 1st character
                                         ; of the line buffer.
         inc     a
         dec     a                       ; set flags
@@ -741,7 +743,7 @@ l0414:  ld      hl,$ffff
         push    bc
         xor     a
         ld      ($38cc),a
-        rst     $10,GETNEXT             ; get next character
+        rst     $10,CHRGET             ; get next character
         or      a                       ; set flags
         push    af                      ; save for later.
         call    FINDLIN,$049f           ; Find address in ram of the start
@@ -938,11 +940,11 @@ l0516:  inc     de
         ld      a,b
         cp      $88
         jr      nz,$0524                ;  (2)
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         dec     hl
 
 l0524:  inc     hl
-        ld      a,(hl)                  ; retrieve cahracter into A
+        ld      a,(hl)                  ; retrieve character into A
         cp      $61                     ; compare with 'a' 
         jr      c,$052c                 ; if below 'a' then jump
         and     $5f                     ; otherwise and it with $5F to make 
@@ -1124,7 +1126,7 @@ l05d0:  call    $03a3
 l05e9:  pop     de
         ex      de,hl
         ld      c,$08
-        call    $0ba0,CHK_STKSPC        ;check stack space
+        call    GETSTK        ;check stack space
         push    hl
         ld      hl,($38c7)
         ex      (sp),hl
@@ -1148,7 +1150,7 @@ l05e9:  pop     de
         cp      $a7
         ld      a,$01
         jr      nz,$061f                ;  (10)
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         call    $0972
         push    hl
         call    $152e
@@ -1198,7 +1200,7 @@ l062c:  ld      (TMPSTAT),hl            ; save address of next statment
 ; It then checks the next character before calling the function.
 ; If there are more parameters the CF will be set.
 NEXTSTMT:
-l064b:  rst     $10,GETNEXT             ; get next character.
+l064b:  rst     $10,CHRGET             ; get next character.
         ld      de,$062c                ; push return address to stack 
         push    de                      ;
 
@@ -1228,11 +1230,12 @@ l0651:  sub     $80                     ; subtract $80 from command byte
         ex      de,hl                   ; restore character pointer to HL
 ;
 ; Get next character from the string
-;
-NEXTCHR:
-l066b:  inc     hl
-        ld      a,(hl)
-        cp      $3a                     ; Is it (':') ?
+; NEXTCHR: $066b
+CHRGTR: ;label from CP/M & GW-BASIC source, where the documentation indicates that in the
+        ;original 8080 code, CHRGET was at RST $10 and CHRGTR duplicated the code for speed
+        inc     hl
+CHRGOT: ld      a,(hl)                  ; [from CP/M source]
+POINTB: cp      $3a                    ; Is it (':') ?
         ret     nc                      ; If it is ":" then there is no more data
                                         ; so RET effectively calling the routine
                                         ; whose address was pushed to the stack.
@@ -1242,10 +1245,11 @@ l066b:  inc     hl
                                         ; command.
 ;
 ; On entry to this routine, A holds an ASCII code.
-; Also called from RST10 GETNEXT, to fetch the next character in the string.
+; Also called from RST10 CHRGET, to fetch the next character in the string.
 ;
-l0670:  cp      $20                     ; is it a SPACE
-        jr      z,$066b                 ; if so, jump to 066b, NEXTCHR:,
+CHRCON: ;$0670  [label from CP/M and GW-BASIC source]`
+        cp      $20                     ; is it a SPACE
+        jr      z,CHRGTR                ; if so, jump to 066b, CHRGTR:,
                                         ; to skip whitespace.
 
         cp      $30                     ; is it between '0' and '9'
@@ -1254,7 +1258,7 @@ l0670:  cp      $20                     ; is it a SPACE
         dec     a                       ; set other flags.
         ret                             ; 
 
-l067a:  rst     $10,GETNEXT             
+l067a:  rst     $10,CHRGET             
 
 l067b:  call    $0972                   ;
 
@@ -1293,7 +1297,7 @@ l069c:  dec     hl
 
 l069d:  ld      de,$0000                ; we start with 00
 
-l06a0:  rst     $10,GETNEXT             ; get next character
+l06a0:  rst     $10,CHRGET              ; get next character
         ret     nc                      ; return if it is not between '0' and '9'
                                         ; fall through if it is.
         push    hl
@@ -1338,7 +1342,7 @@ l06be:  rst     $30,CALLUDF
 ; Entry point for GOSUB routine.
 ST_GOSUB:
 l06cb:  ld      c,$03
-        call    $0ba0,CHK_STKSPC        ;check stack space
+        call    GETSTK        ;check stack space
         pop     bc
         push    hl
         push    hl
@@ -1361,7 +1365,7 @@ l06dc:  call    STR2VAL,$069c           ; convert the line number, held as text
         inc     hl                      ; move HL to point to next statment.
         push    hl                      ; and save address for later.
         ld      hl,(CURLIN)             ; retrieve CURRENT line number temporarily
-        rst     $20,CMPHLDE             ; Compare current line number 
+        rst     $20,COMPAR             ; Compare current line number 
                                         ; with the line number after GOTO statement.
 
         pop     hl                      ; retrieve next statment address.
@@ -1453,7 +1457,7 @@ l0731:  call    $10d1
         defb    $b0                     ; ensure an = sign follws variable name.
 
         push    de
-        ld      a,($38ab)
+        ld      a,(VALTYP)
         push    af
         call    $0985
         pop     af
@@ -1536,7 +1540,7 @@ l079c:  call    $0985
 l07a7:  call    $0975
         rst     $28
         jp      z,FIND_BC,$071e         ; find BC in memory.
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         jp      c,$06dc
         jp      $0650
 
@@ -1546,7 +1550,7 @@ l07b5:  ld      a,$01                   ; set channel to 01-Printer
         ld      (CHANNEL),a
 
 l07ba:  dec     hl
-        rst     $10,GETNEXT                     ;GETNEXT
+        rst     $10,CHRGET                     ;CHRGET
 
 ;Entry point for PRINT command.
 ST_PRINT:
@@ -1577,7 +1581,7 @@ l07c1:  jp      z,PRINT_END,$0866               ; and we done printing.
         pop     bc                              ; restore character pointer to BC
         call    $0985
         push    hl
-        ld      a,($38ab)
+        ld      a,(VALTYP)
         or      a
         jp      nz,$0811
         call    $1680
@@ -1662,7 +1666,7 @@ l085e:  rst     $18                     ; print B spaces.
         djnz    $085e                   ; loop till B = 00
 
 l0861:  pop     hl                      ; restore character pointer.
-        rst     $10,GETNEXT             ; retrieve next character
+        rst     $10,CHRGET              ; retrieve next character
         jp      PRT_CONT,$07c1          ; and continue printing.
 
 PRINT_END:
@@ -1753,10 +1757,10 @@ l08ec:  jp      z,$071b
 l08f0:  rst     $30,CALLUDF
         defb    $1c
 
-        ld      a,($38ab)
+        ld      a,(VALTYP)
         or      a
         jr      z,$0917                 ;  (31)
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         ld      d,a
         ld      b,a
         cp      $22
@@ -1777,20 +1781,20 @@ l090b:  call    $0e63
         push    de
         jp      $074a
 
-l0917:  rst     $10,GETNEXT
+l0917:  rst     $10,CHRGET
         call    $15e5
         ex      (sp),hl
         call    $153a
         pop     hl
         dec     hl
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         jr      z,$0929                 ;  (5)
         cp      $2c
         jp      nz,$0880
 
 l0929:  ex      (sp),hl
         dec     hl
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         jp      nz,$08c9
         pop     de
         ld      a,($38cd)
@@ -1821,7 +1825,7 @@ l0953:  call    $071c                   ;
         ld      d,(hl)
         ld      ($38c9),de
 
-l096a:  rst     $10,GETNEXT
+l096a:  rst     $10,CHRGET
         cp      $83
         jr      nz,$0953                ;  (-28)
         jp      $08f0
@@ -1830,7 +1834,7 @@ l0972:  call    $0985
 
 l0975:  or      $37             ; or A with $37
 
-l0977:  ld      a,($38ab)
+l0977:  ld      a,(VALTYP)
         adc     a,a
         or      a
         ret     pe
@@ -1840,13 +1844,12 @@ l0977:  ld      a,($38ab)
         ld      bc,$28cf
 
 ;Evaluate Expression
-l0985:  dec     hl                      ; HL now points to the character immediately
-                                        ; after 'PRINT'
-        ld      d,$00
+FRMEVL: dec     hl                      ;$0985 BACK UP CHARACTER POINTER
+        ld      d,$00                   ;INITIAL DUMMY PRECEDENCE IS 0
 
-l0988:  push    de
+LPOPER: push    de                      ;$0988 SAVE PRECEDENCE
         ld      c,$01
-        call    $0ba0,CHK_STKSPC        ;check stack space
+        call    GETSTK        ;check stack space
         call    $09fd
         ld      ($38d0),hl
 
@@ -1869,7 +1872,7 @@ l0994:  ld      hl,($38d0)
         sub     $a8
         ld      e,a
         jr      nz,$09ba                ;  (8)
-        ld      a,($38ab)
+        ld      a,(VALTYP)
         dec     a
         ld      a,e
         jp      z,$0f7c
@@ -1916,17 +1919,17 @@ l09e4:  sub     $af
         ld      d,a
         jp      c,ERROR_SN,$03c4
         ld      ($38c3),hl
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         jr      $09e4                   ;  (-25)
 
 l09fd:  rst     $30,CALLUDF
         defb    $09
 
         xor     a
-        ld      ($38ab),a
-        rst     $10,GETNEXT     ; get next character (at HL+1)
+        ld      (VALTYP),a
+        rst     $10,CHRGET      ; get next character (at HL+1)
         jp      z,$03d6         ; if character is 00, jump back
-        jp      c,$15e5         ; if character is 0-9jump forward
+        jp      c,$15e5         ; if character is 0-9 jump forward
         call    IsAtoZ,$0cc6
         jp      nc,$0a4e
         cp      $a8
@@ -1964,7 +1967,7 @@ l0a4e:  call    $10d1
         push    hl
         ex      de,hl
         ld      ($38e4),hl
-        ld      a,($38ab)
+        ld      a,(VALTYP)
         or      a
         call    z,$1520
         pop     hl
@@ -1978,7 +1981,7 @@ l0a5f:  rst     $30,CALLUDF
         rlca    
         ld      c,a
         push    bc
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         ld      a,c
         cp      $29
         jr      c,$0a87                 ;  (22)
@@ -2051,7 +2054,7 @@ l0acb:  or      e
         jp      (hl)
 
 l0ad0:  ld      hl,$0ae2
-        ld      a,($38ab)
+        ld      a,(VALTYP)
         rra     
         ld      a,d
         rla     
@@ -2072,7 +2075,7 @@ l0ad0:  ld      hl,$0ae2
         push    hl
         jp      z,$155b
         xor     a
-        ld      ($38ab),a
+        ld      (VALTYP),a
         jp      $0dfc
         inc     a
         adc     a,a
@@ -2107,7 +2110,7 @@ l0b21:  ld      b,c
 l0b22:  ld      d,b                     ; move B to D
 
 l0b23:  ld      e,$00                   ; make E = $00
-        ld      hl,$38ab
+        ld      hl,VALTYP
         ld      (hl),e
         ld      b,$90
         jp      $14fb
@@ -2147,7 +2150,7 @@ l0b40:  rst     $30,CALLUDF
         ld      e,$16
         jp      ERROR,$03db
 
-l0b53:  rst     $10,GETNEXT
+l0b53:  rst     $10,CHRGET
 
 l0b54:  call    $0972
 
@@ -2156,7 +2159,7 @@ l0b57:  call    $067e
         or      a                               ; set flags.
         jp      nz,ERROR_FC,$0697               ; report an FC error if D <> 0
         dec     hl
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         ld      a,e
         ret     
 
@@ -2214,8 +2217,9 @@ l0b98:  rst     $20             ; COMPARE HL,DE
         dec     hl
         jr      $0b98                   ;  (-8)
 
-CHK_STKSPC
-l0ba0,CHK_STKSPC        ;check stack space:  push    hl                 ; save HL for later.
+;$0ba0, originally CHK_STKSPC
+GETSTK: ;check stack space:  
+        push    hl                 ; save HL for later.
         ld      hl,($38da)              ;
         ld      b,$00                   ;
         add     hl,bc
@@ -2385,7 +2389,7 @@ ST_CLOAD*
 l0c63:  xor     a                       ; clear A
         or      a                       ; set flags.
         push    af                      ; save AF.
-        rst     $10,GETNEXT             ; 
+        rst     $10,CHRGET             ; 
         ld      a,$01                   ;
         ld      ($38cb),a
         call    $10d1                   ;
@@ -2466,7 +2470,7 @@ l0ccd:  rst     $30,CALLUDF
         jp      z,$0bcf
         call    $067b
         dec     hl
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
 
         push    hl
         ld      hl,(RAMTOP)
@@ -2479,7 +2483,7 @@ l0ccd:  rst     $30,CALLUDF
         push    de
         call    $067b
         dec     hl
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         jp      nz,ERROR_SN,$03c4
         ex      (sp),hl
         ex      de,hl
@@ -2552,7 +2556,7 @@ l0d4d:  ld      sp,hl
         ld      a,(hl)
         cp      $2c
         jp      nz,$062c
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         call    $0d16
 
 l0d5b:  ld      a,$3f                   ; The '?' character
@@ -2779,7 +2783,7 @@ l0e7e:  ld      de,$38bd
         ld      hl,($38af)
         ld      ($38e4),hl
         ld      a,$01
-        ld      ($38ab),a
+        ld      (VALTYP),a
         call    $153d
         rst     $20             ; COMPARE HL,DE
         ld      ($38af),hl
@@ -3043,7 +3047,7 @@ l0ff3:  ld      bc,$0b36        ; preload return address.
 l0ff7:  call    $0fc6
         xor     a
         ld      d,a
-        ld      ($38ab),a
+        ld      (VALTYP),a
         ld      a,(hl)
         or      a
         ret     
@@ -3173,7 +3177,7 @@ l1084:  call    $0ff7
         ex      (sp),hl
         push    bc
         dec     hl
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         call    $15e5
         pop     bc
         pop     hl
@@ -3197,7 +3201,7 @@ l10a8:  ld      hl,($38da)
         ex      de,hl
         ld      hl,$0000
         add     hl,sp
-        ld      a,($38ab)
+        ld      a,(VALTYP)
         or      a
         jp      z,$0b1c
         call    $0fc9
@@ -3207,7 +3211,7 @@ l10a8:  ld      hl,($38da)
         jp      $0b1c
 
         dec     hl
-        rst     $10,GETNEXT     ; get next character in BASIC line.
+        rst     $10,CHRGET     ; get next character in BASIC line.
         ret     z               ; return if nothing more to do.
 
         rst     $8,CHKNEXT
@@ -3232,8 +3236,8 @@ l10d1:  xor     a                       ; set A to 00
 
         xor     a                       ; Clear A
         ld      b,a                     ; clear B
-        ld      ($38ab),a               ; set $38ab to $00
-        rst     $10,GETNEXT             ; get next character.
+        ld      (VALTYP),a              ; set VALTYP to $00
+        rst     $10,CHRGET              ; get next character.
         jr      c,$10e9                 ; if if it "A" to "Z" jump to 10e9
         call    IsAtoZ,$0cc6            ; check if it is less than "A"
         jr      c,$10f2                 ; CF set so it IS less than "A"
@@ -3242,7 +3246,7 @@ l10d1:  xor     a                       ; set A to 00
                                         ; fall through if character is > "9"
 l10e9:  ld      b,a                     ; save character to A
 
-l10ea:  rst     $10,GETNEXT             ; get next character
+l10ea:  rst     $10,CHRGET             ; get next character
         jr      c,$10ea                 ; loop while it is "A" to "Z"
         call    IsAtoZ,$0cc6            ; then check following character
         jr      nc,$10ea                ; Loop back if it is < "Z"
@@ -3250,11 +3254,11 @@ l10ea:  rst     $10,GETNEXT             ; get next character
 l10f2:  sub     $24                     ; Now check if it is $
         jr      nz,$10fe                ; If not jump forward to $10fe
         inc     a                       ; 
-        ld      ($38ab),a
+        ld      (VALTYP),a
         rrca    
         add     a,b
         ld      b,a
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
 
 l10fe:  ld      a,($38cb)
         dec     a
@@ -3408,7 +3412,7 @@ l11d3:  ld      de,$0004
         ld      (hl),b
         inc     hl
         ld      c,a
-        call    $0ba0,CHK_STKSPC        ;check stack space
+        call    GETSTK        ;check stack space
         inc     hl
         inc     hl
         ld      ($38c3),hl
@@ -4219,7 +4223,7 @@ l15ef:  call    $12c3                   ; clear out the calculator stack?
         cpl     
         ld      c,a
 
-l15f7:  rst     $10,GETNEXT
+l15f7:  rst     $10,CHRGET
         jp      c,$163f
         cp      $2e                     ; check for DECIMAL POINT
         jp      z,$161a                 ; jump to $161a if it is a decimal now.
@@ -4228,10 +4232,10 @@ l15f7:  rst     $10,GETNEXT
         cp      $45
         jp      nz,$161e
 
-l160a:  rst     $10,GETNEXT
+l160a:  rst     $10,CHRGET
         call    $0a98
 
-l160e:  rst     $10,GETNEXT
+l160e:  rst     $10,CHRGET
         jp      c,$1661
         inc     d
         jp      nz,$161e
@@ -4773,7 +4777,7 @@ l1953:  in      a,($0f)
         ld      a,a
         dec     b
         ei      
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         ld      e,$86
         ld      h,l
         ld      h,$99
@@ -4810,8 +4814,8 @@ l1985:  rst     $30,CALLUDF             ; This is interesting!
                                         ; obviously had to sacrifise this command
                                         ; for space or time reasons.
 
-PRNTCHR:
-l198a:  rst     $30                     ; call UDF
+OUTDO:  ;$198a [from 6502 source, originally PRNTCHR]
+        rst     $30                     ; call UDF
         defb    0d
 
         push    af                      ; save character to be printed
@@ -4923,7 +4927,7 @@ l19f0:  ld      a,(CHANNEL)             ;
 
 l19fa:  ret     
 
-l19fb:  rst     $10,GETNEXT
+l19fb:  rst     $10,CHRGET
         push    hl
         call    $1a18
         jr      z,$1a0b                 ;  (9)
@@ -4936,7 +4940,7 @@ l19fb:  rst     $10,GETNEXT
 l1a0b:  ld      hl,$036d
         ld      ($38e4),hl
         ld      a,$01
-        ld      ($38ab),a
+        ld      (VALTYP),a
         pop     hl
         ret     
 
@@ -5020,7 +5024,7 @@ l1a5c:  ex      af,af'
         pop     hl
         ret     
 
-l1a68:  rst     $10,GETNEXT
+l1a68:  rst     $10,CHRGET
         call    $1a7f           ; get two values stored in BASIC as (x,y) into 
                                 ; BC and DE
         call    $1a8e           ; check X and Y coords are in range, otherwise
@@ -5495,7 +5499,7 @@ l1cab:  defb    'Bad',CRLF,$00
 l1cb1:  xor     a
         ld      ($3851),a
         dec     hl
-        rst     $10,GETNEXT
+        rst     $10,CHRGET
         ret     z
 
 l1cb8:  call    $0985
@@ -6125,6 +6129,6 @@ l1fe8:  ld      a,$aa           ; 10101010
         jp      $2010           ; Jump to ROM extension
 
 WELCOM: ;$1FF2
-        ld      hl,HEDIN        ; Start of Copyright message.
+        ld      hl,FREMES        ; Start of Copyright message.
         jp      PRINTSTR        ;
 
