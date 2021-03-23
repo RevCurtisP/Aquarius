@@ -1,6 +1,10 @@
-# Mattel Aquarius ROM Disassembly Convesions
-
 # Convert Annotated Aquarius ROM Disassembly to TASM Source Code
+# Python 2 and 3 compatible
+
+# python makeasm.py
+# tasm -80 -b -s s2basic.asm
+# fc /b s2basic.obj aquarius.rom
+
 def makeasm(iname, oname):
 
   #Psuedo-Op Replacement Dictionary
@@ -52,6 +56,10 @@ def makeasm(iname, oname):
       if line[32:40].rstrip() in ["=", "equ"]: continue
       else: line = line[:24] + '        ' + line[32:]
     
+    #Check for proper formatting
+    if line[23:24] > ' ': print("Misaligned label in line %d" % lineno)
+    if line[23:33] == ' ': print("Misaligned mnemonic in line %d" % lineno)
+    
     #Remove Address and Object Code Prefix
     line = line[24:]
     
@@ -66,7 +74,7 @@ def makeasm(iname, oname):
       label = line[:8].rstrip()
       mnemonic = line[8:16].rstrip()
       if mnemonic.find(" ") > -1:
-        print("Misaligned operator/operand in line " + str(lineno))
+        print("Misaligned operand in line %d" % lineno)
         print(">" + mnemonic)
     else:
       mnemonic = None

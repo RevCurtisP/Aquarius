@@ -1,8 +1,8 @@
 Hex Address  Dec Address   Label   Description
 $3000-$33FF  12288-13311   SCREEN  Screen Character Matrix
-$3400-$37FF  13311-14335   COLOR   Screen Color Matrix
+$3400-$37FF  13312-14335   COLOR   Screen Color Matrix
    $3800        14336      TTYPOS  Cursor Screen Column
-$3801-$3892  14337-14348   CURRAM  Cursor Position in Screen Character Matrix
+$3801-$3892  14337-14378   CURRAM  Cursor Position in Screen Character Matrix
 $3803-$3805  14339-14341   USRPOK  USR Function Jump Instruction
    $3806     14342-14343   HOOK    Extended ROM Hook Vector
    $3808        14344      CNTOFL  LIST Statement Line Counter  

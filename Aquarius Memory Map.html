@@ -120,18 +120,18 @@ After the memory reserved for the character and color matrix is a part of the me
 <td>0x3809</td><td>14345</td><td>PTOLD:</td><td>0xA3</td><td>Contains the code which will be send to the protection port</td>
 </tr>
 <tr>
-<td>0x380A</td><td>14346</td><td>CHARQ:</td><td>0x00</td><td>ASCII-value of the latest key pressed on the keyboard, but not yet been transferred to the character-matrix. Hence the value which will be used by the key-scanning routine (0x380E). The value will eventually end op at address 14350 (0x380F)</td>
+<td>0x380A</td><td>14346</td><td>CHARQ:</td><td>0x00</td><td>ASCII-value of the latest key pressed on the keyboard, but not yet been transferred to the character-matrix. Hence the value which will be used by the key-scanning routine (). The value will eventually end op at address 14351 (0x380F)</td>
 </tr>
 <td>0x380B<br>0x380C</td><td>14347<br>14348</td><td>SKEY:</td><td>0x00<br>0x00</td><td>Pointer use in the single key command</td>
 </tr>
 <tr>
 <td>0x380D</td><td>14349</td><td>BUFO:</td><td>0x20</td><td>Storage of the character behind the cursor</td>
 </tr>
-<tr>
-<td>0x380E</td><td>14350</td><td>CTRLFG:</td><td>0x00</td><td>Debounce count for the key scanning routine</td>
+<tr><!-- 380E and 380F were incorrectly swapped in the original document -->
+<td>0x380E</td><td>14350</td><td>CTRLFG:</td><td>0x00</td><td>Current key value after scanning</td>
 </tr>
 <tr>
-<td>0x380F</td><td>14351</td><td>FLAG:</td><td>0x00</td><td>Current key value after scanning</td>
+<td>0x380F</td><td>14351</td><td>FLAG:</td><td>0x00</td><td>Debounce count for the key scanning routine</td>
 </tr>
 <tr>
 <td>0x3810<br>0x381E</td><td>14352<br>14366</td><td>FDIV:</td><td></td><td>Subroutine for division</td>
