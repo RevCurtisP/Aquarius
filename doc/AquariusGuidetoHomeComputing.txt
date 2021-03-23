@@ -1,0 +1,422 @@
+AQUARIUS GUIDE TO HOME COMPUTING
+
+All you need to know about using your Aquarius Home Computer System
+(C) 1983, Radofin Electronics (Far East) Ltd. PRINTED IN HONG KONG. All Rights Reserved 5931-0038R-1
+Jump to Main Contents
+Your Aquarius is designed to operate within the locality in which it was purchased.
+Because of local receiver requirements, your computer is tailored to operate on one only of the following television channel designations.
+VHF O or I (switch selected)
+VHF A or B (switch selected)
+VHF 3 or 4 (switch selected)
+UHF 36 (U.K. or South Africa)
+In VHF models, a selector switch can be found on the rear of Aquarius to allow selection of an unused channel in your area.
+* It should also be noted that operation of Aquarius should not be done simultaneously while using any form of TV video game as serious interference may
+result.
+Country TV System Voltage TV Channel
+United Kingdom PAL I 240 E-36
+Canada NTSC 110 3 or 4
+Germany PAL B 220 E3 or E4
+Italy PAL B 220 A or B
+France SECAM 220 E-36
+Scandinavia PAL B 220 E3 or E4
+Benelux PAL B 220 E3 or E4
+Switzerland PAL B 220 E3 or E4
+Austria PAL B 220 E3 or E4
+Spain PAL B 220 E3 or E4
+South Africa PAL I 220 E-36
+Australia PAL B 240/250 0 or 1
+Japan NTSC 100 1 or 2
+
+KEY POINTS FOR TROUBLE FREE USE OF YOUR AQUARIUS HOME COMPUTER SYSTEM
+1. Place Aquarius on a flat, sturdy surface, so the air vents on the bottom can do their job. Do not place ON CARPETED SURFACES.
+2. Keep fingers out of the open end of the program cartridges and cartridge port(s).
+3 Never lift Aquarius by any external wires, or by the Mini Expander, or its hand controllers.
+4. Protect both program cartridges and Aquarius from excessive heat.
+5. Always insert cartridge port dust cover when port is not in use.
+6. Turn Aquarius OFF and disconnect from mains when not in use. NEW PRODUCT NEWS
+4 COLOR PRINTER
+
+-----
+-----
+
+Finally, wherever your computer takes you, have a great time!
+-------------------------------------
+Model No.__________________________
+Serial No._________________________
+-------------------------------------
+-------------------------------------
+NOTICE- PROJECTION TV OWNERS
+Some stationary game patterns produced by this product may be permanently imprinted on Projection TV tubes by extended use at high brightness levels.
+Consult Projection TV Owner's manual before use of this product.
+
+TABLE OF CONTENTS
+
+INTRODUCTION "Quick Tour of the Aquarius Computer"
+  Hook-Up Without Hang-Ups
+
+CHAPTER 1 "GETTING YOUR FEET WET"
+  Modes
+  RTN - The Action Key
+  Playing With Immediate Mode
+  Arithmetic
+  RUN
+  NEW
+  CONT
+  LIST
+  CTL - The Shortcut Key
+  Playing With Programmed Mode
+  More About Line Numbers
+  Back To The PRINT Command
+  How To Edit
+
+CHAPTER 2 "DIVING IN"
+Constants
+Variables
+Reserved Words List
+INPUT - The Interactive Instruction
+LET
+Punctuation
+
+CHAPTER 3 "CASSETTE COMMANDS - CSAVE & CLOAD"
+Saving Programs
+Loading Programs
+Verify
+Saving and Loading Arrays
+
+-----------------------------------------------------------------------------
+
+CHAPTER 4 "BRANCHING OUT"
+GOTO - The One-Way Ticket
+IF...THEN - The Truth Detector
+Relational and Logical Expressions
+
+CHAPTER 5 "LOOPS THAT COUNT"
+The Long Way Around
+FOR...NEXT Loops
+One Step At A Time
+The Nesting Instinct
+"Digital Clock" - Our First Real Program
+
+CHAPTER 6 "A SPLASH OF COLOR"
+POKE
+Character RAM Matrix/Color RAM matrix
+Number Relationships On The Matrix
+PEEK
+Drawing Lines
+The Fine Line - PSET
+PRESET
+POINT
+
+CHAPTER 7 "SUBROUTINES - THE ROUND TRIP TICKET"
+GOSUB
+RETURN
+REMARK - Notes To Yourself
+Nesting Subroutines
+Computed GOTO and GOSUB
+Sound
+
+CHAPTER 8 "READ...DATA - THE EFFICIENCY EXPERTS"
+READ
+DATA
+Out Of Data
+The Flag
+Restore
+
+CHAPTER 9 "MAXIMUM STORAGE WITH ARRAYS"
+Intro
+The Size Of An Array
+Changing Dimensions - The CLEAR Statement
+Assigning Values To An Array
+Multi-Dimensions
+
+CHAPTER 10 "FUNCTIONS - THE SUPER SHORTCUTS"
+Intro To Functions
+Different Kinds of Functions
+Nested Functions
+Random Numbers - Games of Chance
+CHR$ - The Multi-Function Function
+Other Handy Functions - FRE
+LEFT$
+MID$
+RIGHT$
+
+-----------------------------------------------------------------------------
+
+CHAPTER 11 "DIGITAL CLOCK"
+REFERENCE SECTION
+APPENDIX
+PRACTICE PROGRAMS
+
+QUICK TOUR OF THE AQUARIUS COMPUTER SYSTEM
+INPUT/OUTPUT DEVICES
+HOOK-UP WITHOUT HANG-UPS
+Carefully unpack your computer. Check to make sure that you have all these parts:
+Computer
+Power Cord with attached transformer
+Television Hook-Up Cable (10 foot)
+Antenna Switch Box
+(See illustration of these parts on page 4.)
+BEFORE YOU CONTINUE...
+Take a minute to check the bottom of the computer. You will see two number - a model number and a serial number. Jot these numbers down on page 2 of
+this section in the spaces provided
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+
+10 PRINT "Enter # of lines (0-6):"
+20 INPUT L
+25 IF L>6 THEN PRINT CHR$(7):GOTO 10
+60 PRINT "Enter HOUR (1-12):"
+62 INPUT H
+63 IF H>12 THEN PRINT CHR$(7):GOTO 60
+64 PRINT "Enter MINUTES (1-59):"
+66 INPUT M
+67 IF M>59 THEN PRINT CHR$(7):GOTO 64
+72 T=L*38+17
+74 PRINT CHR$(11)
+76 PRINT TAB(T)"TIME"
+78 T=16
+80 PRINT TAB(T) H"_:"M"_:"S
+85 S=S+1
+90 IF S>59 THEN M=M+1
+95 IF S>59 THEN S=0
+110 IF M>59 THEN H=H+1
+120 IF M>59 THEN M=0
+130 IF H>12 THEN H=1
+140 FOR P=0 TO 850:NEXT P
+150 GOTO 72
+
+Now RUN the program. Is it a clock? It is! We'll build a fancier version in Chapter 11, but for now we DO have a clock. If you want your clock to stop, press
+[CTL]-[C]. The next time you RUN your program, you can reset your clock again.
+(P.S. Don't forget to save this program if you have a cassette recorder hooked up to your computer.)
+
+COMPUTER TALK
+DECREMENT. To decrease. Also, the amount by which a value is decreased.
+DEFAULT. To automatically revert to a value or operation unless another is specified. Also, the value or operation that Aquarius automatically reverts to
+unless another is specified.
+INCREMENT. To increase. Also, the amount by which a value is increased.
+INDEX VARIABLE. The variable in a FOR...NEXT loop that controls the number of times the loop repeats.
+NESTING. The inclusion of one loop or subroutine within another. (Nested subroutines are discussed in Chapter 7.)
+TIME DELAY LOOP. The simplest form of FOR...NEXT loop, one that tells Aquarius to count to some number before executing the next statement.
+
+CONTROL SHORTCUTS
+FOR...[CTL]-[-]
+NEXT...[CTL]-[=]
+
+CHAPTER 6 "A SPLASH OF COLOR" (PEEK and POKE, RAM matrix, PSET, PRESET and POINT)
+
+Everything you have typed so far has appeared as black characters on a light 
+blue background. Aquarius has much more than this to offer in the way of
+color. In this chapter we will discover how to use the full range of colors 
+built into your Aquarius home computer. There is math involved in using color, 
+but fortunately,
+
+    YOU DON'T HAVE TO DO IT. ALL YOU HAVE TO DO IS PLUG NUMBERS INTO A COUPLE OF 
+    SIMPLE FORMULAS AND AQUARIUS WILL HANDLE THE MATH FOR YOU.
+
+So don't let the numbers put you off. Color makes a world of difference. (By 
+the way, you will need a color TV set to get the most out of this chapter.)
+
+POKING AROUND
+
+POKE is a way of telling your computer to POKE something into a position on 
+your TV screen. That something can be a CHARACTER or a COLOR - FOREGROUND 
+and/or BACKGROUND color.
+
+POKE A CHARACTER
+
+You must give Aquarius 2 pieces of information:
+
+    - WHICH CHARACTER to poke...given as a NUMBER. You get the number from the 
+    Character Code List starting on page 6 of the Appendix.
+    
+    - WHERE on the TV screen to poke it. This is one of 960 squares which the 
+    screen is divided into. You specify which square by a NUMBER. You get then 
+number from the CHARACTER RAM MATRIX on page 4 of the Appendix.
+
+-----------------------------------------------------------------------------
+Example of a statement to POKE A CHARACTER:
+
+    POKE 12328,65
+
+This tells Aquarius to POKE the letter A into the Home Position on the TV 
+screen. 65 is the Character Code number for the letter A. 12328 is the number
+on the Character RAM Matrix.
+
+These numbers were simply plugged into a FORMULA. The FORMULA is the 
+important thing to know, because you can look up the number for any
+character or any screen position on the lists.
+
+The FORMULA is:
+POKE (screen position),(character number) <-NOTE THE COMMA
+
+POKE A COLOR
+
+You must give Aquarius 3 pieces of information:
+
+    - WHAT FOREGROUND COLOR to poke (if you want one). This is the color you 
+    give to whatever CHARACTER is printed in a particular screen position.
+    This color is given as a NUMBER. You get the number from the Color Code 
+    List on page 3 of this chapter.
+    
+    - WHAT BACKGROUND COLOR to poke (if you want one). This is the color of 
+    the screen itself in a particular position. The color is also given as a
+    NUMBER, which you get from the Color Code List on page 3.
+    
+    - WHERE on the screen to poke these colors. This is one of 960 squares 
+    which the screen is divided into. You specify which square by a NUMBER, 
+    which you get from the COLOR RAM MATRIX on page 5 of the Appendix.
+
+Example of a statement to POKE A COLOR:
+
+    POKE 13352,5*16+3 <-NOTE THE COMMA
+
+This tells Aquarius to poke the FOREGROUND COLOR, VIOLET and the BACKGROUND 
+COLOR, YELLOW into the HOME POSITION. 13352 is the number for the Home 
+Position on the COLOR RAM MATRIX. 5 is the number for violet. 3 is the 
+number for yellow.
+
+These numbers were PLUGGED INTO A FORMULA. The FORMULA is what you need to 
+know to plug ANY color into ANY screen position. (You can always
+look the number up.)
+
+The FORMULA IS:
+
+    POKE (screen position), (foreground color) * 16 + (background color)
+
+    If you don't specify a foreground color, you will get BLACK.
+    If you don't specify a background color, you will get LIGHT BLUE-GREEN.
+
+POKE BOTH CHARACTER AND COLOR
+
+If you want to POKE BOTH a character and color into the same screen position, 
+you will need to use TWO POKE statements - one for the character and one for 
+the color. Example...To POKE a RED letter A into a DARK BLUE BACKGROUND in 
+the HOME POSITION, use these two statements:
+
+    POKE 12328,65
+    POKE 13352,1*16+11 
+    (1 is the color code for Red and 11 is the color code for dark blue.)
+
+COLOR CODE LIST
+
+  COLOR CODE
+  Black             0
+  Red               1
+  Green             2
+  Yellow            3
+  Blue              4
+  Violet            5
+  Light Blue-Green  6
+  White             7
+  Light Gray        8
+  Blue-Green        9
+  Magenta          10
+  Dark Blue        11
+  Light Yellow     12
+  Light Green      13
+  Orange           14
+  Dark Gray        15
+
+* COLORS MAY VARY FROM TV SET TO TV SET 
+
+CHARACTER RAM MATRIX / COLOR RAM MATRIX
+
+Let's look at your television screen again.
+
+Aquarius divides your TV screen into 24 rows and 40 columns. When you type a 
+program, you can type in 38 of the 40 columns. But ALL 40 COLUMNS can contain 
+a color or character, when a program is run, if you use the POKE statement.
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+
+STR$(ex)
+ex=an arithmetic expression, numeric constant or variable
+Example: Result:
+10 A=176
+20 A$=STR$(A)
+30 PRINT LEFT$(A$,3) 17 (preceded by blank)
+TAB
+Advances cursor to a specified column. Data is printed in the next available print positions.
+Columns are numbered from 0 (left margin) to 39 (right margin). If the position specified in the TAB argument overflows the right margin, the remaining
+spaces are inserted on following line.
+Format:
+TAB(ex)
+ex=an arithmetic expression, numeric constant or variable in the range 0 to 255
+Examples: Result:
+PRINT "AQUARIUS";TAB(12)"LOVES YOU" AQUARIUS LOVES YOU
+10 FOR X=2 TO 10 STEP 2 AQUARIUS AQUARIUS
+20 PRINT TAB(X)"AQUARIUS" AQUARIUS AQUARIUS
+30 NEXT X AQUARIUS
+To move cursor down the screen a specified number of lines (L) to a specified TAB position (P), use this formula: TAB(L*38+P)
+TAN
+Returns the tangent (in radians) of the argument.
+Format:
+
+TAN(ex)
+ex=an arithmetic expression, numeric constant or variable
+Example: Result:
+PRINT TAN(45) 1.61977
+
+USR
+Branches to a user-created machine code subroutine. Machine code has 
+certain advantages over BASIC, in terms of execution speed and memory
+requirements. It is not as easy to learn as BASIC, and it is beyond 
+the scope of this guide. You may want to study machine code and learn 
+it use it in BASIC program subroutines to make your program more 
+efficient and responsive.
+
+Only one USR function may be defined in memory. The starting memory 
+address of machine code subroutines are stored in addresses 14340 and 14341.
+
+VAL
+Converts a character string into a numeric value. VAL is the inverse of STR$. The string must contain valid numbers. If string contains a plus or minus sign,
+it must precede numbers. The function returns a value of zero if the first character of the string is not a number or valid sign.
+Format:
+
+VAL(sv$)
+sv$=name of the string variable containing the character string
+Example: Result:
+10 INPUT SV$ ? -99
+20 PRINT VAL(SV$) -99
+30 GOTO 10 ? 31- 31 ? xyz 0 ? 9-2 9 ? AQUARIUS
+
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+
+
+THE CLEAR STATEMENT
+
+Once you establish the dimension of an array, the only ways to change it 
+are with the NEW command (which erases everything in memory) or the CLEAR
+statement. The CLEAR statement ERASES THE VALUES STORED IN ALL VARIABLES 
+UP TO THAT STATEMENT.
+
+Example:
+
+    10 DIM FOOD(11) Establishes a string array with room for 12 elements.
+    20 FOOD(0)=300.00 Assigns values to first 3 elements of the array.
+    30 FOOD(1)=290.00
+    40 FOOD(2)=330.00
+    50 ? FOOD(0),FOOD(1),FOOD(2) Prints values of first three array elements.
+    60 CLEAR Sets dimensions of FOOD to 0. Sets values of FOOD(0), FOOD(1) and FOOD(2) to zero.
+    70 PHONE(0)=70.00 Assigns values to PHONE(0) and
+    80 PHONE(1)=52.00 PHONE(1).
+    90 ? PHONE(0),PHONE(1) Prints values of PHONE(0) and PHONE(1). Notice that these
+    values were not affected by the preceding CLEAR statement.
+    100 ? FOOD(0),FOOD(1),FOOD(2) Prints value of FOOD array elements which are now blank
+    (represented by Aquarius as 0).
+
+Be careful that you don't accidentally erase the value of a variable which you
+want to use again. If you do, re-assign the erased value to that variable.
+
+ASSIGNING VALUES TO AN ARRAY
+Once you set up an array, you can assign values to the array elements in three ways - with LET statements, INPUT statements or READ and DATA
+statements
+
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+

@@ -14,7 +14,7 @@ $380B-$380C  14347-14348   RESADR  Address of Ctrl-Key Reserved Word
    $380F        14351      KCOUNT  Keyboard Debounce counter
 $3810-$381D  14352-14365   FDIV    Floating Point Division Routine       
 $381E-$3820  14366-14368   RNDCTR  RND Function Counters              
-$3821-$3840  14369-14400   RNDTAB  ;nused Random Number TABLE
+$3821-$3840  14369-14400   RNDTAB  Unused Random Number TABLE
 $3841-$3845  14401-14405   RNDX    Last Random Number Generated
    $3846        14406      LPTPOS  Current Printer Column
    $3847        14407      PRTFLG  Output to Screen or Printer

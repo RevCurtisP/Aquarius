@@ -1,7 +1,73 @@
+## The Screen
 
-## Printing
+The Aquarius uses a 40 column by 25 row character mapped screen. The screen
+data is kept in two RAM matrixes:
+
+  The Character Matrix at 12288 - 13311 ($3000-$33FF) contains the ASCII 
+  values of the characters to display.
+  
+  The Color Martix at 13312 - 14335 ($3400 - $37FF) contains the foreground
+  and background colors of each character.
+
+The Basic interpreter does not use the the top row or left and right columns,
+for an effective screen size of 38 by 24 characters. 
+
+When clearing the screen, Basic fills the Character Matrix with the Color 
+Matrix with the default color combination. Basic does not write to the 
+Color Matirx when printing to or scrolling the screen.
+
+Note: Even though 1024 bytes of RAM are reserved for each matrix, only the
+first 1000 bytes are used for the display. However, when Basic clears the
+screen, it overwrites the entire 1024 bytes of both matrixes. Therefore the
+unused bytes are not generally suitable for storing data.
+
+### The Character Matrix
+
+
+### The Color Matrix
+
+Each location in the Screen Matrix has a corresponding location in the 
+Color Matrix which contains the colors combination for that character. 
+In each locaton, the foreground and background colors are stord in the
+high and low nybbles, respectively. So to set a color, use:
+
+    POKE 13312+offset.foreground*16+background 
+
+To fill the entire screen with a specific color, use the following code:
+
+    FOR A=13312 to 14311:POKE A,colors:NEXT
+    
+Note: This will also set the border color (see The Screen Border, below).
+
+### The Screen Border
+
+The character area of the screen is surrounded by a border, which is copied
+from the first character of the Screen and Color Matrixes. Therefore, to 
+change the border color, use 
+
+    POKE 13312,color
+    
+Note: Amy character POKEd  into 12288, will be repetively displayed in the
+border. Normally, this is a space so that no character appears in the border.
 
 ## Moving the Cursor 
+
+In Basic, the cursor is controlled by three system variables:
+
+    CURRAM (14337-14378) contains the current Screen Matrix address
+    TTYPOS (14336) contains the current column number (1-38)
+    CURCHR (14349)
+    
+Before moving the cursor, it must be removed from the screen using
+
+    POKE PEEK(14378)*256+PEEK(14377),PEEK(14349)
+    
+Then, to move the cursot to a new position, use
+    
+    A=12288+row*40+col
+    POKE 14437,A AND 255
+    POKE 14438,INT(A/40)
+    POKE 14436,row
 
 # Assembly Language Programming
 
