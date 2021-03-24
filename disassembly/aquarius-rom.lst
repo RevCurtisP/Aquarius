@@ -65,8 +65,8 @@
                   [M80] FDIVG   equ     $381B   ;    
                         ;               $381E   ;{M80} RND FUNCTION PERTUBATION COUNT
                   [M80] RNDCNT  equ     $381F   ; 
-                  [M80]         equ     $3820   ; 
-;                 [M80] RNDTAB  equ     $3821   ;;Unused Random Number TABLE
+                  [M80] ;       equ     $3820   ; 
+                  [M80] RNDTAB  equ     $3821   ;;Unused Random Number TABLE
                                                 ;;;The exact same table exists in CP/M Basic where it is unused
                         RNDX    equ     $3841   ;[M80] LAST RANDOM NUMBER GENERATED, BETWEEN 0 AND 1
                   [M80] LPTPOS  equ     $3846   ;[M80] POSITION OF LPT PRINT HEAD
@@ -108,7 +108,7 @@
                   [M80] SUBFLG  equ     $38CB   ;[M80] FLAG WHETHER SUBSCRIPTED VARIABLE ALLOWED "FOR" AND USER-DEFINED 
                                                 ;[M80] FUNCTION POINTER FETCHING TURN THIS ON BEFORE CALLING PTRGET SO 
                                                 ;[M80] ARRAYS WON'T BE DETECTED. STKINI AND PTRGET CLEAR IT.
-                  [M80] USFLG  equ      $38CC   ;;Direct Mode Flag    
+                  [M80] USFLG   equ     $38CC   ;;Direct Mode Flag    
                   [M80] FLGINP  equ     $38CD   ;[M80] FLAGS WHETHER WE ARE DOING "INPUT" OR A READ
                   [M80] SAVTXT  equ     $38CE   ;[M80] PLACE WHERE NEWSTT SAVES TEXT POINTER
                   [M80] TENP2   equ     $38D0   ;[M80] FORMULA EVALUATOR TEMP MUST BE PRESERVED BY OPERATORS
@@ -124,7 +124,8 @@
                   [M80] DATPTR  equ     $38DC   ;[M80] POINTER TO DATA. INITIALIZED TO POINT AT THE ZERO IN FRONT OF [TXTTAB]
                                                 ;[M80] BY "RESTORE" WHICH IS CALLED BY CLEARC. UPDATED BY EXECUTION OF A "READ"
                   [M65] VARNAM  equ     $38DE   
-;                                 $38E0-$38E3   ;;Unused
+                  [M65] VARPNT  equ     $38E0   
+;                                 $38E2-$38E3   ;;Unused
                   [M80] FACLO   equ     $38E4   ;[M80] LOW ORDER OF MANTISSA
                   {M80} FACMO   equ     $38E5   ;[M80] MIDDLE ORDER OF MANTISSA
                   [M80] FACHO   equ     $38E6   ;[M80] HIGH ORDER OF MANTISSA
@@ -1225,7 +1226,7 @@
 053D : 12         {M80} KRNSAV: ld      (de),a          ;[M80] SAVE BYTE IN KRUNCH BUFFER
 053E : 13                       inc     de              ;[M80] BUMP POINTER
 053F : 0C                       inc     c               ;;Increment buffer count
-0540 : D6 3A                    sub     ':'             ;[M65] IS IT A ":"?`
+0540 : D6 3A                    sub     ':'             ;[M65] IS IT A ":"?"
 0542 : 28 04                    jr      z,COLIS         ;[M65] YES, ALLOW CRUNCHING AGAIN.
 0544 : FE 49                    cp      DATATK-':'      ;[M65] IS IT A DATATK?
 0546 : 20 03                    jr      nz,NODATT       ;[M65] NO, SEE IF IT IS REM TOKEN.
@@ -1465,7 +1466,7 @@
 067A                  | ;[M80] CHARACTER OF THE FORMULA ON RETURN.
 067A                  | ;
 067A : D7               INTIDX: rst     CHRGET          ;
-067B : CD 72 09         INTID2: call    FRMNUM          ;{M80} READ FORMULA AND GET RESULT AS NTEGER IN [D,E]
+067B : CD 72 09         INTID2: call    FRMNUM          ;{M80} READ FORMULA AND GET RESULT AS INTEGER IN [D,E]
 067E : EF               INTFR2: rst     FSIGN           ;[M80] DON'T ALLOW NEGATIVE NUMBERS
 067F : FA 97 06                 jp      m,FCERR         ;[M80] TOO BIG. FUNCTION CALL ERROR
 0682
@@ -1853,7 +1854,7 @@
 08C9 : CF         [M80] LOPDT2: rst     SYNCHK          
 0BCA : 2C                       byte    ','             ;[M80] MAKE SURE THERE IS A ","
 08CB : CD D1 10   {M80} LOPDAT: call    PTRGET          ;[M80] GET THE POINTER TO A VARIABLE INTO [D,E]
-08CE : E3                       ex      (sp),hl         ;;Swap with Data List Pointer`
+08CE : E3                       ex      (sp),hl         ;;Swap with Data List Pointer
 08CF                    ;[M80] NOTE AT THIS POINT WE HAVE A VARIABLE WHICH WANTS DATA
 08CF                    ;[M80] AND SO WE MUST GET DATA OR COMPLAIN
 08CF : D5                       push    de              ;[M80] SAVE THE POINTER TO THE VARIABLE
@@ -2015,9 +2016,9 @@
 0985                  | ;[M65]       THE PRECEDENCE OF THE OPERATOR.
 0985                  | ;
 0985 : 2B         [M80] FRMEVL: dec     hl              ;[M80] BACK UP CHARACTER POINTER
-0986 : 16 00      [M80] FRMCHK: ld      d,000H          ;[M80] INITIAL DUMMY PRECEDENCE IS 0
+0986 : 16 00      [M80] FRMCHK: ld      d,0             ;[M80] INITIAL DUMMY PRECEDENCE IS 0
 0988 : D5         [M80] LPOPER: push    de              ;[M80] SAVE PRECEDENCE
-0989 : 0E 01                    ld      c,001H          ;[M80] EXTRA SPACE NEEDED FOR RETURN ADDRESS
+0989 : 0E 01                    ld      c,1             ;[M80] EXTRA SPACE NEEDED FOR RETURN ADDRESS
 098B : CD A0 0B                 call    GETSTK          ;[M80] MAKE SURE THERE IS ROOM FOR RECURSIVE CALLS
 098E : CD FD 09                 call    EVAL            ;[M80] EVALUATE SOMETHING
 0991 : 22 D0 38   [N80] TSTOP:  ld      (TENP2),hl      ;[M80] SAVE TEXT POINTER
@@ -2181,12 +2182,10 @@
 0A83 : EB                       ex      de,hl           ;[M80] TEXT POINTER INTO [D,E], [H,L]=INT VALUE OF SECOND ARGUMENT
 0A84 : E3                       ex      (sp),hl         ;[M80] SAVE INT VALUE OF SECOND ARG. [H,L]=FUNCTION NUMBER
 0A85 : 18 08                    jr      FINGO           ;[M80] DISPATCH TO FUNCTION
-0A87                    
 0A87 : CD 37 0A   [M80] OKNORM: call    PARCHK          ;[M80] CHECK OUT THE ARGUMEN AND MAKE SURE ITS FOLLOWED BY ")"
 0A8A : E3                       ex      (sp),hl         ;[M80] [H,L]=FUNCTION # AND SAVE TEXT POINTER
 0A8B : 11 49 0A                 ld      de,LABBCK       ;[M80] RETURN ADDRESS
 0A8E : D5                       push    de              ;[M80] MAKE THEM REALLY COME BACK
-0A8F
 0A8F : 01 15 02   (M80) FINGO:  ld      bc,FUNDSP       ;[M80] FUNCTION DISPATCH TABLE       
 0A92 : 09                       add     hl,bc           ;[M80] ADD ON THE OFFSET
 0A93 : 4E                       ld      c,(hl)          ;{M80} FASTER THAN "PUSH HL"
@@ -2212,7 +2211,7 @@
 0AA8
 0AA8                  + ;;AND and OR Operators
 0AA8                  | ;
-0AA8                  | ;[M80] DANDOR APPLIES THE "AND" AND "OR" OPERATOR`
+0AA8                  | ;[M80] DANDOR APPLIES THE "AND" AND "OR" OPERATOR
 0AA8                  | ;[M80] AND SHOULD BE USED TO IMPLEMENT ALL LOGICAL OPERATORS.
 0AA8                  | ;[M80] WHENEVER AN OPERATOR IS APPLIED, ITS PRECEDENCE IS IN [B].
 0AA8                  | ;[M80] THIS FACT IS USED TO DISTINGUISH BETWEEN "AND" AND "OR".
@@ -2311,7 +2310,7 @@
 0B1E : 4F                       ld      c,a             ;
 0B1F : 7C                       ld      a,h             ;[M80] SAVE HIGH BYTE IN [H]
 0B20 : 9A                       sbc     a,d             ;
-0B21 : 41         [M80] GIVINT: ld      b,c             ;;Float [D,E], entered from NOTER
+0B21 : 41         [M80] GIVINT: ld      b,c             ;;Float [C,D], entered from NOTER
 0B22 : 50               FLOATB: ld      d,b             ;;Float [B], entered from SNGFLT
 0B23 : 1E 00            FLOATD: ld      e,0             ;;Float [D], entered from POINT
 0B25 : 21 AB 38                 ld      hl,VALTYP       ;
@@ -2391,7 +2390,7 @@
 0B7D : 12                       ld      (de),a          ;[M80] STORE IT AWAY
 0B7E : C9                       ret                     ;[M80] SCANNED EVERYTHING
 0B7F
-0B7F : CD 85 09         L0B7F:  call    FRMEVL          ;;*** More Orphan Code?
+0B7F : CD 85 09   {~~~} FRMINT: call    FRMEVL          ;;*** More Orphan Code?
 0B82 : E5                       push    hl
 0B83 : CD 82 06                 call    FRCINT
 0B86 : E1                       pop     hl
@@ -2606,7 +2605,7 @@
 0C8D : CD 87 1B                 call    WRBYT2          ;
 0C90 : 18 11                    jr      RWARY           ;;Write Array 
 0C92                    ;;Read Array Header from Tape
-0C92 : CD 2E 1B   (~~~) CLOADH: call    PPLAY           ;;"Press <PLAY>", wait for RETURN`
+0C92 : CD 2E 1B   (~~~) CLOADH: call    PPLAY           ;;"Press <PLAY>", wait for RETURN
 0C95 : CD CE 1B                 call    RDSYNC          ;;Wait for SYNC
 0C98 : 0E 06      (~~~) CLOADG: ld      c,6             ;;Look for filename "@@@@@@"
 0C9A : CD 4D 1B   (~~~) CLOADL: call    RDBYTE
@@ -2635,7 +2634,7 @@
 0CBA : 23                       inc     hl              ;;Bump pointer
 0CBB : 18 F0                    jr      RWARYL          ;;and do next byte
 0CBD : F1               RWARYD: pop     af              ;;Get CSAVE/CLOAD flag
-0CBE : C2 1C 1C                 jp      nz,CSAVEZ       ;;If CSAVE* write trailer and return
+0CBE : C2 1C 1C                 jp      nz,WRTAIL       ;;If CSAVE* write trailer and return
 0CC1 : E1                       pop     hl              ;;Restore text pointer
 0CC2 : C3 7E 1B                 jp      RWARYR          ;;and Return
 0CC5                    ;
@@ -4540,7 +4539,6 @@
 1570 : 1F         {M80} FCOMPD: rra                     ;[M80] NUMBERS ARE DIFFERENT, CHANGE SIGN IF
 1571 : A9                       xor     c               ;[M80]  BOTH NUMBERS ARE NEGATIVE
 1572 : C9                       ret                     ;[M80] GO SET UP A
-1573                    
 1573 : 23         (M80) FCOMP2: inc     hl              ;POINT TO EXPONENT
 1574 : 78                       ld      a,b             ;GET EXPONENT OF ARG
 1575 : BE                       cp      (hl)            ;COMPARE THE TWO
@@ -5051,7 +5049,7 @@
 17DF : 38 30                    jr      c,EXP200        ;
 17E1 : CD 13 15                 call    PUSHF           ;[M80] SAVE y
 17E4 : CD B1 15                 call    INT             ;[M80] DETERMINE INTEGER POWER OF 2
-17E7 : C6 81                    add     a,081H          ;[M80] INTEGER WAS RETURNED IN A, BIAS IS 201
+17E7 : C6 81                    add     a,$81          ;[M80] INTEGER WAS RETURNED IN A, BIAS IS 201
 17E9 : C1                       pop     bc              ;
 17EA : D1                       pop     de              ;[M80] RECALL y
 17EB : 28 15                    jr      z,EXP110        ;[M80] OVERFLOW
@@ -5460,6 +5458,8 @@
 1A7E : C9                       ret                     ;
 1A7F
 1A7F                    ;;Get parameters for PSET, PRESET, POINT, and SOUND
+1A7F                    ;;Scans program text in the format (x-ooord,y-coord)
+1A7F                    ;;Returns x-ooord in BC, y-coord in DE
 1A7F : CF         [GWB] SCAND:  rst     SYNCHK
 1A80 : 28                       byte    '('             ;[GWB] SKIP OVER OPEN PAREN
 1A81 : CD D0 1A                 call    GETINT          ;[GWB] SCAN X INTO [D,E]
@@ -5574,6 +5574,7 @@
 1B14 : C9                       ret                     ;
 1B15
 1B15                    ;;Copy Screen Contents to Printer
+1B15                    ;;Assumes printer line width is 40
 1B15 : E5               COPY:   push    hl              ;;Save Text Pointer
 1B16 : D5                       push    de              ;
 1B17 : CD E1 1A                 call    LPCRLF          ;;Print CR/LF
@@ -5689,7 +5690,7 @@
 1B98 : CD A5 1B                 call    WRBITS          ;;Write 8 bits of byte
 1B9B : 3E FF                    ld      a,$FF           ;
 1B9D : 1E 02                    ld      e,2             ;
-1B9F : CD A5 1B                 call    WRBITS          ;;Writw stop bits (2 x $FF)
+1B9F : CD A5 1B                 call    WRBITS          ;;Write stop bits (2 x $FF)
 1BA2 : D9                       exx                     ;
 1BA3 : F1                       pop     af              ;;Restore all registers
 1BA4 : C9                       ret                     ;
@@ -5774,7 +5775,7 @@
 1C13 : CD 25 1D                 call    WRHEAP           ;
 1C16 : 2A 4F 38                 ld      hl,(TXTTAB)     ;
 1C19 : CD 38 1D                 call    CSAVEP          ;
-1C1C : 06 0F            CSAVEZ: ld      b,15            ;;Write 16 $00 to tape
+1C1C : 06 0F            WRTAIL: ld      b,15            ;;Write 16 $00 to tape
 1C1E : AF                       xor     a               ;
 1C1F : CD 8A 1B         CSAVE3: call    WRBYTE          ;
 1C22 : 10 FB                    djnz    CSAVE3          ;
@@ -5796,7 +5797,7 @@
 1C3B : FE 01                    cp      1               ;;If A is 0, set C, else clear C 
 1C3D : F5                       push    af              ;;Save A and C
 1C3E : 3E FF                    ld      a,$FF           ;
-1C40 : 32 5E 38                 ld      (CLFLAG),a       ;;Set FlagE to $FF
+1C40 : 32 5E 38                 ld      (CLFLAG),a      ;;Set Cload Flag to $FF
 1C43 : CD B1 1C                 call    NAMFIN          ;;Get FILNAM if present
 1C46                  + ;;Look for Filename
 1C46                  | ;;Reads tape until a file matching FILNAM is found
@@ -5804,9 +5805,9 @@
 1C46 : AF         (~~~) CLOADF: xor     a               ;
 1C47 : 32 5D 38                 ld      (INSYNC),a       ;;Clear SYNC flag
 1C4A : D5                       push    de              ;
-1C4B : CD 2E 1B                 call    PPLAY           ;;"Press <PLAY>", wait for RETURN`
-1C4E : CD D9 1C                 call    RDHEAD           ;
-1C51 : 21 57 38                 ld      hl,FILNAF       ;;Filename found on tape`
+1C4B : CD 2E 1B                 call    PPLAY           ;;"Press <PLAY>", wait for RETURN
+1C4E : CD D9 1C                 call    RDHEAD          ;
+1C51 : 21 57 38                 ld      hl,FILNAF       ;;Filename found on tape
 1C54 : CD ED 1C                 call    CMPNAM          ;;Compare with FILNAM
 1C57 : D1                       pop     de              ;
 1C58 : 28 12                    jr      z,CLOADC        ;;If they match, continue CLOAD
@@ -5825,7 +5826,7 @@
 1C76 : DC BE 0B                 call    c,SCRTCH        ;;If not CLOAD?, do a NEW
 1C79 : 3A E4 38                 ld      a,(FACLO)       ;;Get mode back
 1C7C : FE 01                    cp      1               ;;and check it
-1C7E : 32 5E 38                 ld      (CLFLAG),a       ;;Store in FlagE
+1C7E : 32 5E 38                 ld      (CLFLAG),a      ;;Store in FlagE
 1C81 : 2A 4F 38                 ld      hl,(TXTTAB)     ;;Set pointer to BASIC program
 1C84 : CD 51 1D                 call    CLOADP          ;;Load/verify program
 1C87 : 20 11                    jr      nz,CLOADV       ;;Check CLOAD? status
@@ -5879,14 +5880,14 @@
 1CD9
 1CD9                    ;;Read File Header from Tape
 1CD9 : CD CE 1B         RDHEAD: call    RDSYNC          ;;Wait for SYNC
-1CDC : AF                       xor     a               ;
+1CDC : AF         {~~~} RDNAME: xor     a               ;
 1CDD : 32 5D 38                 ld      (INSYNC),a      ;;Clear SYNC flag
 1CE0 : 21 57 38                 ld      hl,FILNAF       ;
 1CE3 : 06 06                    ld      b,6             ;;Read 6 bytes into FINLAF
-1CE5 : CD 4D 1B         RDHEAL: call    RDBYTE          ;
+1CE5 : CD 4D 1B   (~~~) RDNAML: call    RDBYTE          ;
 1CE8 : 77                       ld      (hl),a          ;
 1CE9 : 23                       inc     hl              ;
-1CEA : 10 F9                    djnz    RDHEAL          ;
+1CEA : 10 F9                    djnz    RDNAML          ;
 1CEC : C9                       ret                     ;
 
 1CED                    ;;Compare Filename
@@ -5894,7 +5895,8 @@
 1CED                    ;;Returns Z Set if the two are equal or FILNAM is an empty string
 1CED                    ;;Otherwise, return Z Clear
 1CED : 01 51 38         CMPNAM: ld      bc,FILNAM       ;
-1CF0 : 1E 06                    ld      e,6             ;;Check 6 characters
+1CED                    ;;Entry Point to Compare FILNAM to String pointed to by BC
+1CF0 : 1E 06      {---} CMPNAF: ld      e,6             ;;Check 6 characters
 1CF2 : 0A                       ld      a,(bc)          ;
 1CF3 : B7                       or      a               ;;First character of FILNAM
 1CF4 : C8                       ret     z               ;;If NUL return Equsl
@@ -5920,7 +5922,7 @@
 1D15 : 06 06                    ld      b,6             ;;Filenames are 6 characters long
 1D17 : 7E               OUTNM1: ld      a,(hl)          ;
 1D18 : 23                       inc     hl              ;
-1D19 : B7                       or      a               ;
+1D19 : B7                       or      a               
 1D1A : 28 01                    jr      z,OUTNM2        ;;ASCII NUL?
 1D1C : DF                       rst     OUTCHR          ;;No, print character
 1D1D : 10 F8            OUTNM2: djnz    OUTNM1          ;;Countdown and loop
@@ -5930,17 +5932,17 @@
 1D24 : C9                       ret                     ;
 1D25    
 1D25                    ;;Prompt User, Wait for RETURN, and Write Header
-1D25 : CD 7F 1B         WRHEAP: call    PRECRD          ;;"Press <RECORD>", wait for RETURN`
+1D25 : CD 7F 1B         WRHEAP: call    PRECRD          ;;"Press <RECORD>", wait for RETURN
 1D28                    ;;Write File Header to Tape
 1D28 : CD BC 1B   {~~~} WRHEAD: call    WRSYNC          ;;Write SYNC to tape
-1D2B : 06 06                    ld      b,6
+1D2B : 06 06      {~~~} WRNAME: ld      b,6
 1D2D : 21 51 38                 ld      hl,FILNAM       ;;Write Filename to tape 
-1D30 : 7E         (~~~) WRHEAL: ld      a,(hl)
+1D30 : 7E         (~~~) WRNAML: ld      a,(hl)
 1D31 : 23                       inc     hl
 1D32 : CD 8A 1B                 call    WRBYTE
-1D35 : 10 F9                    djnz    WRHEAL
+1D35 : 10 F9                    djnz    WRNAML
 1D37 : C9                       ret
-1D38                        ;
+1D38                        
 1D38                    ;;Save Program Text to tape 
 1D38 : CD BC 1B         CSAVEP: call    WRSYNC          ;;Write SYNC to tape
 1D3B : EB                       ex      de,hl           ;;Save from TXTTAB
@@ -6119,7 +6121,7 @@
 1E56 : C3 E7 1D                 jp      TTYFIS          ;;Save and Finish
 1E59
 1E59                    ;;Fill 1024 bytes atarting at HL with A                     
-1E59 : 11 FF 03         FILLIT: ld      de,003FFH       ;;Count down from 1023 
+1E59 : 11 FF 03         FILLIT: ld      de,$3FF         ;;Count down from 1023 
 1E5C                    ;;Fill BC bytes atartinf at HL with A
 1E5C : 70               FILLIP: ld      (hl),b          ;;Store byte
 1E5D : 23                       inc     hl              ;;Increment pointer
@@ -6149,7 +6151,22 @@
 1E7B : 2B                       dec     hl              ;
 1E7C : 18 FA                    jr      SDELAL          ;;Decrement and loop
 1E7E                    
-1E7E                    ;;INCHRH, INCHRX, and INCHRI - Get Character from Keyboard 
+1E7E                  + ;;INCHRH, INCHRX, and INCHRI - Get Character from Keyboard 
+                      | ;;The Keyboard Matrix is 8 columns by 6 rows. The columns are wired to
+                      | ;;to address lines A8 through A15 and the rows to I/O Port 255.
+                      | ;;When the Z80 executes and IN instruction, it puts the contents of BC 
+                      | ;;on the address bus. So to read the keyboard, B is loaded with a column
+                      | ;;mask, C is loaded with $FF, and OUT (C) reads the rows.
+                      | ;;
+                      | ;;        A8  A9  A10 A11 A12 A13 A14 A15            
+                      | ;;    D0   =   -   9   8   6   5   3   2
+                      | ;;    D1  <--  /   O   I   Y   T   E   W
+                      | ;;    D2   :   0   K   7   G   4   S   L
+                      | ;;    D3  RTN  P   M   U   V   R   Z   Q
+                      | ;;    D4   ;   L   N   H   C   D  SPC    
+                      | ;;    D5   .   ,   J   B   F   X   A
+                      | ;;
+                      | ;; Note: The RESET key is wired directly to the Z80 reset line.
 1E7E : F7               INCHRH: rst     HOOKDO
 1E7F : 12         {~~~} HOOK18: byte    18
 1E80 : D9               INCHRX: exx                     ;;Save Registers        
@@ -6171,7 +6188,7 @@
 1E9A : B7                       or      a
 1E9B : F2 36 1F                 jp      p,KEYRET
 1E9E : AF                       xor     a
-1E9F : 32 0C 38                 ld      (X380C),a
+1E9F : 32 0C 38                 ld      (RESPTR+1),a
 1EA2                    ;;Scan Keyboard
 1EA2 : 01 FF 00         KEYSCN: ld      bc,$FF          ;;B=0 to scan all columns
 1EA5 : ED 78                    in      a,(c)           ;;Read rows from I/O Port 255
