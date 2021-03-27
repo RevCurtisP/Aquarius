@@ -1,0 +1,8 @@
+NEW
+1 REM@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+10 D=14598:IF PEEK(D)=64 GOTO 20
+12 FOR A=D TO D+63:B=PEEK(A):IF B=0 THEN A=A+6:NEXT
+14 IF B<48 THEN A=A+1:C=PEEK(A):B=(B-32)*16+C-32
+16 POKE D,B:D=D+1:NEXT:POKE 14340,7:POKE 14341,57
+20 REM Z=USR(0)
+
