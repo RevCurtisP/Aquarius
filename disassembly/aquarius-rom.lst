@@ -3468,7 +3468,16 @@
 10D1                  | ;[M80] A VARIABLE NAME CAN CAUSE RECURSIVE CALLS TO PTRGET SO AT
 10D1                  | ;[M80] THAT POINT ALL VALUES MUST BE STORED ON THE STACK.
 10D1                  | ;[M80] ON RETURN, [A] DOES NOT REFLECT THE VALUE OF THE TERMINATING CHARACTER
-10D1                  | ;
+10D1                  | ;;VALTYP is set to 1f a '$' follows the variable name, or 0 if one doesn't.
+10D1                  | ;;  A pointer to the variable contents is returned in DE. The contents are a
+10D1                  | ;;  four byte floating point numbwe for numeric variables and a two byte
+10D1                  | ;;  pointer to the string data for a string variable.
+10D1                  | ;;If SUBFLG = 0 and a '(' follows the variable name, the array table is searched.
+10D1                  | ;;  If the array is found, the indexes are evaluated and a pointer to the array
+10D1                  | ;;  element is returned in DE.
+10D1                  | ;;If SUBFLG = 1, the array table is searched for the variable name.
+10D1                  | ;;  If found, the pointer to the next array entry is returned in DE, and
+10D1                  | ;;  a pointer to the number of dimensions is returned in BC.
 10D1 : AF         [M80] PTRGET: xor      a              ;[M80] MAKE [A]=0
 10D2 : 32 AA 38                 ld      (DIMFLG),a      ;[M80] FLAG IT AS SUCH
 10D5 : 4E                       ld      c,(hl)          ;[M80] GET FIRST CHARACTER IN [C]
