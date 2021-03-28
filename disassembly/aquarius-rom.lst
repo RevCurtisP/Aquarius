@@ -2027,7 +2027,7 @@
 0998 : 78                       ld      a,b             ;
 0999 : FE 78                    cp      $78             ;
 099B : D4 75 09                 call    nc,CHKNUM       ;
-099E : 7E         [M80] NOTSTV  ld      a,(hl)          ;[M80] GET NEXT CHARACTER
+099E : 7E         {M80} NOTSTV  ld      a,(hl)          ;[M80] GET NEXT CHARACTER
 099F : 22 C3 38                 ld      (TENP3),hl      ;[M80] SAVE UPDATED CHARACTER POINTER
 09A2 : FE A8                    cp      PLUSTK          ;[M80] IS IT AN OPERATOR?
 09A4 : D8                       ret     c               ;
@@ -2579,8 +2579,8 @@
 0C5F : C3 97 06                 jp      FCERR
 0C62
 0C62                    ;;CSAVE* and CLOAD*
-0C62   3E               CSAVES: byte    $3E             ;;"LD A," sets A = 62 for CSAVE*
-0C63 : AF               CLOADS: xor     a               ;;Set A = 0 for CLOAD*
+0C62   3E               CSVES:  byte    $3E             ;;"LD A," sets A = 62 for CSAVE*
+0C63 : AF               CLARY:  xor     a               ;;Set A = 0 for CLOAD*
 0C64 : B7                       or      a               ;;Set flags
 0C65 : F5                       push    af              ;;and save them
 0C66 : D7                       rst     CHRGET          ;;Skip '*'
@@ -2591,39 +2591,41 @@
 0C72 : 32 CB 38                 ld      (SUBFLG),a      ;;Turn subscripts back on
 0C75 : CD 75 09                 call    CHKNUM          ;;Must be numeric variable or TM Error
 0C78 : F1                       pop     af              ;
-0C79 : E5                       push    hl              ;;
-0C7A : F5                       push    af              ;;Stack is now (from top) variable pointer,
-0C7B : C5                       push    bc              ;;CSAVE/CLOAD flag, text pointer
-0C7C : 06 23                    ld      b,$23           ;
-0C7E : 28 12                    jr      z,CLOADH        ;;If flag is 0, do CLOAD
+0C79 : E5                       push    hl              ;;Text Pointer
+0C7A : F5                       push    af              ;;CSAVE/CLOAD flag
+0C7B : C5                       push    bc              ;;Pointer to Number of Dimensions
+0C7C : 06 23                    ld      b,'#'           ;
+0C7E : 28 12                    jr      z,CLARYP        ;;If flag is 0, do CLOAD
 0C80                    ;;Write Array Header to Tape
-0C80 : CD 7F 1B   {~~~} CSAVEH: call    PRECRD          ;;"Press <RECORD>" and wait for RETURN
+0C80 : CD 7F 1B   {~~~} CSARYH: call    PRECRD          ;;"Press <RECORD>" and wait for RETURN
 0C83 : CD BC 1B                 call    WRSYNC          ;;Write SYNC to tape
 0C86 : 78                       ld      a,b             ;;Write filename "######"
 0C87 : CD 87 1B                 call    WRBYT2          ;
 0C8A : CD 87 1B                 call    WRBYT2          ;
 0C8D : CD 87 1B                 call    WRBYT2          ;
-0C90 : 18 11                    jr      RWARY           ;;Write Array 
+0C90 : 18 11                    jr      RWARY            ;;Write Array 
 0C92                    ;;Read Array Header from Tape
-0C92 : CD 2E 1B   (~~~) CLOADH: call    PPLAY           ;;"Press <PLAY>", wait for RETURN
-0C95 : CD CE 1B                 call    RDSYNC          ;;Wait for SYNC
-0C98 : 0E 06      (~~~) CLOADG: ld      c,6             ;;Look for filename "@@@@@@"
-0C9A : CD 4D 1B   (~~~) CLOADL: call    RDBYTE
+0C92 : CD 2E 1B   (~~~) CLARYP: call    PPLAY           ;;"Press <PLAY>", wait for RETURN
+0C95 : CD CE 1B   {~~~} CLARYH: call    RDSYNC          ;;Wait for SYNC
+0C98 : 0E 06      (~~~) CLARYF: ld      c,6             ;;Look for filename "@@@@@@"
+0C9A : CD 4D 1B   (~~~) CLARYL: call    RDBYTE
 0C9D : B8                       cp      b
-0C9E : 20 F8                    jr      nz,CLOADG
+0C9E : 20 F8                    jr      nz,CLARYF
 0CA0 : 0D                       dec     c
-0CA1 : 20 F7                    jr      nz,CLOADL
+0CA1 : 20 F7                    jr      nz,CLARYL
 0CA3                    ;;Read Array from or Write Array to Tape
-0CA3 : E1               RWARY:  pop     hl              ;;DE = End of Array Data
-0CA4 : EB                       ex      de,hl           ;
-0CA5 : 19                       add     hl,de           ;
-0CA6 : EB                       ex      de,hl           ;
-0CA7 : 4E                       ld      c,(hl)          ;;HL = Beginning of Array Data
-0CA8 : 06 00                    ld      b,0             ;
-0CAA : 09                       add     hl,bc           ;
-0CAB : 09                       add     hl,bc           ;
-0CAC : 23                       inc     hl              ;
-0CAD : E7         (~~~) RWARYL: rst     COMPAR          ;;Are we there yet?
+0CA3                   ;;DE=End of Array+1, Stack: Array Pointer, CSAVE Flag, Text Pointer
+0CA3 : E1               RWARY:  pop     hl              ;;Restore Array Pointer
+0CA4 : EB                       ex      de,hl           ;;DE = Array Pointer, HL = Array Length
+0CA5 : 19                       add     hl,de           ;;HL = End of Array plus 1
+0CA6 : EB                       ex      de,hl           ;;HL = Array Pointer, DE = End of Array
+0CA7 : 4E                       ld      c,(hl)          ;
+0CA8 : 06 00                    ld      b,0             ;;BC = Number of Dimensions
+0CAA : 09                       add     hl,bc           ;;Each dimension size is two bytes
+0CAB : 09                       add     hl,bc           ;;So add twice
+0CAC : 23                       inc     hl              ;;Add one more for Number of Dimensions
+0CAD                   ;;HL=Start Address, DE=End Addres+1, Stack: CSAVE Flag, Text Pointer
+0CAD : E7         (~~~) RWMEM:  rst     COMPAR          ;;Are we there yet?
 0CAE : 28 0D                    jr      z,RWARYD        ;;Yes, you can get out
 0CB0 : F1                       pop     af              ;;Get CSAVE/CLOAD flag
 0CB1 : F5                       push    af              ;;And save it again
@@ -2632,7 +2634,7 @@
 0CB6 : CC 4D 1B                 call    z,RDBYTE        ;;If CLOAD* read from tape
 0CB9 : 77                       ld      (hl),a          ;;Write byte into array
 0CBA : 23                       inc     hl              ;;Bump pointer
-0CBB : 18 F0                    jr      RWARYL          ;;and do next byte
+0CBB : 18 F0                    jr      RWMEM           ;;and do next byte
 0CBD : F1               RWARYD: pop     af              ;;Get CSAVE/CLOAD flag
 0CBE : C2 1C 1C                 jp      nz,WRTAIL       ;;If CSAVE* write trailer and return
 0CC1 : E1                       pop     hl              ;;Restore text pointer
@@ -3609,6 +3611,9 @@
 119E : D5                       push    de              ;[M80 ]SAVE NUMBER OF DIMENSIONS
 119F : 11                       byte    $11             ;[M80] "LD H," OVER THE NEXT TWO BYTES
 11A0
+11A0                    ;;Get Pointer to Array
+11A0                    ;;BC = Array Variable Name on Entry
+11A0                    ;;     Pointer to Number of Dimensions on Exit 
 11A0 : E5         [M80] ERSFIN: push    hl              ;[M80] SAVE THE TEXT POINTER
 11A1 : F5                       push    af              ;[M80] SAVE A DUMMY NUMBER OF DIMENSIONS WITH THE ZERO FLAG SET
 11A2
@@ -4931,8 +4936,8 @@
 1746 : E1                       pop     hl              ;
 1747 : C9                       ret                     ;
 1748                    
-1748 : 01 74 94   [M80] FOUNVC: ld      bc,09474H       ;
-174B : 11 F7 23                 ld      de,023F7H       ;[M80] GET 999999.5 TO SEE IF THE FAC IS TOO BIG
+1748 : 01 74 94   [M80] FOUNVC: ld      bc,$9474        ;
+174B : 11 F7 23                 ld      de,$23F7        ;[M80] GET 999999.5 TO SEE IF THE FAC IS TOO BIG
 174E : CD 5B 15                 call    FCOMP           ;
 1751 : B7                       or      a               ;
 1752 : E1         {M80} FONVC2: pop     hl              ;
@@ -5769,7 +5774,7 @@
 1C08 : F7               CSAVE:  rst     HOOKDO          ;
 1C09 : 15         {~~~} HOOK21: byte    21              ;
 1C0A : FE AA                    cp      MULTK           ;;If * Token
-1C0C : CA 62 0C                 jp      z,CSAVES        ;;Do CSAVE*
+1C0C : CA 62 0C                 jp      z,CSARY        ;;Do CSAVE*
 1C0F : CD B8 1C                 call    NAMFIL          ;;Scan filename
 1C12 : E5                       push    hl              ;;Save text pointer
 1C13 : CD 25 1D                 call    WRHEAP           ;
@@ -5787,7 +5792,7 @@
 1C2C : F7               CLOAD:  rst     HOOKDO
 1C2D : 14         {~~~} HOOK20: byte    20
 1C2E : FE AA                    cp      MULTK           ;;Check for token after CLOAD
-1C30 : CA 63 0C                 jp      z,CLOADS        ;;If *, CLOAD variable
+1C30 : CA 63 0C                 jp      z,CLARY        ;;If *, CLOAD variable
 1C33 : D6 95                    sub     PRINTK          ;
 1C35 : 28 02                    jr      z,CLOADQ        ;;If ?, A will be $FF (verify)
 1C37 : AF                       xor     a               ;;otherwise it will be 0 (load)
