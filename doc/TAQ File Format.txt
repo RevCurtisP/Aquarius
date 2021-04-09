@@ -1,0 +1,48 @@
+TAQ - Mattel Aquarius Raw Tape Image File Format
+
+A TAQ image is a cycle-accurate binary representation of the signals 
+sent to and/or received from the cassette I/O port. 
+
+
+A TAQ file contains an ASCII header immediately followed by the binary
+image data.
+
+Header 
+
+The header consists of the format identifier "TAQ" followed by the 
+version as a string in "#.#" format, an optional comment block, and 
+an ASCII NUL. The reference header is
+
+    TAQ1.0\n
+    Mattel Aquarius Raw Tape Image\n
+    \x00
+    
+Data
+
+The image data is a series of little endian unsigned 16-bit words 
+representing a state transition on the cassette I/O port.
+
+The high bit of the word indicates the bit value sent to the I/O port,
+either 0 or 1, while the low 15 bits is the binary value of the time 
+elapsed since the opposite bit value was sent in CPU cycles. The maximum
+cycle count is 32768 and higher counts are truncated to that value.
+
+Consecutive words with the same high bit represent multiple writes of the
+same bit value to the port with no writes of the complementary bit
+value in between. In this case, The period of that state is the sum
+of the binary cycles counts in the words.
+
+Consequently, each word represents the duration of one half of each
+wave on in the signal, where a high bit of 0 indicates the time from
+crest to trough, while a 1 indicates the tume from trough to crest.
+
+The ROM cassette encode each data bit as two full waves, with longer 
+(lower frequency) waves representing a 0 and shorter (higher frequency) 
+waves representing a 1. So a 0 data bit might be encoded as
+
+   07ed 87ed 079c 883e
+   
+while a 1 data bit might ne encoded as
+
+   041f 837c 041f 83ce
+
