@@ -459,7 +459,7 @@
 018C : 00                       byte    0               ;;3808 CNTOFL
 018D : A3                       byte    163             ;;3809 LASTFF
 018E : 00                       byte    0               ;;380A CHARC 
-018F : 00                       word    0               ;;380B RESPTR
+018F : 00 00                    word    0               ;;380B RESPTR
 0191 : 20                       byte    ' '             ;;380D CURCHR
 0192 : 00                       byte    0               ;;380E LSTX  
 0193 : 00                       byte    0               ;;380F KCOUNT
@@ -491,9 +491,9 @@
 01CC : 28                       byte    $28             ;;3848 LINLEN
 01CD : 0E                       byte    $0E             ;;3849 CLMLST
 01CE : 00                       byte    $00             ;;384A RUBSW 
-01CF : 64                       byte    $64,$39         ;;384B TOPMEM
-01D1 : FE                       byte    $FE,$FF         ;;384D CURLIN
-01D3 : 01                       byte    $01,$39         ;;384F TXTTAB
+01CF : 64 39                    byte    $64,$39         ;;384B TOPMEM
+01D1 : FE FF                    byte    $FE,$FF         ;;384D CURLIN
+01D3 : 01 39                    byte    $01,$39         ;;384F TXTTAB
 01D5
 01D5                  + ;[M65] STATEMENT DISPATCH ADDRESSES
 01D5                  | ;[M65] WHEN A STATEMENT IS TO BE EXECUTED, THE FIRST
@@ -511,7 +511,7 @@
 01D5                  | ;[M65] THE LIST.
 01D5                  | ;
 01D5              [M65] STMDSP: ;MARKS START OF STATEMENT LIST
-01D5 : 12 0C                    word    ENDS            ;;$0C21
+01D5 : 21 0C                    word    ENDS            ;;$0C21
 01D7 : BC 05                    word    FOR             ;;$05BC
 01D9 : 13 0D                    word    NEXT            ;;$0D13
 01DB : 1C 07                    word    DATA            ;;$071C
@@ -546,7 +546,7 @@
 0215 : F5 14      [M80] FUNDSP: word    SGN             ;;$14F5
 0217 : B1 15                    word    INT             ;;$15B1
 0219 : 09 15                    word    ABS             ;;$1509
-021B : 03 38    .               word    USRPOK          ;;$3803 USR()
+021B : 03 38                    word    USRPOK          ;;$3803 USR()
 021D : A8 10                    word    FRE             ;;$10A8
 022F : 2E 0B                    word    LPOS            ;;$0B2E
 0221 : 33 0B                    word    POS             ;;$0B33
@@ -587,7 +587,8 @@
 024F : C4 41 54 41              byte    'D'+$80,"ATA"   ;;$83
 0253 :                  TK      =       TK+1            ;
 0253 :                  INPUTK  equ     TK              ;
-0253 : C9 4E 50 55 54           byte    'I'+$80,"NPUT"  ;;$84
+0253 : C9 4E 50 55              byte    'I'+$80,"NPUT"  ;;$84
+0257 : 54
 0258 :                  TK      =       TK+1            ;
 0258 : C4 49 4D                 byte    'D'+$80,"IM"    ;;$85
 025B :                  TK      =       TK+1            ;
@@ -606,7 +607,8 @@
 026F : 4F 52 45
 0272 :                  TK      =       TK+1            ;
 0272 :            [M65] GOSUTK  equ     TK              ;
-0272 : C7 4F 53 55 42           byte    'G'+$80,"OSUB"  ;;$8C
+0272 : C7 4F 53 55              byte    'G'+$80,"OSUB"  ;;$8C
+0276 : 42
 0277 :                  TK      =       TK+1            ;
 0277 : D2 45 54 55              byte    'R'+$80,"ETURN" ;;$8D
 027B : 52 4E                                            ;
@@ -628,26 +630,32 @@
 0293 : D0 4F 4B 45              byte    'P'+$80,"OKE"   ;;$94
 0297 :                  TK      =       TK+1            ;
 0297 :            [M65] PRINTK  equ     TK              ;
-0297 : D0 52 49 4E 54           byte    'P'+$80,"RINT"  ;;$95
+0297 : D0 52 49 4E              byte    'P'+$80,"RINT"  ;;$95
+029B : 54
 029C :                  TK      =       TK+1            ;
 029C : C3 4F 4E 54              byte    'C'+$80,"ONT"   ;;$96
 02A0 :                  TK      =       TK+1            ;
 02A0 : CC 49 53 54              byte    'L'+$80,"IST"   ;;$97
 02A4 :                  TK      =       TK+1            ;
-02A4 : CC 4C 49 53 54           byte    'L'+$80,"LIST"  ;;$98
+02A4 : CC 4C 49 53              byte    'L'+$80,"LIST"  ;;$98
+02A8 : 54
 02A9 :                  TK      =       TK+1            ;
-02A9 : C3 4C 45 41 52           byte    'C'+$80,"LEAR"  ;;$99
+02A9 : C3 4C 45 41              byte    'C'+$80,"LEAR"  ;;$99
+02AD : 52
 02AE :                  TK      =       TK+1            ;
-02AE : C3 4C 4F 41 44           byte    'C'+$80,"LOAD"  ;;$9A
+02AE : C3 4C 4F 41              byte    'C'+$80,"LOAD"  ;;$9A
+02B2 : 44
 02B3 :                  TK      =       TK+1            ;
-02B3 : C3 53 41 56 45           byte    'C'+$80,"SAVE"  ;;$9B
+02B3 : C3 53 41 56              byte    'C'+$80,"SAVE"  ;;$9B
+02B7 : 45
 02B8 :                  TK      =       TK+1            ;
 02B8 : D0 53 45 54              byte    'P'+$80,"SET"   ;;$9C
 02BC :                  TK      =       TK+1            ;
 02BC : D0 52 45 53              byte    'P'+$80,"RESET" ;;$9D
 02C0 : 45 54                                            ;
 02C2 :                  TK      =       TK+1            ;
-02C2 : D3 4F 55 4E 44           byte    'S'+$80,"OUND"  ;;$9E
+02C2 : D3 4F 55 4E              byte    'S'+$80,"OUND"  ;;$9E
+02C6 : 44
 02C7 :                  TK      =       TK+1            ;
 02C7 :            [M65] SCRATK  equ     TK              ;
 02C7 : CE 45 57                 byte    'N'+$80,"EW"    ;;$9F
@@ -666,8 +674,8 @@
 02D2 : D3 50 43 28              byte    'S'+$80,"PC("   ;;$A3
 02D6 :                  TK      =       TK+1            ;
 02D6 :                  INKETK  equ     TK              ;
-02D6 : C9 4E 4B 45 59           byte    'I'+$80,"NKEY$" ;;$A4
-02DB : 24
+02D6 : C9 4E 4B 45              byte    'I'+$80,"NKEY$" ;;$A4
+02DA : 59 24
 02DC :                  TK      =       TK+1            ;
 02DC :            [M65] THENTK  equ     TK              ;
 02DC : D4 48 45 4E              byte    'T'+$80,"HEN"   ;;$A5
@@ -700,13 +708,13 @@
 02EF : CF 52                    byte    'O'+$80,"R"     ;;$AE
 02F1 :                  TK      =       TK+1            ;
 02F1 :            [M80] GREATK  equ     TK              ;
-02F1 :                          byte    '>'+$80         ;;$AF greater than
+02F1 : BE                       byte    '>'+$80         ;;$BE greater than
 02F2 :                  TK      =       TK+1            ;
 02F2 :            [M80] EQUATK  equ     TK              ;
-02F2 : BD                       byte    '='+$80         ;;$B0 equals
+02F2 : BD                       byte    '='+$80         ;;$BD equals
 02F3 :                  TK      =       TK+1            ;
 02F3 :            [M80] LESSTK  equ     TK              ;
-02F3 : BC                       byte    '<'+$80         ;;$B1 less than
+02F3 : BC                       byte    '<'+$80         ;;$BC less than
 02F3 :                  TK      =       TK+1            ;
 02F4
 02F4 :                + ;;Functions
@@ -719,12 +727,12 @@
 02F4 :                | ;[M65] ANOTHER EXAMPLE: IF T OR Q THEN ... "TO" IS CRUNCHED
 02F4 :            [M65] ONEFUN  equ     TK              ;;*** This might go after SGN
 02F4 : D3 47 4E                 byte    'S'+$80,"GN"    ;;$B2
-0247                    TK      =       TK+1            ;
-0247 : C9 4E 54                 byte    'I'+$80,"NT"    ;;$B3
-024A                    TK      =       TK+1            ;
-024A : C1 42 53                 byte    'A'+$80,"BS"    ;;$B4
-024D                    TK      =       TK+1            ;
-024D : D5 53 52                 byte    'U'+$80,"SR"    ;;$B5
+02F7                    TK      =       TK+1            ;
+02F7 : C9 4E 54                 byte    'I'+$80,"NT"    ;;$B3
+02FA                    TK      =       TK+1            ;
+02FA : C1 42 53                 byte    'A'+$80,"BS"    ;;$B4
+02FD                    TK      =       TK+1            ;
+02FD : D5 53 52                 byte    'U'+$80,"SR"    ;;$B5
 0300                    TK      =       TK+1            ;
 0300 : C6 52 45                 byte    'F'+$80,"RE"    ;;$B6
 0303                    TK      =       TK+1            ;
@@ -1077,7 +1085,7 @@
 0492 : 23                       inc     hl              ;
 0493 : 23                       inc     hl              ;
 0494 : AF                       xor     a               ;SET CC'S
-0495 : BE        (M80)  CZLOOP: cp      (hl)            ;;Skip to end of Basic line
+0495 : BE         (M80) CZLOOP: cp      (hl)            ;;Skip to end of Basic line
 0496 : 23                       inc     hl              ;
 0497 : 20 FC                    jr      nz,CZLOOP       ;
 0499 : EB                       ex      de,hl           ;SWITCH TEMP
@@ -2579,7 +2587,7 @@
 0C5F : C3 97 06                 jp      FCERR
 0C62
 0C62                    ;;CSAVE* and CLOAD*
-0C62   3E               CSVES:  byte    $3E             ;;"LD A," sets A = 62 for CSAVE*
+0C62   3E               CSARY:  byte    $3E             ;;"LD A," sets A = 62 for CSAVE*
 0C63 : AF               CLARY:  xor     a               ;;Set A = 0 for CLOAD*
 0C64 : B7                       or      a               ;;Set flags
 0C65 : F5                       push    af              ;;and save them
@@ -2603,7 +2611,7 @@
 0C87 : CD 87 1B                 call    WRBYT2          ;
 0C8A : CD 87 1B                 call    WRBYT2          ;
 0C8D : CD 87 1B                 call    WRBYT2          ;
-0C90 : 18 11                    jr      RWARY            ;;Write Array 
+0C90 : 18 11                    jr      RWARY           ;;Write Array 
 0C92                    ;;Read Array Header from Tape
 0C92 : CD 2E 1B   (~~~) CLARYP: call    PPLAY           ;;"Press <PLAY>", wait for RETURN
 0C95 : CD CE 1B   {~~~} CLARYH: call    RDSYNC          ;;Wait for SYNC
@@ -2614,7 +2622,7 @@
 0CA0 : 0D                       dec     c
 0CA1 : 20 F7                    jr      nz,CLARYL
 0CA3                    ;;Read Array from or Write Array to Tape
-0CA3                   ;;DE=End of Array+1, Stack: Array Pointer, CSAVE Flag, Text Pointer
+0CA3                    ;;DE=End of Array+1, Stack: Array Pointer, CSAVE Flag, Text Pointer
 0CA3 : E1               RWARY:  pop     hl              ;;Restore Array Pointer
 0CA4 : EB                       ex      de,hl           ;;DE = Array Pointer, HL = Array Length
 0CA5 : 19                       add     hl,de           ;;HL = End of Array plus 1
@@ -2624,7 +2632,7 @@
 0CAA : 09                       add     hl,bc           ;;Each dimension size is two bytes
 0CAB : 09                       add     hl,bc           ;;So add twice
 0CAC : 23                       inc     hl              ;;Add one more for Number of Dimensions
-0CAD                   ;;HL=Start Address, DE=End Addres+1, Stack: CSAVE Flag, Text Pointer
+0CAD                    ;;HL=Start Address, DE=End Address+1, Stack: CSAVE Flag Z, Text Pointer
 0CAD : E7         (~~~) RWMEM:  rst     COMPAR          ;;Are we there yet?
 0CAE : 28 0D                    jr      z,RWARYD        ;;Yes, you can get out
 0CB0 : F1                       pop     af              ;;Get CSAVE/CLOAD flag
@@ -4953,7 +4961,7 @@
 1753 : E2 B0 16                 jp      po,FOUNV2       ;[M80] GO DO THE CHECK
 1756 : E9                       jp      (hl)            ;[M80] IT ISN'T TOO BIG, JUST RETURN
 1757                    
-1757 :                  FHALF:  byte    $00,$00,$00,$80 ;[M65] 1/2
+1757 : 00 00 00 80      FHALF:  byte    $00,$00,$00,$80 ;[M65] 1/2
 175B : 40                       ld      b,b
 175C : 42                       ld      b,d
 175D : 0F                       rrca
@@ -5688,7 +5696,7 @@
 1B85 : 18 AD                    jr      PRETRN          ;;Wait for RETURN  
 1B87
 1B87                    ;;Write byte to tape twice
-1B87 : CD 8A 1B  {~~~}  WRBYT2: call    WRBYTE          ;;Call WRBYTE, then drop into it
+1B87 : CD 8A 1B         WRBYT2: call    WRBYTE          ;;Call WRBYTE, then drop into it
 1B8A                    
 1B8A                    ;;Write framed byte to tape                    
 1B8A                    ;;Writes a start bit (0) , the bits of the byte, then two stop bits (1)
@@ -6383,6 +6391,6 @@
 1FF5 : C3 9D 0E                 jp      STROUT          ;
 1FF8
 1FF8                    ;;Pad rest of ROM space
-1FF8 : F5 F5 F5 F5              byte    $F5,$F5,$F5,$F5,$F5,$F5,$F5,$F5, 
-2000
-2000                            end                    ;End of Program!
+1FF8 : F5 F5 F5 F5              byte    $F5,$F5,$F5,$F5,$F5,$F5,$F5,$F5 
+1FFC : F5 F5 F5 F5
+2000 :                          end                    ;End of Program!

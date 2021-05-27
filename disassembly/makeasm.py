@@ -5,7 +5,7 @@
 # tasm -80 -b -s s2basic.asm
 # fc /b s2basic.obj aquarius.rom
 
-def makeasm(iname, oname):
+def makeasm(iname, oname, bname):
 
   #Psuedo-Op Replacement Dictionary
   PSO = {"byte": ".byte", "end": ".end", "equ": ".equ", 
@@ -19,6 +19,7 @@ def makeasm(iname, oname):
   
   ifile = open(iname, 'r')
   ofile = open(oname, 'w')
+  bfile = open(bname, 'wb')
 
   llblank = True
   llmeta = False
@@ -31,9 +32,6 @@ def makeasm(iname, oname):
   
     line = line.rstrip()
     blank = False if len(line) else True     
-
-    #Remove lines containing only object code
-    if 5 < len(line) <19 and line[5:6] == ':': continue
 
     #Remove Trailing Blank Lines
     if blank and (llblank or llmeta or llblock): continue
@@ -51,6 +49,18 @@ def makeasm(iname, oname):
       continue
     llblock = False
         
+    #Extract Object Code Bytes and Write to .bin file
+    objtext = line[7:18].replace(' ','')
+    if objtext:
+      try:
+        objbytes = bytes.fromhex(objtext)
+        bfile.write(objbytes)
+      except:
+        print("Error parsing object code '%s' in line %d\n" % (objtext, lineno))
+    
+    #Remove lines containing only object code
+    if 5 < len(line) <19 and line[5:6] == ':': continue
+
     #Remove Unreferenced Labels
     if line[18:19] == '{': 
       if line[32:40].rstrip() in ["=", "equ"]: continue
@@ -95,7 +105,7 @@ def makeasm(iname, oname):
       if arg in RST:
         line = line[:16] + RST[arg].ljust(8) + line[24:]
       else:
-        print("Illegal RST operand %s in line %d" % (arg, lineno))
+        print("Illegal RST operand s in line %d" % (arg, lineno))
 
     #Write Line to ASM File
     ofile.write(line + '\n')
@@ -104,5 +114,6 @@ def makeasm(iname, oname):
   
   ofile.close()
   ifile.close()
+  bfile.close()
 
-makeasm("aquarius-rom.lst", "s2basic.asm")  
+makeasm("aquarius-rom.lst", "s2basic.asm", "s2basic.bin")  
