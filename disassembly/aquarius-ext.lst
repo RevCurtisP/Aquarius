@@ -1,0 +1,3231 @@
+2000 : 2C 33 24  EXTBAS:  byte    ",3$$7+",0  ;;Extended BASIC Cartridge Signature
+2003 : 24 37 2B   
+2006 : 00            
+2007 : 00 00 00           byte    0,0,0,0,0,0,0,0,0
+200A : 00 00 00   
+200D : 00 00 00
+2010 : 21 5A 20  XSTART:  ld      HL,EXBAST   ;;Print "Extended BASIC"
+2013 : CD 9D 0E           call    STROUT
+2016 : 21 63 01           ld      HL,HEDING+3 ;;Start of Copyright Message (S1 ROM?) 
+2019 : 7E                 ld      A,(HL)      
+201A : FE 79              cp      $79
+201C : 20 03              jr      NZ,XSTAR2   ;;If first character is 'y'
+201E : 2B                 dec     HL          ;;  Back up to 
+201F : 2B                 dec     HL          ;;  Start of Message in S2 ROM
+2020 : 2B                 dec     HL
+2021 : CD 9D 0E   XSTAR2: call    STROUT      ;;Print Copyright Message
+2024 : 21 6C 20           ld      HL,$206C    ;;Store Hook Table Address
+2027 : 22 06 38           ld      (HOOK),HL   ;;in Hook Table
+202A : 21 00 00           ld      HL,$0000    ;;
+202D : 22 31 39           ld      (X3931),HL  ;;
+2030 : 21 04 07           ld      HL,$0704    ;;
+2033 : 22 00 39           ld      (X3900),HL
+2036 : 21 48 39           ld      HL,$3948    ;;End of System RAM
+2039 : 36 00              ld      (HL),$00    ;;Store a 0 there 
+203B : 23                 inc     HL          ;;Set Beginning of BASIC Text
+203C : 22 4F 38           ld      (TXTTAB),HL ;;to $394C
+203F : CD BE 0B           call    SCRTCH      ;;Do a NEW
+2042 : 3E C3              ld      A,$C3
+2044 : 32 0B 39           ld      (X390B),A
+2047 : 32 0E 39           ld      (X390E),A
+204A : 32 3E 39           ld      (X393E),A
+204D : AF                 xor     A
+204E : 32 33 39           ld      (X3933),A
+2051 : 32 34 39           ld      (X3934),A
+2054 : 32 35 39           ld      (X3935),A
+2057 : C3 02 04           jp      READY       ;;Go to Immediate Mode
+    ;
+205A : 0B 45 78   EXBAST: byte " Extended BASIC",13,10,0
+205D : 74 65 6E  
+2060 : 64 65 64  
+2063 : 20 42 41  
+2066 : 53 49 43  
+2069 : 0D 0A 00  
+206C              ;;When the Hook Routine is Executed, the stack will contain
+206C              ;;Return Address, Saved Accumulator and Flags, BASIC Pointer
+206C : E3         DOHOOK: ex      (SP),HL     ;;Swap BASIC Pointer with Return Address
+206D : F5                 push    AF          ;;Save Accumulator and Flags
+206E : 7E                 ld      A,(HL)      ;;Get Hook ID
+206F : 23                 inc     HL          ;;Increment Address Past Hook ID
+2070 : E5                 push    HL          ;;and Push it back on to stack
+2071 : 21 9D 20           ld      HL,HOOKT       
+2074 : C5                 push    BC          ;;
+2075 : 01 09 00           ld      BC,$0009    ;;
+2078 : ED B1              cpir                ;;Search Hook List for Hook Number
+207A : 79                 ld      A,C         ;;Index into Hook List
+207B : C1                 pop     BC          
+207C : 87                 add     A,A         ;;Multiply by 2
+207D : 21 8B 20           ld      HL,HOOKD    ;;Add to Address of Hook Table
+2080 : 85                 add     A,L         
+2081 : 6F                 ld      L,A
+2082 : 3E 00              ld      A,0
+2084 : 8C                 adc     A,H
+2085 : 67                 ld      H,A         ;;Load Hook Routing Address
+2086 : 7E                 ld      A,(HL)      ;;into HL
+2087 : 23                 inc     HL
+2088 : 66                 ld      H,(HL)
+2089 : 6F                 ld      L,A
+208A : E9                 jp      (HL)        ;;and Execute It
+208B    
+208B              ;;Hook Dispatch Table
+208B : AD 20      HOOKD:  word    UNHOOK      ;;Hook Not Implemented
+208D : EC 20              word    NOTGOX      ;;(NOTGOS)
+208E : A5 20              word    OUTDOX      ;;(OUTDO)
+2091 : F9 21              word    DOATN       ;;ATN Routine
+2093 : 77 21              word    DODEF       ;;DEF FN Routine
+2095 : A1 21              word    DOFN        ;;FN() Routine
+2097 : 37 21              word    INCHRX      ;;INCHR Hook
+2099 : FF 20              word    LISTHK      ;;LIST Hook
+209B : 11 21              word    GONE23      ;;GONE2
+209D
+209D :            ;;Hook Offset Table                  
+209D : 17         HOOKT:  byte    23          ;;Hook 23 (GONE2)
+209E : 16                 byte    22          ;;Hook 22 (LIST)
+209F : 12                 byte    18          ;;Hook 18 (INCHRH)
+20A0 : 10                 byte    16          ;;Hook 16 (FNDOER)
+02A1 : 0F                 byte    15          ;;Hook 15 (DEF)
+20A2 : 0E                 byte    14          ;;Hook 14 (ATN)
+20A3 : 0D                 byte    13          ;;Hook 12 (OUTDO)
+20A4 : 0A                 byte    10          ;;Hook 10 (NOTGOS)
+  
+20A5 : 2A 31 39  OUTDOX:  ld      hl,(X3931)
+20A8 : 7C                 ld      a,h
+20A9 : B5                 or      l
+20AA : C2 52 23           jp      nz,L2352
+20AD
+20AD             ;;Hook Not Implemented - Restore Registers and Return
+20AD : E1        UNHOOK:  pop     hl          ;;Get Return Address
+20AE : F1                 pop     af          ;;Restore Accumulator and Flags
+20AF : E3                 ex      (sp),hl     ;;Swap Return Address for BASIC Pointer
+20B0 : C9                 ret
+    
+20B1              EXTLST: ;;Extended Reserved Words List
+20B1 : D8 4F 52           byte    'X'+$80,"OR"  
+20B4    L20B4:
+20B4 : C5 44 49           byte    'E'+$80,"DIT"
+20B7 : 54  
+20B8 : CC 4F 43           byte    'L'+%80," OCATE"
+20BB : 41 54 45 
+20BE : CD 45 4E           byte    'M'+$80,"ENU"
+20C1 : 55 
+20C2 : C3 4C 53           byte    'C'+$80,"LS" 
+20C5 : CC 49 4E           byte    'L'+$80,"INE"
+20C8 : 45  
+20C9 : C3 49 52           byte    'C'+$80,"IRCLE"
+20CC : 43 4C 45
+20CF : C7 45 54           byte    'G'+$80,"ET"
+20D2 : D0 55              byte    'P'+$80,"UT"
+20D5 : C4 52 41           byte    'D'+$80,"RAW"
+20D8 : 57 
+20D9 : 80                 byte    $80         ;End of Table
+20DA
+20DA              ;;Extended Statement Dispatch Table       
+20DA : 7F 23      EXTDSP: word    $237F       ;;Do EDIT
+20DC : 4A 22              word    $224A       ;;
+20DE : 67 22              word    $2267       ;;
+20E0 : 46 22              word    $2246       ;;
+20E2 : E7 25              word    $25E7       ;;
+20E4 : 00 27              word    $2700       ;;
+20E6 : 6F 23              word    $236F       ;;
+20E8 : 6B 23              word    $236B       ;;
+20EA : 9D 2A              word    $2A9D       ;;  
+
+20EC : 78 FE      NOTGOX: ld      hl,(XFE78)    ;*** What the heck is going on here???
+20EE : CB C2              set     0,d
+20F0 : AD                 xor     l
+20F1 : 20 C1              jr      nz,L20B4
+20F3 : F1                 pop     af            ;;Restore Accumulator and Flags
+20F4 : E1                 pop     hl            ;;Restore BASIC Pointer
+20F5 : C5                 push    bc            ;;Push Return Address
+20F6 : EB                 ex      de,hl
+20F7 : 11 B0 20           ld      de,$20B0
+20FA : 06 CE              ld      b,$CE
+20FC : C3 F9 04           jp      CRUNCX        ;;Jump into CRUNCH
+    
+20FF : D1         LISTHK: pop     de            ;;Get Return Address
+2100 : F1                 pop     af            ;;Restore Accumulator and Flags
+2101 : E1                 pop     hl            ;;Restore Basic Pointer
+2102 : FE CF              cp      $CF           
+2104 : 30 02              jr      nc,L2108
+2106 : D5                 push    de            ;;Push Return Address onto Stack
+2107 : C9                 ret                   ;;and Return
+2108 : D6 CE      L2108:  sub     $CE
+210A : 4F                 ld      c,a
+210E : C3 A8 05           jp      RESSRC
+  
+210B : 11 B1 20           ld      de,$20B1
+    ;
+2111 : C1         GONE23: pop     bc          ;Pop Return Address
+2112 : F1                 pop     af          ;Restore Accumulator and Flags
+2113 : E1                 pop     hl          ;Restore BASIC Pointer
+2114 : 30 0C              jr      nc,GONE24   ;If Not a Token
+2116 : F5                 push    af          ;  Save Accumulator and Flags
+2117 : FE 1C              cp      $1C         ;  If CHR$(27)
+2119 : 28 4E              jr      z,L2169     ;    Go Here
+211B : FE 1D              cp      $1D         ;  If CHR$(28)
+211D : 28 46              jr      z,L2165     ;    Go There
+211F : F1                 pop     af          ;  Restore Accumulator and Flags
+2120 : C5                 push    bc          ;  Push Return Address back on to Stack
+2121 : C9                 ret                 ;  and Return
+2122 : D6 50      GONE24: sub 80              ;
+2124 : DA C4 03           jp c,SNERR
+2127 : FE 09              cp 9
+2129 : D2 C4 03           jp nc,SNERR
+212C : 07                 rlca
+212D : 4F                 ld c,a
+212E : 06 00              ld b,0
+2130 : EB                 ex de,hl
+2131 : 21 DA 20           ld hl,EXTDSP        ;;Use Extended Dispatch Table
+2134 : C3 65 06           jp GONE5            ;;Continue Statement Dispatch
+    ;
+2137 : E1         INCHRX: pop   hl
+2138 : F1                 pop   af
+2139 : E1                 pop   hl
+213A : CD 80 1E           call INCHRC
+213D : D9                 exx
+213E : 21 B1 20           ld hl,$20B1
+2141 : FE 0F              cp $0F
+2143 : 28 0F              jr z,L2154
+2145 : FE 19              cp $19
+2147 : 28 0F              jr z,L2158
+2149 : FE 10              cp $10
+214B : 28 13              jr z,L2160
+214D : FE 1E              cp $1E
+214F : 28 0B              jr z,L215C
+2151 : B7                 or a
+2152 : D9                 exx
+2153 : C9                 ret
+    ;
+2154    L2154:
+2154 : 0E 06              ld c,6
+2156 : 18 0A              jr KEYREX
+    ;
+2158    L2158:
+2158 : 0E 01              ld c,1
+215A : 18 06              jr KEYREX
+    ;
+215C    L215C:
+215C : 0E 09              ld c,9
+215E : 18 02              jr KEYREX
+    ;           
+2160    L2160:            
+2160 : 0E 05              ld c,5
+2162 : C3 28 1F   KEYREX: jp KEYRES
+    ;
+2165    L2165:
+2165 : F1  " "  pop af
+2166 : AF  " "  xor a
+2167 : 18 03  "  "  jr L216C
+    ;
+2169    L2169:
+2169 : F1  " "  pop af
+216A : 3E 01  "> "  ld a,001H
+216C    L216C:
+216C : 23  "#"  inc hl
+216D : 08  " "  ex af,af'
+216E : CF  " "  rst SYNCHK
+216F : 28 2B  "(+"  jr z,L219C
+2171 : CD 47 25  " G%"  call L2547
+2174 : C3 55 1A  " U "  jp L1A55
+    ;
+2177 : E1         DODEF:  pop hl
+2178 : F1                 pop af
+2179 : E1                 pop hl
+217A : CD EA 21           call L21EA
+217D : CD 45 0B           call ERRDIR
+2180 : 01 1C 07  "   "  ld bc,0071CH
+2183 : C5  " "  push bc
+2184 : D5  " "  push de
+2185 : CF  " "  rst SYNCHK
+2186 : 28 CD  "( "  jr z,L2155
+2188 : D1  " "  pop de
+2189 : 10 E5  "  "  djnz L2170
+218B : EB  " "  ex de,hl
+218C : 2B  "+"  dec hl
+218D : 56  "V"  ld d,(hl)
+218E : 2B  "+"  dec hl
+218F : 5E  "^"  ld e,(hl)
+2190 : E1  " "  pop hl
+2191 : CD 75 09  " u "  call CHKNUM
+2194 : CF  " "  rst SYNCHK
+2195 : 29  ")"  add hl,hl
+2196 : CF  " "  rst SYNCHK
+2197 : B0  " "  or b
+2198 : 44  "D"  ld b,h
+2199 : 4D  "M"  ld c,l
+219A : E3  " "  ex (sp),hl
+219B : 71  "q"  ld (hl),c
+219C    L219C:
+219C : 23  "#"  inc hl
+219D : 70  "p"  ld (hl),b
+219E : C3 59 0E  " Y "  jp L0E59
+    ;
+21A1 : E1         DOFN:   pop hl
+21A2 : F1                 pop af
+21A3 : E1                 pop hl
+21A4 : CD EA 21           call L21EA
+21A7 : D5  " "  push de
+21A8 : CD 37 0A  " 7 "  call PARCHK
+21AB : CD 75 09  " u "  call CHKNUM
+21AE : E3  " "  ex (sp),hl
+21AF : 5E  "^"  ld e,(hl)
+21B0 : 23  "#"  inc hl
+21B1 : 56  "V"  ld d,(hl)
+21B2 : 23  "#"  inc hl
+21B3 : 7A  "z"  ld a,d
+21B4 : B3  " "  or e
+21B5 : CA D0 03  "   "  jp z,UFERR
+21B8 : 7E  "~"  ld a,(hl)
+21B9 : 23  "#"  inc hl
+21BA : 66  "f"  ld h,(hl)
+21BB : 6F  "o"  ld l,a
+21BC : E5  " "  push hl
+21BD : 2A DE 38  "* 8"  ld hl,(X38DE)
+21C0 : E3  " "  ex (sp),hl
+21C1 : 22 DE 38  "" 8"  ld (X38DE),hl
+21C4 : 2A E2 38  "* 8"  ld hl,(X38E2)
+21C7 : E5  " "  push hl
+21C8 : 2A E0 38  "* 8"  ld hl,(X38E0)
+21CB : E5  " "  push hl
+21CC : 21 E0 38  "! 8"  ld hl,X38E0
+21CF : D5  " "  push de
+21D0 : CD 3A 15  " : "  call MOVMF
+21D3 : E1  " "  pop hl
+21D4 : CD 72 09  " r "  call FRMNUM
+21D7 : 2B  "+"  dec hl
+21D8 : D7  " "  rst CHRGET
+21D9 : C2 C4 03  "   "  jp nz,SNERR
+21DC : E1  " "  pop hl
+21DD : 22 E0 38  "" 8"  ld (X38E0),hl
+21E0 : E1  " "  pop hl
+21E1 : 22 E2 38  "" 8"  ld (X38E2),hl
+21E4 : E1  " "  pop hl
+21E5 : 22 DE 38  "" 8"  ld (X38DE),hl
+21E8 : E1  " "  pop hl
+21E9 : C9  " "  ret
+    ;
+21EA    L21EA:
+21EA : CF  " "  rst SYNCHK
+21EB : A2  " "  and d
+21EC : 3E 80  "> "  ld a,080H
+21EE : 32 CB 38  "2 8"  ld (X38CB),a
+21F1 : B6  " "  or (hl)
+21F2 : 4F  "O"  ld c,a
+21F3 : CD D6 10  "   "  call PTRGT2
+21F6 : C3 75 09  " u "  jp CHKNUM
+    ;
+21F9 : E1         DOATN:  pop hl
+21FA : F1                 pop af
+21FB : E1                 pop hl
+21FC : EF                 rst FSIGN
+21FD : FC 70 17           call m,PSHNEG
+2200 : FC 0B 15           call m,NEG
+2203 : 3A E7 38           ld a,(X38E7)
+2206 : FE 81  "  "  cp 081H
+2208 : DA 17 22  "  ""  jp c,L2217
+220B : 01 00 81  "   "  ld bc,08100H
+220E : 51  "Q"  ld d,c
+220F : 59  "Y"  ld e,c
+2210 : CD 2F 14  " / "  call FDIV
+2213 : 21 58 12  "!X "  ld hl,01258H
+2216 : E5  " "  push hl
+2217    L2217:
+2217 : 21 21 22  "!!""  ld hl,02221H
+221A : CD 37 18  " 7 "  call POLYX
+221D : 21 53 19  "!S "  ld hl,01953H
+2220 : C9  " "  ret
+    ;
+2221 : 09  " "  add hl,bc
+2222 : 4A  "J"  ld c,d
+2223 : D7  " "  rst CHRGET
+2224 : 3B  ";"  dec sp
+2225 : 78  "x"  ld a,b
+2226 : 02  " "  ld (bc),a
+2227 : 6E  "n"  ld l,(hl)
+2228 : 84  " "  add a,h
+2229 : 7B  "{"  ld a,e
+222A : FE C1  "  "  cp 0C1H
+222C : 2F  "/"  cpl
+222D : 7C  "|"  ld a,h
+222E : 74  "t"  ld (hl),h
+222F : 31 9A 7D  "1 }"  ld sp,07D9AH
+2232 : 84  " "  add a,h
+2233 : 3D  "="  dec a
+2234 : 5A  "Z"  ld e,d
+2235 : 7D  "}"  ld a,l
+2236 : C8  " "  ret z
+2237 : 7F  " "  ld a,a
+2238 : 91  " "  sub c
+2239 : 7E  "~"  ld a,(hl)
+223A : E4 BB 4C  "  L"  call po,L4CBB
+223D : 7E  "~"  ld a,(hl)
+223E : 6C  "l"  ld l,h
+223F : AA  " "  xor d
+2240 : AA  " "  xor d
+2241 : 7F  " "  ld a,a
+2242 : 00  " "  nop
+2243 : 00  " "  nop
+2244 : 00  " "  nop
+2245 : 81  " "  add a,c
+2246 : 3E 0B  "> "  ld a,00BH
+2248 : DF  " "  rst OUTCHR
+2249 : C9  " "  ret
+    ;
+224A : CD 54 0B  " T "  call GETBYT
+224D : F5  " "  push af
+224E : 3D  "="  dec a
+224F : FE 26  " &"  cp 026H
+2251 : D2 97 06  "   "  jp nc,FCERR
+2254 : CF  " "  rst SYNCHK
+2255 : 2C  ","  inc l
+2256 : CD 54 0B  " T "  call GETBYT
+2259 : FE 18  "  "  cp 018H
+225B : D2 97 06  "   "  jp nc,FCERR
+225E : 1C  " "  inc e
+225F : F1  " "  pop af
+2260 : 57  "W"  ld d,a
+2261 : EB  " "  ex de,hl
+2262 : CD 4D 2D  " M-"  call L2D4D
+2265 : EB  " "  ex de,hl
+2266 : C9  " "  ret
+    ;
+2267    X2267:
+2267 : FE 40  " @"  cp 040H
+2269 : CC 6B 06  " k "  call z,CHRGTR
+226C : CD E0 22  "  ""  call L22E0
+226F : D5  " "  push de
+2270 : 1E 01  "  "  ld e,001H
+2272 : 7E  "~"  ld a,(hl)
+2273 : FE 2C  " ,"  cp 02CH
+2275 : 20 08  "  "  jr nz,L227F
+2277 : D7  " "  rst CHRGET
+2278 : CD 54 0B  " T "  call GETBYT
+227B : D5  " "  push de
+227C : CF  " "  rst SYNCHK
+227D : 3B  ";"  dec sp
+227E : D1  " "  pop de
+227F    L227F:
+227F : 4B  "K"  ld c,e
+2280 : 06 01  "  "  ld b,001H
+2282 : D1  " "  pop de
+2283 : D5  " "  push de
+2284 : C5  " "  push bc
+2285    L2285:
+2285 : E5  " "  push hl
+2286 : EB  " "  ex de,hl
+2287 : E5  " "  push hl
+2288 : CD 4D 2D  " M-"  call L2D4D
+228B : 3E 2E  ">."  ld a,02EH
+228D : DF  " "  rst OUTCHR
+228E : E1  " "  pop hl
+228F : E3  " "  ex (sp),hl
+2290 : CD 85 09  "   "  call FRMEVL
+2293 : E5  " "  push hl
+2294 : CD C6 0F  "   "  call FRESTR
+2297 : CD A0 0E  "   "  call STRPRT
+229A : E1  " "  pop hl
+229B : D1  " "  pop de
+229C : C1  " "  pop bc
+229D : 7E  "~"  ld a,(hl)
+229E : FE 2C  " ,"  cp 02CH
+22A0 : 20 0C  "  "  jr nz,L22AE
+22A2 : EB  " "  ex de,hl
+22A3 : 04  " "  inc b
+22A4 : CD FB 22  "  ""  call L22FB
+22A7 : C5  " "  push bc
+22A8 : E5  " "  push hl
+22A9 : EB  " "  ex de,hl
+22AA : D7  " "  rst CHRGET
+22AB : D1  " "  pop de
+22AC : 18 D7  "  "  jr L2285
+    ;
+22AE    L22AE:
+22AE : FE 88  "  "  cp 088H
+22B0    L22B0:
+22B0 : C2 C4 03  "   "  jp nz,SNERR
+22B3 : E3  " "  ex (sp),hl
+22B4    L22B4:
+22B4 : E5  " "  push hl
+22B5 : C5  " "  push bc
+22B6 : 1E 00  "  "  ld e,000H
+22B8    L22B8:
+22B8 : CD CE 22  "  ""  call L22CE
+22BB : 1C  " "  inc e
+22BC : 38 0A  "8 "  jr c,L22C8
+22BE : CD FB 22  "  ""  call L22FB
+22C1 : 05  " "  dec b
+22C2 : 20 F4  "  "  jr nz,L22B8
+22C4 : C1  " "  pop bc
+22C5 : E1  " "  pop hl
+22C6 : 18 EC  "  "  jr L22B4
+    ;
+22C8    L22C8:
+22C8 : E1  " "  pop hl
+22C9 : E1  " "  pop hl
+22CA : E1  " "  pop hl
+22CB : C3 85 07  "   "  jp L0785
+    ;
+22CE    L22CE:
+22CE : C5  " "  push bc
+22CF : CD 4D 2D  " M-"  call L2D4D
+22D2    L22D2:
+22D2 : CD 2F 1A  " / "  call CQINCH
+22D5 : FE 0D  "  "  cp 00DH
+22D7 : 37  "7"  scf
+22D8 : 28 04  "( "  jr z,L22DE
+22DA : FE 20  "  "  cp 020H
+22DC : 20 F4  "  "  jr nz,L22D2
+22DE    L22DE:
+22DE : C1  " "  pop bc
+22DF : C9  " "  ret
+    ;
+22E0    L22E0:
+22E0 : CF  " "  rst SYNCHK
+22E1 : 28 CD  "( "  jr z,L22B0
+22E3 : 54  "T"  ld d,h
+22E4 : 0B  " "  dec bc
+22E5 : FE 26  " &"  cp 026H
+22E7 : 30 09  "0 "  jr nc,L22F2
+22E9 : 3C  "<"  inc a
+22EA : F5  " "  push af
+22EB : CF  " "  rst SYNCHK
+22EC : 2C  ","  inc l
+22ED : CD 54 0B  " T "  call GETBYT
+22F0 : FE 25  " %"  cp 025H
+22F2    L22F2:
+22F2 : D2 97 06  "   "  jp nc,FCERR
+22F5 : D1  " "  pop de
+22F6 : 3C  "<"  inc a
+22F7 : 5F  "_"  ld e,a
+22F8 : CF  " "  rst SYNCHK
+22F9 : 29  ")"  add hl,hl
+22FA : C9  " "  ret
+    ;
+22FB    L22FB:
+22FB : 7D  "}"  ld a,l
+22FC : 81  " "  add a,c
+22FD : 6F  "o"  ld l,a
+22FE : FE 18  "  "  cp 018H
+2300 : D8  " "  ret c
+2301 : 2E 17  ". "  ld l,017H
+2303 : C9  " "  ret
+    ;
+2304    L2304:
+2304 : EF  " "  rst FSIGN
+2305 : FA 0E 23  "  #"  jp m,L230E
+2308 : EB  " "  ex de,hl
+2309 : CD 82 06  "   "  call FRCINT
+230C : EB  " "  ex de,hl
+230D : C9  " "  ret
+    ;
+230E    L230E:
+230E : D5  " "  push de
+230F : CD 0B 15  "   "  call NEG
+2312 : CD 82 06  "   "  call FRCINT
+2315 : CD 0B 15  "   "  call NEG
+2318 : 21 00 00  "!  "  ld hl,00000H
+231B : B7  " "  or a
+231C : ED 52  " R"  sbc hl,de
+231E : D1  " "  pop de
+231F : C9  " "  ret
+    ;
+2320    L2320:
+2320 : E5  " "  push hl
+2321 : D5  " "  push de
+2322 : C5  " "  push bc
+2323 : 7C  "|"  ld a,h
+2324 : 55  "U"  ld d,l
+2325 : CD 23 0B  " # "  call FLOATD
+2328 : C1  " "  pop bc
+2329 : D1  " "  pop de
+232A : E1  " "  pop hl
+232B : C9  " "  ret
+    ;
+232C              ;;Print Null Terminated String
+232C : 7E         LISPRX: ld a,(hl)
+232D : B7                 or a
+232E : C8                 ret z
+232F : DF                 rst OUTCHR
+2330 : 23                 inc hl
+2331 : C3 2C 23           jp LISPRX
+    ;
+2334    MAKUPS:
+2334 : FE 61  " a"  cp 061H
+2336 : D8  " "  ret c
+2337 : FE 7B  " {"  cp 07BH
+2339 : D0  " "  ret nc
+233A : E6 5F  " _"  and 05FH
+233C : C9  " "  ret
+    ;
+233D    BUFLIN:
+233D : E5  " "  push hl
+233E : 21 02 00  "!  "  ld hl,00002H
+2341 : 39  "9"  add hl,sp
+2342 : 22 2F 39  ""/9"  ld (X392F),hl
+2345 : 21 60 38  "!`8"  ld hl,03860H
+2348 : 22 31 39  ""19"  ld (X3931),hl
+234B : 2A 4F 38  "*O8"  ld hl,(TXTTAB)
+234E : E3  " "  ex (sp),hl
+234F : C3 98 05  "   "  jp LISPRT
+    ;
+2352    L2352:
+2352 : F1  " "  pop af
+2353 : F1  " "  pop af
+2354 : FE 0D  "  "  cp 00DH
+2356 : 28 07  "( "  jr z,L235F
+2358 : 77  "w"  ld (hl),a
+2359 : 23  "#"  inc hl
+235A : 22 31 39  ""19"  ld (X3931),hl
+235D : E1  " "  pop hl
+235E : C9  " "  ret
+    ;
+235F    L235F:
+235F : AF  " "  xor a
+2360 : 77  "w"  ld (hl),a
+2361 : 67  "g"  ld h,a
+2362 : 6F  "o"  ld l,a
+2363 : 22 31 39  ""19"  ld (X3931),hl
+2366 : 2A 2F 39  "*/9"  ld hl,(X392F)
+2369 : F9  " "  ld sp,hl
+236A : C9  " "  ret
+    ;
+236B : 3E 01  "> "  ld a,001H
+236D : 18 01  "  "  jr L2370
+    ;
+236F : AF  " "  xor a
+2370    L2370:
+2370 : C3 84 29  "  )"  jp L2984
+    ;
+2373    INTGET:
+2373 : CD 85 09  "   "  call FRMEVL
+2376 : E5  " "  push hl
+2377 : CD 75 09  " u "  call CHKNUM
+237A : CD 82 06  "   "  call FRCINT
+237D : E1  " "  pop hl
+237E : C9  " "  ret
+    ;
+                      + ;[M80] EDIT COMMAND
+                      | ;[M80] [C] CONTAINS COUNT OF CHARACTERS IN LINE
+                      | ;[M80] [B] CONTAINS CURRENT CHARACTER POSITION 0=FIRST IN LINE.
+                      | ;[M80] [D] CONTAINS NUMBER OF TIMES TO REPEAT THIS SUBCOMMAND
+                      | ;[M80] [H,L] POINT TO CURRENT CHARACTER
+
+
+237F : CD 9C 06   [M80] EDIT:   call    SCNLIN          ;[M80[ GET THE ARGUMENT LINE NUMBER
+2382 : C0                       ret     nz              ;[M80] ERROR IF NOT END OF LINE
+2383 : E1         {M80} EREDIT  pop     hl              ;[M80] GET RID OF NEWSTT ADDRESS
+2384 : CD 9F 04   [M80] EEDITS: call    FNDLIN          ;[M80] FIND THE LINE IN QUESTION
+2387 : D2 F3 06                 jp      nc,USERR        ;[M80] IF NOT FOUND, UNDEFINED STATEMENT ERROR.
+238A : 60                       ld      h,b             ;[M80] PONTER TO LINE IS IN [B,C]
+238B : 69                       ld      l,c             ;[M80] TRANSFER IT TO [H,L]
+238C : 23                       inc     hl              ;[M80] PASS OVER POINTER TO NEXT LINE
+238D : 23                       inc     hl              ;[M80] LIKE SO.
+238E : 4E                       ld      c,(hl)          ;[M80] GET FIRST BYTE OF LINE #
+238F : 23                       inc     hl              ;[M80] MOVE TO 2ND BYTE
+2390 : 46                       ld      b,(hl)          ;[M80] PICK IT UP INTO B
+2391 : 23                       inc     hl              ;[M80] ADVANCE TO POINT TO FIRST BYTE OF LINE
+2392 : C5                       push    bc              ;[M80] SAVE LINE # ON STACK
+2393 : CD 3D 23                 call    BUFLIN          ;[M80] UNPACK LINE INTO BUF
+2396 : E1         [M80] LLED:   pop     hl              ;[M80] GET BACK LINE #
+2397 : E5         {M80} INLED:  push    hl              ;[M80] SAVE IT BACK ON STACK
+2398 : 7C                       ld      a,h             ;[M80] TEST FOR DOUBLE BYTE ZERO
+2399 : A5                       and     l               
+239A : 3C                       inc     a               
+239B : 3E 21                    ld      a,'!'           ;[M80] GET PROMPT FOR DIRECT EDIT
+239D : CC 8A 19                 call    z,OUTDO         ;[M80] SEND IT
+23A0 : C4 75 16                 call    nz,LINPRT       ;[M80] PRINT LINE # IF NOT INLIN EDIT
+23A3 : 3E 20                    ld      a,' '           ;[M80] TYPE A SPACE
+23A5 : DF                       rst     OUTCHR          ;[M80] ...
+23A6 : 21 60 38                 ld      hl,BUF          ;[M80] GET START OF BUF IN [H,L]
+23A9 : E5                       push    hl              ;[M80] SAVE [H,L] WHILE WE CALC LINE LENGTH
+23AA : 0E FF                    ld      c,255           ;[M80] ASSUME 0 CHAR LINE
+23AC : 0C         [M80] LENLP:  inc     c               ;[M80] BUMP COUNT OF CHARS
+23AD : 7E                       ld      a,(hl)          ;[M80] GET CHAR FROM LINE
+23AE : 23                       inc     hl              ;[M80] BUMP POINTER
+23AF : B7                       or      a               
+23B0 : 20 FA                    jr      nz,LENLP        ;[M80] IF NOT ZERO (END OF LINE) KEEP COUNTING...
+23B2 : E1                       pop     hl              ;[M80] GET BACK POINTER TO LINE
+23B3 : 47                       ld      b,a             ;[M80] SET CURRENT LINE POSIT TO ZERO
+23B4 : 16 00      {M80} DISPED: ld      d,0             ;[M80] ASSUME REPITION COUNT IS ZERO
+23B6 : CD DA 19   [M80] DISPI:  call    INCHR           ;[M80] GET A CHAR FROM USER
+23B9 : B7                       or      a               ;[M80] IGNORE NULLS
+23BA : 28 FA                    jr      z,DISPI         
+23BC : CD 34 23                 call    MAKUPS          ;[M80] MAKE UPPER CASE COMMAND
+23BF : D6 30                    sub     '0'             ;[M80] GET RID OF OFFSET
+23C1 : 38 0E                    jr      c,NOTDGI        ;[M80] ... 
+23C3 : FE 0A                    cp      10            
+23C5 : 30 0A                    jr      nc,NOTDGI        
+23C7 : 5F                       ld      e,a             ;[M80] SAVE CHAR
+23C8 : 7A                       ld      a,d             ;[M80] GET ACCUM REPITITION
+23C9 : 07                       rlca                    ;[M80] MULTIPLY BY 2
+23CA : 07                       rlca                    ;[M80] BY 4
+23CB : 82                       add     a,d             ;[M80] AND ADD TO GET 5*D
+23CC : 07                       rlca                    ;[M80] *2 TO GET 10*D
+23CD : 83                       add     a,e             ;[M80] ADD DIGIT
+23CE : 57                       ld      d,a             ;[M80] SAVE BACK NEW ACCUM
+23CF : 18 E5                    jr      DISPI           ;[M80]  GET NEXT CHAR
+23D1    
+23D1 : E5         [M80] NOTDGI: push    hl              ;[M80] SAVE TEXT POINTER
+23D2 : 21 B4 23                 ld      hl,023B4H       ;[M80] PUT RETURN ADDRESS TO DISPED
+23D5 : E3                       ex      (sp),hl         ;[M80] ON THE STACK
+23D6 : 15                       dec     d               ;[M80] SEE IF D=0 (REP FACTOR)
+23D7 : 14                       inc     d               ;[M80] SET CONDITION CODES
+23D8 : 20 01                    jr      nz,NTZERD       ;[M80] BRANCH AROUND
+23DA : 14                       inc     d               ;[M80] MAKE IT 1
+23DB    
+23DB : FE EC      [M80] NTZERD: cp      8-'0'           ;[M80] Backspace?
+23DD : CA 19 25                 jp      z,BAKED         ;[M80] HANDLE IT
+23E0 : FE DD                    cp      13-'0'          ;[M80] CARRIAGE RETURN
+23E2 : CA 26 25                 jp      z,CRED          ;[M80] DONE EDITING
+23E5 : FE F0                    cp      ' '-'0'         ;[M80] SPACE
+23E7 : 28 42                    jr      z,SPED          ;[M80] GO TO ROUTINE
+23E9 : FE 31                    cp      'A'+32-'0'      ;[M80] COMMAND IN LOWER CASE?
+23EB : 38 02                    jr      c,NOTLW4        ;[M80] NO, SO OK.
+23ED : D6 20                    sub     32              ;[M80] CONVERT TO UPPER CASE
+23EF    
+23EF : FE 21      [M80] NOTLW4: cp      'Q'-'0'         ;[M80] QUIT?
+23F1 : CA 3C 25                 jp      z,QED           ;[M80] IF SO, QUIT & PRINT "OK" OR RETURN TO INLIN
+23F4 : FE 1C                    cp      'L'-'0'         ;[M80] L?
+23F6 : 28 68                    jr      z,LED           ;[M80] BRANCH
+23F8 : FE 23                    cp      'S'-'0'         ;[M80] S?
+23FA : 28 41                    jr      z,SED           ;[M80] SEARCH
+23FC : FE 19                    cp      'I'-'0'         ;[M80] I?
+23FE : CA B1 24                 jp      z,IED           ;[M80] INSERT
+2401 : FE 14                    cp      CPI 'D'-'0'     ;[M80] D?
+2403 : 28 65                    jr      z,DED           ;[M80] DELETE
+2405 : FE 13                    cp      'C'-'0'         ;[M80] C?
+2407 : 28 7A                    jr      z,CED           ;[M80] CHANGE
+2409 : FE 15                    cp      'E'-'0'         ;[M80] END?
+240B : CA 29 25                 jp      z,EED           ;[M80] (SAME AS <CR> BUT DOESNT PRINT REST)
+240E : FE 28                    cp      'X'-'0'         ;[M80] EXTEND?
+2410 : CA AC 24                 jp      z,XED           ;[M80] GO TO END OF LINE & INSERT
+2413 : FE 1B                    cp      'K'-'0'         ;[M80] KILL??
+2415 : 28 20                    jr      z,KED           ;[M80] (SAME AS "S" BUT DELETES CHARS)
+2417 : FE 18                    cp      'H'-'0'         ;[M80] HACK??
+2419 : CA A9 24                 jp      z,HED           ;[M80] HACK OFF THE REST OF THE LINE & INSERT
+241C : FE 11                    cp      'A'-'0'         ;[M80] AGAIN??
+241E : 3E 07                    ld      a,7             ;[M80] GET READY TO TYPE BEL.
+2420 : C2 8A 19                 jp      nz,OUTDO        ;[M80] NO MATCH, SEND BEL AND RETURN TO DISPATCHER
+2423 : C1                       pop     bc              ;[M80] DISPI RETURN ADDRESS
+2424 : D1                       pop     de              ;[M80] LINE NUMBER INTO [D,E]
+2425 : CD EA 19                 call    CRDO            ;[M80] TYPE A CARRIAGE RETURN LINE-FEED
+2428 : C3 84 23                 jp      EEDITS          ;[M80] RESTART EDITING
+242B              
+242B : 7E         [M80] SPED:   ld      a,(hl)          ;[M80] GET CHAR FROM CURENT POSIT
+242C : B7                       or      a               ;[M80] ARE WE AT END OF LINE?
+242D : C8                       ret     z               ;[M80] IF SO, RETURN
+242E : 04                       inc     b               ;[M80] BUMP CURRENT POSITION
+242F : CD 8A 19                 call    OUTDO           ;[M80] TYPE CHARACTER
+2432 : 23                       inc     hl              ;[M80] MOVE POINTER TO NEXT CHAR
+2433 : 15                       dec     d               ;[M80] TEST IF DONE WITH REPITITIONS
+2434 : 20 F5                    jr      nz,SPED         ;[M80] REPEAT
+2436 : C9                       ret                     ;[M80] RETURN TO DISPATCHER
+    ;
+2437    
+2437 : E5         [M80] KED:    push    hl              ;[M80] SAVE CURRENT CHAR POSIT
+2438 : 21 7F 24                 ld      hl,TYPSLH       ;[M80] TYPE SLASH WHEN DONE
+243B : E3                       ex      (sp),hl         ;[M80] PUT IT ON STACK & GET POSIT BACK
+243C : 37                       scf                     ;[M80] SET THE CARRY FLAG
+243D    
+243D : F5         [M80] SED:    push    af              ;[M80] SAVE CONDITION CODES
+243E : CD DA 19  "              call    INCHR           ;[M80] GET SEARCH CHAR
+2441 : 5F                       ld      e,a             ;[M80] SAVE IT
+2442 : F1                       pop     af
+2443 : F5                       push    af
+2444 : DC 7F 24                 call    c,TYPSLH        ;[M80] TYPE BEGINNING SLASH FOR "K"
+2447 : 7E         [M80] SRCALP: ld      a,(hl)
+2448 : B7                       or      a
+2449 : 28 13                    jr      z,POPART
+244B : CD 8A 19                 call    OUTDO           ;[M80] TYPE THE CHAR
+244E : F1                       pop     af              ;[M80] GET KILL FLAG
+244F : F5                       push    af              ;[M80] SAVE BACK
+2450 : DC E6 24                 call    c,DELCHR        ;[M80] DELETE THE CHAR IF K COMMAND.
+2453 : 38 02                    jr      c,NOTSRC        ;[M80] AND DONT MOVE POINTER AS DELCHR ALREADY DID
+2455 : 23                       inc     hl
+2456 : 04                       inc     b               ;[M80] INCREMENT LINE POSIT
+2457 : 7E         [M80] NOTSRC: ld      a,(hl)          ;[M80] ARE WE AT END
+2458 : BB                       cp      e               ;[M80] ARE CURRENT CHAR & SEARCH
+2459 : 20 EC                    jr      nz,SRCALP       ;[M80] CHAR THE SAME? IF NOT, LOOK MORE
+245B : 15                       dec     d               ;[M80] LOOK FOR N MATCHES
+245C : 20 E9                    jr      nz,SRCALP       ;[M80] IF NOT 0, KEEP LOOKING
+245E : F1         [M80] POPART: pop     af              ;[M80] GET RID OF KILL FLAG
+245F : C9                       ret                     ;[M80] DONE SEARCHING
+2460    
+2460 : CD 2C 23   [M80] LED:    call    LISPRX          ;[M80] TYPE REST OF LINE
+2463 : CD EA 19                 call    CRDO            ;[M80] TYPE CARRIAGE RETURN
+2466 : C1                       pop     bc              ;[M80] GET RID OF RETURN TO DISPED
+2467 : C3 96 23                 jp      LLED            ;[M80] GO TO MAIN CODE
+246A              
+246A : 7E         [M80] DED:    ld      a,(hl)          ;[M80] GET CHAR WHICH WE ARE TRYING TO DELETE
+246B : B7                       or      a               ;[M80] IS IT THE END OF LINE
+246C : C8                       ret     z               ;[M80] DONE IF SO
+246D : 3E 5C                    ld      a,'\'           ;[M80] TYPE BACKSLASH
+246F : CD 8A 19                 call    OUTDO           ;[M80] LIKE SO
+2472 : 7E         [M80] DELLP:  ld      a,(hl)          ;[M80] GET CHAR FROM LINE
+2473 : B7                       or      a               ;[M80] ARE WE AT END?
+2474 : 28 09                    jr      z,TYPSLH        ;[M80] TYPE SLASH
+2476 : CD 8A 19                 call    OUTDO           ;[M80] TYPE CHAR WE'RE GOING TO DELETE
+2479 : CD E6 24                 call    DELCHR          ;[M80] DELETE CURRENT CHAR
+247C : 15                       dec     d               ;[M80] DECREMENT DELETE COUNT
+247D : 20 F3                    jr      nz,DELLP        ;[M80] KEEP DOING IT
+247F : 3E 5C      [M80] TYPSLH: ld      a,'\'           ;[M80] TYPE ENDING SLASH
+2481 : DF                       rst     OUTCHR          ;[M80] LIKE SO
+2482 : C9                       ret
+2483    
+2483 : 7E         [M80] CED:    ld      a,(hl)          ;[M80] ARE WE AT END OF LINE?
+2484 : B7                       or      a               ;[M80] SEE IF 0
+2485 : C8                       ret     z               ;[M80] RETURN
+2486 : CD DA 19   [M80] CED2:   call    INCHR           ;[M80] GET CHAR TO REPLACE CHAR
+2489 : FE 20                    cp      ' '             ;[M80] IS IT CONTROL CHAR?
+248B : D2 9F 24                 jp      nc,NOTCCC       ;[M80] NO
+248E : FE 0A                    cp      10              ;[M80] IS IT LF?
+2490 : 28 0D                    jr      z,NOTCCC        ;[M80] YES
+2492 : FE 07                    cp      7               ;[M80] OR BELL?
+2494 : 28 09                    jr      z,NOTCCC        ;[M80] OK
+2496 : FE 09                    cp      9               ;[M80] OR TAB?
+2498 : 28 05                    jr      z,NOTCCC        ;[M80] OK
+249A : 3E 07                    ld      a,7             ;[M80] GET BELL
+249C : DF                       rst     OUTCHR          ;[M80] SEND IT
+249D : 18 E7                    jr      CED2            ;[M80] RETRY
+249F : 77         [M80] NOTCCC: ld      (hl),a          ;[M80] SAVE IN MEMORY
+24A0 : CD 8A 19                 call    OUTDO           ;[M80] ECHO THE CHAR WERE USING TO REPLACE
+24A3 : 23                       inc     hl              ;[M80] BUMP POINTER
+24A4 : 04                       inc     b               ;[M80] INCREMENT POSITION WITHIN LINE
+24A5 : 15                       dec     d               ;[M80] ARE WE DONE CHANGING?
+24A6 : 20 DB                    jr      nz,CED          ;[M80] IF NOT, CHANGE SOME MORE.
+24A8 : C9                       ret                     ;[M80] DONE
+24A9    
+24A9 : 36 00      [M80] HED:    ld      (hl),0          ;[M80] MAKE LINE END AT CURRENT POSITION
+24AB : 48                       ld c,b                  ;[M80] SET UP LINE LENGTH CORRECTLY
+24AC    
+24AC : 16 FF      [M80] XED:    ld      d,255           ;[M80] FIND END OF LINE
+24AE : CD 2B 24                 call    SPED            ;[M80] BY CALLING SPACER
+24B1 :                  ;NOW FALL INTO INSERT CODE
+24B1 : CD DA 19   [M80] IED:    call    INCHR           ;[M80] GET CHAR TO INSERT
+24B4 : FE 1C                    cp      28              ;[M80] DELETE??
+24B6 : 28 1F                    jr      z,TYPARW        ;[M80] YES, ACT LIKE "_" 
+24B8 : FE 0D                    cp      13              ;[M80] IS IT A CARRIAGE RETURN?
+24BA : 28 6A                    jr      z,CRED          ;[M80] DONT INSERT, AND SIMULATE <CR>
+24BC : FE 11                    cp      17              ;[M80] IS IT ESCAPE?
+24BE : C8                       ret     z               ;[M80] IF SO, DONE.
+24BF : FE 08                    cp      8               ;[M80] BACKSPACE?              
+24C1 : 28 16                    jr      z,TYPAR1        ;[M80] TYPE BACKARROW AND DELETE 
+24C3 : FE 0A                    cp      10              ;[M80] LINE FEED?
+24C5 : 28 2E                    jr      z,NTARRW        ;[M80] ALLOW IT
+24C7 : FE 07                    cp      7               ;[M80] BELL?
+24C9 : 28 2A                    jr      z,NTARRW        ;[M80] ALLOW IT
+24CB : FE 09                    cp      9               ;[M80] TAB?
+24CD : 28 26                    jr      z,NTARRW        ;[M80] ALLOW IT
+24CF : FE 20                    cp      ' '             ;[M80] IS IT ILLEGAL CHAR
+24D1 : 38 DE                    jr      c,IED           ;[M80] TOO SMALL
+24D3 : FE 5F                    cp      '_'             ;[M80] DELETE PREVIOUS CHAR INSERTED?
+24D5 : 20 1E                    jr      nz,NTARRW       ;[M80] IF NOT, JUMP AROUND NEXT CODE
+24D7 : 3E 5F      [M80] TYPARW: ld      a,'_'           ;[M80] TYPE IT
+24D9 : 05         [M80] TYPAR1: dec     b               ;[M80] ARE WE AT START OF LINE?
+24DA : 04                       inc     b               ;[M80] LETS SEE
+24DB : 28 1F                    jr      z,DINGI         ;[M80] IF SO, TYPE DING.
+24DD : CD 8A 19                 call    OUTDO           ;[M80] TYPE THE BACK ARROW
+24E0 : 2B                       dec     hl              ;[M80] BACK UP THE POINTER
+24E1 : 05                       dec     b               ;[M80] MOVE BACK POSIT IN LINE
+24E2 : 11 B1 24                 ld      de,IED          ;[M80] SET UP RETURN ADDRESS
+24E5 : D5                       push    de              ;[M80] SAVE IT  ON STACK & FALL THROUGH
+24E6                    ;[M80] SUBROUTINE TO DELETE CHAR POINTED TO BY [H,L]. CORRECTS C.
+24E6 : E5         [M80] DELCHR: push    hl              ;[M80] SAVE CURRENT POSIT POINTER
+24E7 : 0D                       dec     c               ;[M80] MAKE LENGTH OF LINE ONE LESS
+24E8 : 7E         [M80] CMPRSS: ld      a,(hl)          ;[M80] GET CHAR TO DELETE
+24E9 : B7                       or      a               ;[M80] ARE WE AT END OF LINE
+24EA : 37                       scf                     ;[M80] FLAG THAT DELCHR WAS CALLED (FOR K)
+24EB : CA 1A 14                 jp      z,POPHRT        ;[M80] IF SO, DONE COMPRESSING
+24EE : 23                       inc     hl              ;[M80] POINT TO NEXT BYTE
+24EF : 7E                       ld      a,(hl)          ;[M80] PICK IT UP
+24F0 : 2B                       dec     hl              ;[M80] NOW BACK AGAIN
+24F1 : 77                       ld      (hl),a          ;[M80] DEPOSIT IT
+24F2 : 23                       inc     hl              ;[M80] NOW TO NEXT BYTE
+24F3 : 18 F3                    jr      CMPRSS          ;[M80] KEEP CRUNCHING
+24F5    
+24F5 : F5         [M80] NTARRW: push    af              ;[M80] SAVE THE CHAR TO BE INSERTED
+24F6 : 79                       ld      a,c             ;[M80] GET LENGTH OF LINE
+24F7 : FE 48                    cp      BUFLEN          ;[M80] SEE IF WE ARENT TRYING TO MAKE LINE TOO LONG
+24F9 : 38 06                    jr      c,OKINS         ;[M80] IF LENGTH OK, GO INSERT
+24FB : F1                       pop     af              ;[M80] GET THE UNLAWFUL CHAR
+24FC    
+24FC : 3E 07      [M80] DINGI:  ld      a,7             ;[M80] TYPE A BELL TO LET USER KNOW
+24FE : DF                       rst     OUTCHR          ;[M80] IT ALL OVER
+24FF : 18 B0      [M80] IEDG:   jr      IED             ;[M80] HE HAS TO TYPE <ESC> TO GET OUT
+2501 : 90         [M80] OKINS:  sub     b               ;[M80] CALC POINTER TO 0 AT END OF LINE
+2502 : 0C                       inc     c               ;[M80] WE ARE GOING TO HAVE LINE LONGER BY 1
+2503 : 04                       inc     b               ;[M80] POSITION MOVES UP ONE ALSO
+2504 : C5                       push    bc              ;[M80] SAVE [B,C]
+2505 : EB                       ex      de,hl           ;[M80] SAVE [D,E] IN [H,L]
+2506 : 6F                       ld      l,a             ;[M80] SAVE # OF BYTES TO MOVE IN [L]
+2507 : 26 00                    ld      h,0             ;[M80] GET SET TO ADD [D,E] TO [H,L]
+2509 : 19                       add     hl,de           ;[M80] CALC HIGH POINTER
+250A : 44                       ld      b,h             ;[M80] GET HIGH BYTE TO MOVE POINTER
+250B : 4D                       ld      c,l             ;[M80] IN [B,C]
+250C : 23                       inc     hl              ;[M80] ALWAYS MOVE AT LEAST ZERO AT END
+250D : CD 95 0B                 call    BLTUC           ;[M80] MOVE LINE OUT 1 CHAR
+2510 : C1                       pop     bc              ;[M80] RESTORE [B,C]  
+2511 : F1                       pop     af              ;[M80] GET CHAR BACK
+2512 : 77                       ld      (hl),a          ;[M80] SAVE IT IN LINE
+2513 : CD 8A 19                 call    OUTDO           ;[M80] TYPE THE CHAR
+2516 : 23                       inc     hl              ;[M80] POINT TO NEXT CHAR
+2517 : 18 E6                    jr      IEDG            ;[M80] AND GO GET MORE CHARS
+2519    
+2519 : 78         [M80] BAKED:  ld      a,b             ;[M80] ARE WE MOVING BACK PAST THE
+251A : B7                       or      a               ;[M80] FIRST CHARACTER
+251B : C8                       ret     z               ;[M80] DON'T ALLOW IT
+251C : 05                       dec     b               ;[M80] CHANGE CURRENT POSITION
+251D : 2B                       dec     hl              ;[M80] MOVE CHAR POINTER BACK
+251E : 7E                       ld      a,(hl)          ;[M80] 
+251F : CD 8A 19                 call    OUTDO           ;[M80] ECHO IT
+2522 : 15                       dec     d               ;[M80] ARE WE DONE MOVING BACK?
+2523 : 20 F4                    jr      nz,BAKED        ;[M80] IF NOT, GO BACK MORE
+2525 : C9                       ret                     ;[M80] RETURN
+2526    
+2526 : CD 2C 23   [M80] CRED:   call    LISPRX          ;[M80] TYPE REST OF LINE
+2529 : CD EA 19   [M80] EED:    call    CRDO            ;[M80] TYPE CARRIAGE RETURN
+252C : C1                       pop     bc              ;[M80]  GET RID OF DISPED ADDRESS
+252D : D1               L252D:  pop     de              ;[M80] GET LINE # OFF STACK
+252E : 7A                       ld      a,d             ;[M80] DOUBLE BYTE ZERO.
+252F : A3                       and     e               
+2530 : 3C                       inc     a               ;[M80] SET ZERO IF [D,E] = ALL ONES.
+2531 : 21 5F 38  {M80} EDITRT:  ld      hl,BUF-1        ;[M80] START KRUNCHING AT BUF
+2534 : C8                       ret     z               ;[M80] RETURN TO INLIN IF CALLED FROM THERE
+2535 : 37                       scf                     ;[M80] FLAG LINE # WAS SEEN TO FOOL INSERT CODE
+2536 : 03                       inc     bc              ;[M80] ;;Not in MBASIC-80
+2537 : F5                       push    af              ;[M80] PSW IS ON STACK
+2538 : 23                       inc     hl              ;[M80] NOW POINT AT BUF.
+2539 : C3 28 04                 jp      EDENT           ;[M80] GO TO ENTRY POINT IN MAIN CODE
+253C    
+253C : C1         [M80] QED:    pop bc                  ;[M80] GET RID OF DISPED ADDRESS
+253D : D1                       pop de                  ;[M80] GET LINE # OFF STACK
+253E : 7A                       ld a,d                  ;[M80] DOUBLE BYTE ZERO.
+253F : A3                       and e                   
+2540 : 3C                       inc a                   ;[M80] SET ZERO IF [D,E] = ALL ONES.
+2541 : CA E5 19                 jp z,FININL             ;[M80] TYPE CR AND STORE ZERO IN BUF.
+2544 : C3 02 04                 jp READY                ;[M80] OTHERWISE CALLED FROM MAIN
+    ;
+2547    L2547:
+2547 : 7E  "~"  ld a,(hl)
+2548 : FE 40  " @"  cp 040H
+254A : CC 6B 06  " k "  call z,CHRGTR
+254D : 01 00 00  "   "  ld bc,00000H
+2550 : 50  "P"  ld d,b
+2551 : 59  "Y"  ld e,c
+2552 : FE A9  "  "  cp 0A9H
+2554 : 28 16  "( "  jr z,L256C
+2556    L2556:
+2556 : 7E  "~"  ld a,(hl)
+2557 : FE A7  "  "  cp 0A7H
+2559 : F5  " "  push af
+255A : CC 6B 06  " k "  call z,CHRGTR
+255D : CF  " "  rst SYNCHK
+255E : 28 CD  "( "  jr z,L252D
+2560 : 73  "s"  ld (hl),e
+2561 : 23  "#"  inc hl
+2562 : D5  " "  push de
+2563 : CF  " "  rst SYNCHK
+2564 : 2C  ","  inc l
+2565 : CD 73 23  " s#"  call INTGET
+2568 : CF  " "  rst SYNCHK
+2569 : 29  ")"  add hl,hl
+256A : C1  " "  pop bc
+256B : F1  " "  pop af
+256C    L256C:
+256C : E5  " "  push hl
+256D : 2A 09 39  "* 9"  ld hl,(X3909)
+2570 : 28 03  "( "  jr z,L2575
+2572 : 21 00 00  "!  "  ld hl,00000H
+2575    L2575:
+2575 : 09  " "  add hl,bc
+2576 : 22 09 39  "" 9"  ld (X3909),hl
+2579 : 22 03 39  "" 9"  ld (X3903),hl
+257C : 44  "D"  ld b,h
+257D : 4D  "M"  ld c,l
+257E : 2A 07 39  "* 9"  ld hl,(X3907)
+2581 : 28 03  "( "  jr z,L2586
+2583 : 21 00 00  "!  "  ld hl,00000H
+2586    L2586:
+2586 : 19  " "  add hl,de
+2587 : 22 07 39  "" 9"  ld (X3907),hl
+258A : 22 05 39  "" 9"  ld (X3905),hl
+258D : EB  " "  ex de,hl
+258E : E1  " "  pop hl
+258F : C9  " "  ret
+    ;
+2590    L2590:
+2590 : 3A 00 39  ": 9"  ld a,(X3900)
+2593 : C5  " "  push bc
+2594 : D5  " "  push de
+2595 : 5F  "_"  ld e,a
+2596 : 2B  "+"  dec hl
+2597 : D7  " "  rst CHRGET
+2598 : 28 09  "( "  jr z,L25A3
+259A : CF  " "  rst SYNCHK
+259B : 2C  ","  inc l
+259C : FE 2C  " ,"  cp 02CH
+259E : 28 03  "( "  jr z,L25A3
+25A0 : CD 54 0B  " T "  call GETBYT
+25A3    L25A3:
+25A3 : 7B  "{"  ld a,e
+25A4 : E5  " "  push hl
+25A5 : CD 84 2D  "  -"  call L2D84
+25A8 : DA 97 06  "   "  jp c,FCERR
+25AB : E1  " "  pop hl
+25AC : D1  " "  pop de
+25AD : C1  " "  pop bc
+25AE : C3 6C 06  " l "  jp CHRGT2
+    ;
+25B1    L25B1:
+25B1 : 2A 03 39  "* 9"  ld hl,(X3903)
+25B4 : 7D  "}"  ld a,l
+25B5 : 91  " "  sub c
+25B6 : 6F  "o"  ld l,a
+25B7 : 7C  "|"  ld a,h
+25B8 : 98  " "  sbc a,b
+25B9 : 67  "g"  ld h,a
+25BA    L25BA:
+25BA : D0  " "  ret nc
+25BB    L25BB:
+25BB : AF  " "  xor a
+25BC : 95  " "  sub l
+25BD : 6F  "o"  ld l,a
+25BE : 9C  " "  sbc a,h
+25BF : 95  " "  sub l
+25C0 : 67  "g"  ld h,a
+25C1 : 37  "7"  scf
+25C2 : C9  " "  ret
+    ;
+25C3    L25C3:
+25C3 : 2A 05 39  "* 9"  ld hl,(X3905)
+25C6 : 7D  "}"  ld a,l
+25C7 : 93  " "  sub e
+25C8 : 6F  "o"  ld l,a
+25C9 : 7C  "|"  ld a,h
+25CA : 9A  " "  sbc a,d
+25CB : 67  "g"  ld h,a
+25CC : 18 EC  "  "  jr L25BA
+    ;
+25CE    L25CE:
+25CE : E5  " "  push hl
+25CF : 2A 05 39  "* 9"  ld hl,(X3905)
+25D2 : EB  " "  ex de,hl
+25D3 : 22 05 39  "" 9"  ld (X3905),hl
+25D6 : E1  " "  pop hl
+25D7 : C9  " "  ret
+    ;
+25D8    L25D8:
+25D8 : CD CE 25  "  %"  call L25CE
+25DB    L25DB:
+25DB : E5  " "  push hl
+25DC : C5  " "  push bc
+25DD : 2A 03 39  "* 9"  ld hl,(X3903)
+25E0 : E3  " "  ex (sp),hl
+25E1 : 22 03 39  "" 9"  ld (X3903),hl
+25E4 : C1  " "  pop bc
+25E5 : E1  " "  pop hl
+25E6 : C9  " "  ret
+    ;
+25E7    X25E7:
+25E7 : CD 47 25  " G%"  call L2547
+25EA : C5  " "  push bc
+25EB : D5  " "  push de
+25EC : CF  " "  rst SYNCHK
+25ED : A9  " "  xor c
+25EE : CD 56 25  " V%"  call L2556
+25F1 : CD 90 25  "  %"  call L2590
+25F4 : D1  " "  pop de
+25F5 : C1  " "  pop bc
+25F6 : 28 43  "(C"  jr z,L263B
+25F8 : CF  " "  rst SYNCHK
+25F9 : 2C  ","  inc l
+25FA : CF  " "  rst SYNCHK
+25FB : 42  "B"  ld b,d
+25FC : 28 53  "(S"  jr z,L2651
+25FE : CF  " "  rst SYNCHK
+25FF : 46  "F"  ld b,(hl)
+2600 : E5  " "  push hl
+2601 : CD 2B 2E  " +."  call L2E2B
+2604 : CD D8 25  "  %"  call L25D8
+2607 : CD 2B 2E  " +."  call L2E2B
+260A : CD C3 25  "  %"  call L25C3
+260D : DC CE 25  "  %"  call c,L25CE
+2610 : 23  "#"  inc hl
+2611 : E5  " "  push hl
+2612 : CD B1 25  "  %"  call L25B1
+2615 : DC DB 25  "  %"  call c,L25DB
+2618 : 23  "#"  inc hl
+2619 : E5  " "  push hl
+261A : CD FD 2D  "  -"  call L2DFD
+261D : D1  " "  pop de
+261E : C1  " "  pop bc
+261F    L261F:
+261F : D5  " "  push de
+2620 : C5  " "  push bc
+2621 : CD 7D 2D  " }-"  call L2D7D
+2624 : F5  " "  push af
+2625 : E5  " "  push hl
+2626 : EB  " "  ex de,hl
+2627 : CD C0 2D  "  -"  call L2DC0
+262A : E1  " "  pop hl
+262B : F1  " "  pop af
+262C : CD 76 2D  " v-"  call L2D76
+262F : CD BD 2E  "  ."  call L2EBD
+2632 : C1  " "  pop bc
+2633 : D1  " "  pop de
+2634 : 0B  " "  dec bc
+2635 : 78  "x"  ld a,b
+2636 : B1  " "  or c
+2637 : 20 E6  "  "  jr nz,L261F
+2639 : E1  " "  pop hl
+263A : C9  " "  ret
+    ;
+263B    L263B:
+263B : C5  " "  push bc
+263C : D5  " "  push de
+263D : E5  " "  push hl
+263E : CD 7B 26  " {&"  call L267B
+2641 : 2A 09 39  "* 9"  ld hl,(X3909)
+2644 : 22 03 39  "" 9"  ld (X3903),hl
+2647 : 2A 07 39  "* 9"  ld hl,(X3907)
+264A : 22 05 39  "" 9"  ld (X3905),hl
+264D : E1  " "  pop hl
+264E : D1  " "  pop de
+264F : C1  " "  pop bc
+2650 : C9  " "  ret
+    ;
+2651    L2651:
+2651 : E5  " "  push hl
+2652 : 2A 05 39  "* 9"  ld hl,(X3905)
+2655 : E5  " "  push hl
+2656 : D5  " "  push de
+2657 : EB  " "  ex de,hl
+2658 : CD 3B 26  " ;&"  call L263B
+265B : E1  " "  pop hl
+265C : 22 05 39  "" 9"  ld (X3905),hl
+265F : EB  " "  ex de,hl
+2660 : CD 3B 26  " ;&"  call L263B
+2663 : E1  " "  pop hl
+2664 : 22 05 39  "" 9"  ld (X3905),hl
+2667 : 2A 03 39  "* 9"  ld hl,(X3903)
+266A : C5  " "  push bc
+266B : 44  "D"  ld b,h
+266C : 4D  "M"  ld c,l
+266D : CD 3B 26  " ;&"  call L263B
+2670 : E1  " "  pop hl
+2671 : 22 03 39  "" 9"  ld (X3903),hl
+2674 : 44  "D"  ld b,h
+2675 : 4D  "M"  ld c,l
+2676 : CD 3B 26  " ;&"  call L263B
+2679 : E1  " "  pop hl
+267A : C9  " "  ret
+    ;
+267B    L267B:
+267B : CD 2B 2E  " +."  call L2E2B
+267E : CD D8 25  "  %"  call L25D8
+2681 : CD 2B 2E  " +."  call L2E2B
+2684 : CD C3 25  "  %"  call L25C3
+2687 : DC D8 25  "  %"  call c,L25D8
+268A : D5  " "  push de
+268B : E5  " "  push hl
+268C : CD B1 25  "  %"  call L25B1
+268F : EB  " "  ex de,hl
+2690 : 21 DB 2E  "! ."  ld hl,02EDBH
+2693 : 30 03  "0 "  jr nc,L2698
+2695 : 21 D1 2E  "! ."  ld hl,02ED1H
+2698    L2698:
+2698 : E3  " "  ex (sp),hl
+2699 : E7  " "  rst COMPAR
+269A : 30 10  "0 "  jr nc,L26AC
+269C : 22 13 39  "" 9"  ld (X3913),hl
+269F : E1  " "  pop hl
+26A0 : 22 0C 39  "" 9"  ld (X390C),hl
+26A3 : 21 BD 2E  "! ."  ld hl,02EBDH
+26A6 : 22 0F 39  "" 9"  ld (X390F),hl
+26A9 : EB  " "  ex de,hl
+26AA : 18 0F  "  "  jr L26BB
+    ;
+26AC    L26AC:
+26AC : E3  " "  ex (sp),hl
+26AD : 22 0F 39  "" 9"  ld (X390F),hl
+26B0 : 21 BD 2E  "! ."  ld hl,02EBDH
+26B3 : 22 0C 39  "" 9"  ld (X390C),hl
+26B6 : EB  " "  ex de,hl
+26B7 : 22 13 39  "" 9"  ld (X3913),hl
+26BA : E1  " "  pop hl
+26BB    L26BB:
+26BB : D1  " "  pop de
+26BC : E5  " "  push hl
+26BD : CD BB 25  "  %"  call L25BB
+26C0 : 22 11 39  "" 9"  ld (X3911),hl
+26C3 : CD FD 2D  "  -"  call L2DFD
+26C6 : D1  " "  pop de
+26C7 : D5  " "  push de
+26C8 : CD F0 26  "  &"  call L26F0
+26CB : C1  " "  pop bc
+26CC : 03  " "  inc bc
+26CD : 18 07  "  "  jr L26D6
+    ;
+26CF    L26CF:
+26CF : E1  " "  pop hl
+26D0 : 78  "x"  ld a,b
+26D1 : B1  " "  or c
+26D2 : C8  " "  ret z
+26D3    L26D3:
+26D3 : CD 0B 39  "  9"  call L390B
+26D6    L26D6:
+26D6 : CD 99 2D  "  -"  call L2D99
+26D9 : 0B  " "  dec bc
+26DA : E5  " "  push hl
+26DB : 2A 13 39  "* 9"  ld hl,(X3913)
+26DE : 19  " "  add hl,de
+26DF : EB  " "  ex de,hl
+26E0 : 2A 11 39  "* 9"  ld hl,(X3911)
+26E3 : 19  " "  add hl,de
+26E4 : 30 E9  "0 "  jr nc,L26CF
+26E6 : EB  " "  ex de,hl
+26E7 : E1  " "  pop hl
+26E8 : 78  "x"  ld a,b
+26E9 : B1  " "  or c
+26EA : C8  " "  ret z
+26EB : CD 0E 39  "  9"  call L390E
+26EE : 18 E3  "  "  jr L26D3
+    ;
+26F0    L26F0:
+26F0 : 7A  "z"  ld a,d
+26F1 : B7  " "  or a
+26F2 : 1F  " "  rra
+26F3 : 57  "W"  ld d,a
+26F4 : 7B  "{"  ld a,e
+26F5 : 1F  " "  rra
+26F6 : 5F  "_"  ld e,a
+26F7 : C9  " "  ret
+    ;
+26F8    L26F8:
+26F8 : E1  " "  pop hl
+26F9 : C9  " "  ret
+    ;
+26FA    L26FA:
+26FA : EB  " "  ex de,hl
+26FB : CD BB 25  "  %"  call L25BB
+26FE : EB  " "  ex de,hl
+26FF : C9  " "  ret
+    ;
+2700 : CD 47 25  " G%"  call L2547
+2703 : CF  " "  rst SYNCHK
+2704 : 2C  ","  inc l
+2705 : CD 73 23  " s#"  call INTGET
+2708 : 7A  "z"  ld a,d
+2709 : B7  " "  or a
+270A : FA 97 06  "   "  jp m,FCERR
+270D : E5  " "  push hl
+270E : EB  " "  ex de,hl
+270F : 22 03 39  "" 9"  ld (X3903),hl
+2712 : CD 20 23  "  #"  call L2320
+2715 : CD 75 09  " u "  call CHKNUM
+2718 : 01 35 80  " 5 "  ld bc,08035H
+271B : 11 F3 04  "   "  ld de,004F3H
+271E : CD CB 13  "   "  call FMULT
+2721 : CD 04 23  "  #"  call L2304
+2724 : 22 1A 39  "" 9"  ld (X391A),hl
+2727 : AF  " "  xor a
+2728 : 32 19 39  "2 9"  ld (X3919),a
+272B : 32 25 39  "2%9"  ld (X3925),a
+272E : E1  " "  pop hl
+272F : CD 90 25  "  %"  call L2590
+2732 : 0E 01  "  "  ld c,001H
+2734 : 11 00 00  "   "  ld de,00000H
+2737 : CD 27 29  " ')"  call L2927
+273A : D5  " "  push de
+273B : 0E 80  "  "  ld c,080H
+273D : 11 FF FF  "   "  ld de,0FFFFH
+2740 : CD 27 29  " ')"  call L2927
+2743 : E3  " "  ex (sp),hl
+2744 : AF  " "  xor a
+2745 : EB  " "  ex de,hl
+2746 : E7  " "  rst COMPAR
+2747 : 3E 00  "> "  ld a,000H
+2749 : D2 5B 27  " ['"  jp nc,L275B
+274C : 3D  "="  dec a
+274D : EB  " "  ex de,hl
+274E : F5  " "  push af
+274F : 3A 19 39  ": 9"  ld a,(X3919)
+2752 : 4F  "O"  ld c,a
+2753 : 07  " "  rlca
+2754 : 07  " "  rlca
+2755 : B1  " "  or c
+2756 : 0F  " "  rrca
+2757 : 32 19 39  "2 9"  ld (X3919),a
+275A : F1  " "  pop af
+275B    L275B:
+275B : 32 1C 39  "2 9"  ld (X391C),a
+275E : EB  " "  ex de,hl
+275F : 22 23 39  ""#9"  ld (X3923),hl
+2762 : EB  " "  ex de,hl
+2763 : 22 17 39  "" 9"  ld (X3917),hl
+2766 : E1  " "  pop hl
+2767 : 2B  "+"  dec hl
+2768 : D7  " "  rst CHRGET
+2769 : C2 7E 27  " ~'"  jp nz,L277E
+276C : E5  " "  push hl
+276D : CD 6F 2D  " o-"  call L2D6F
+2770 : 7C  "|"  ld a,h
+2771 : B7  " "  or a
+2772 : CA 9E 27  "  '"  jp z,L279E
+2775 : 3E 01  "> "  ld a,001H
+2777 : 32 25 39  "2%9"  ld (X3925),a
+277A : EB  " "  ex de,hl
+277B : C3 9E 27  "  '"  jp L279E
+    ;
+277E    L277E:
+277E : CF  " "  rst SYNCHK
+277F : 2C  ","  inc l
+2780 : CD 85 09  "   "  call FRMEVL
+2783 : E5  " "  push hl
+2784 : CD 75 09  " u "  call CHKNUM
+2787 : CD 79 29  " y)"  call L2979
+278A : C2 94 27  "  '"  jp nz,L2794
+278D : 3C  "<"  inc a
+278E : 32 25 39  "2%9"  ld (X3925),a
+2791 : CD 2F 14  " / "  call FDIV
+2794    L2794:
+2794 : 21 E7 38  "! 8"  ld hl,X38E7
+2797 : 7E  "~"  ld a,(hl)
+2798 : C6 08  "  "  add a,008H
+279A : 77  "w"  ld (hl),a
+279B : CD 04 23  "  #"  call L2304
+279E    L279E:
+279E : 22 15 39  "" 9"  ld (X3915),hl
+27A1 : 11 00 00  "   "  ld de,00000H
+27A4 : EB  " "  ex de,hl
+27A5 : 22 21 39  ""!9"  ld (X3921),hl
+27A8 : EB  " "  ex de,hl
+27A9 : 2A 03 39  "* 9"  ld hl,(X3903)
+27AC : 29  ")"  add hl,hl
+27AD    L27AD:
+27AD : CD 25 1A  " % "  call ISCNTC
+27B0 : 7B  "{"  ld a,e
+27B1 : 1F  " "  rra
+27B2 : DA CB 27  "  '"  jp c,L27CB
+27B5 : D5  " "  push de
+27B6 : E5  " "  push hl
+27B7 : 23  "#"  inc hl
+27B8 : EB  " "  ex de,hl
+27B9 : CD F0 26  "  &"  call L26F0
+27BC : EB  " "  ex de,hl
+27BD : 13  " "  inc de
+27BE : CD F0 26  "  &"  call L26F0
+27C1 : CD FC 27  "  '"  call L27FC
+27C4 : D1  " "  pop de
+27C5 : E1  " "  pop hl
+27C6 : E7  " "  rst COMPAR
+27C7 : D2 F8 26  "  &"  jp nc,L26F8
+27CA : EB  " "  ex de,hl
+27CB    L27CB:
+27CB : 44  "D"  ld b,h
+27CC : 4D  "M"  ld c,l
+27CD : 2A 21 39  "*!9"  ld hl,(X3921)
+27D0 : 23  "#"  inc hl
+27D1 : 19  " "  add hl,de
+27D2 : 19  " "  add hl,de
+27D3 : 7C  "|"  ld a,h
+27D4 : 87  " "  add a,a
+27D5 : DA E7 27  "  '"  jp c,L27E7
+27D8 : D5  " "  push de
+27D9 : EB  " "  ex de,hl
+27DA : 60  "`"  ld h,b
+27DB : 69  "i"  ld l,c
+27DC : 29  ")"  add hl,hl
+27DD : 2B  "+"  dec hl
+27DE : EB  " "  ex de,hl
+27DF : 7D  "}"  ld a,l
+27E0 : 93  " "  sub e
+27E1 : 6F  "o"  ld l,a
+27E2 : 7C  "|"  ld a,h
+27E3 : 9A  " "  sbc a,d
+27E4 : 67  "g"  ld h,a
+27E5 : 0B  " "  dec bc
+27E6 : D1  " "  pop de
+27E7    L27E7:
+27E7 : 22 21 39  ""!9"  ld (X3921),hl
+27EA : 60  "`"  ld h,b
+27EB : 69  "i"  ld l,c
+27EC : 13  " "  inc de
+27ED : C3 AD 27  "  '"  jp L27AD
+    ;
+27F0    L27F0:
+27F0 : D5  " "  push de
+27F1 : CD F7 28  "  ("  call L28F7
+27F4 : E1  " "  pop hl
+27F5 : 3A 25 39  ":%9"  ld a,(X3925)
+27F8 : B7  " "  or a
+27F9 : C8  " "  ret z
+27FA : EB  " "  ex de,hl
+27FB : C9  " "  ret
+    ;
+27FC    L27FC:
+27FC : EB  " "  ex de,hl
+27FD : 22 1D 39  "" 9"  ld (X391D),hl
+2800 : EB  " "  ex de,hl
+2801 : E5  " "  push hl
+2802 : 21 00 00  "!  "  ld hl,00000H
+2805 : 22 1F 39  "" 9"  ld (X391F),hl
+2808 : CD F0 27  "  '"  call L27F0
+280B : 22 29 39  "")9"  ld (X3929),hl
+280E : E1  " "  pop hl
+280F : EB  " "  ex de,hl
+2810 : E5  " "  push hl
+2811 : CD F0 27  "  '"  call L27F0
+2814 : EB  " "  ex de,hl
+2815 : 22 2B 39  ""+9"  ld (X392B),hl
+2818 : EB  " "  ex de,hl
+2819 : D1  " "  pop de
+281A : CD FA 26  "  &"  call L26FA
+281D : CD 44 28  " D("  call L2844
+2820 : E5  " "  push hl
+2821 : D5  " "  push de
+2822 : 2A 1A 39  "* 9"  ld hl,(X391A)
+2825 : 22 1F 39  "" 9"  ld (X391F),hl
+2828 : EB  " "  ex de,hl
+2829 : 2A 1D 39  "* 9"  ld hl,(X391D)
+282C : EB  " "  ex de,hl
+282D : 7D  "}"  ld a,l
+282E : 93  " "  sub e
+282F : 6F  "o"  ld l,a
+2830 : 7C  "|"  ld a,h
+2831 : 9A  " "  sbc a,d
+2832 : 67  "g"  ld h,a
+2833 : 22 1D 39  "" 9"  ld (X391D),hl
+2836 : 2A 29 39  "*)9"  ld hl,(X3929)
+2839 : CD BB 25  "  %"  call L25BB
+283C : 22 29 39  "")9"  ld (X3929),hl
+283F : D1  " "  pop de
+2840 : E1  " "  pop hl
+2841 : CD FA 26  "  &"  call L26FA
+2844    L2844:
+2844 : 3E 04  "> "  ld a,004H
+2846    L2846:
+2846 : F5  " "  push af
+2847 : E5  " "  push hl
+2848 : D5  " "  push de
+2849 : E5  " "  push hl
+284A : D5  " "  push de
+284B : EB  " "  ex de,hl
+284C : 2A 1F 39  "* 9"  ld hl,(X391F)
+284F : EB  " "  ex de,hl
+2850 : 2A 1A 39  "* 9"  ld hl,(X391A)
+2853 : 29  ")"  add hl,hl
+2854 : 19  " "  add hl,de
+2855 : 22 1F 39  "" 9"  ld (X391F),hl
+2858 : 2A 1D 39  "* 9"  ld hl,(X391D)
+285B : 19  " "  add hl,de
+285C : EB  " "  ex de,hl
+285D : 2A 23 39  "*#9"  ld hl,(X3923)
+2860 : E7  " "  rst COMPAR
+2861 : CA 85 28  "  ("  jp z,L2885
+2864 : D2 71 28  " q("  jp nc,L2871
+2867 : 2A 17 39  "* 9"  ld hl,(X3917)
+286A : E7  " "  rst COMPAR
+286B : CA 7B 28  " {("  jp z,L287B
+286E : D2 97 28  "  ("  jp nc,L2897
+2871    L2871:
+2871 : 3A 1C 39  ": 9"  ld a,(X391C)
+2874 : B7  " "  or a
+2875 : C2 A3 28  "  ("  jp nz,L28A3
+2878 : C3 9E 28  "  ("  jp L289E
+    ;
+287B    L287B:
+287B : 3A 19 39  ": 9"  ld a,(X3919)
+287E : 87  " "  add a,a
+287F : D2 A3 28  "  ("  jp nc,L28A3
+2882 : C3 8C 28  "  ("  jp L288C
+    ;
+2885    L2885:
+2885 : 3A 19 39  ": 9"  ld a,(X3919)
+2888 : 1F  " "  rra
+2889 : D2 A3 28  "  ("  jp nc,L28A3
+288C    L288C:
+288C : D1  " "  pop de
+288D : E1  " "  pop hl
+288E : CD E7 28  "  ("  call L28E7
+2891 : CD D8 28  "  ("  call L28D8
+2894 : C3 B4 28  "  ("  jp L28B4
+    ;
+2897    L2897:
+2897 : 3A 1C 39  ": 9"  ld a,(X391C)
+289A : B7  " "  or a
+289B : CA A3 28  "  ("  jp z,L28A3
+289E    L289E:
+289E : D1  " "  pop de
+289F : E1  " "  pop hl
+28A0 : C3 B4 28  "  ("  jp L28B4
+    ;
+28A3    L28A3:
+28A3 : D1  " "  pop de
+28A4 : E1  " "  pop hl
+28A5 : CD E7 28  "  ("  call L28E7
+28A8 : CD 2B 2E  " +."  call L2E2B
+28AB : D2 B4 28  "  ("  jp nc,L28B4
+28AE : CD FD 2D  "  -"  call L2DFD
+28B1 : CD 99 2D  "  -"  call L2D99
+28B4    L28B4:
+28B4 : D1  " "  pop de
+28B5 : E1  " "  pop hl
+28B6 : F1  " "  pop af
+28B7 : 3D  "="  dec a
+28B8 : C8  " "  ret z
+28B9 : F5  " "  push af
+28BA : D5  " "  push de
+28BB : EB  " "  ex de,hl
+28BC : 2A 29 39  "*)9"  ld hl,(X3929)
+28BF : EB  " "  ex de,hl
+28C0 : CD FA 26  "  &"  call L26FA
+28C3 : 22 29 39  "")9"  ld (X3929),hl
+28C6 : EB  " "  ex de,hl
+28C7 : D1  " "  pop de
+28C8 : E5  " "  push hl
+28C9 : 2A 2B 39  "*+9"  ld hl,(X392B)
+28CC : EB  " "  ex de,hl
+28CD : 22 2B 39  ""+9"  ld (X392B),hl
+28D0 : CD FA 26  "  &"  call L26FA
+28D3 : E1  " "  pop hl
+28D4 : F1  " "  pop af
+28D5 : C3 46 28  " F("  jp L2846
+    ;
+28D8    L28D8:
+28D8 : 2A 09 39  "* 9"  ld hl,(X3909)
+28DB : 22 03 39  "" 9"  ld (X3903),hl
+28DE : 2A 07 39  "* 9"  ld hl,(X3907)
+28E1 : 22 05 39  "" 9"  ld (X3905),hl
+28E4 : C3 7B 26  " {&"  jp L267B
+    ;
+28E7    L28E7:
+28E7 : D5  " "  push de
+28E8 : EB  " "  ex de,hl
+28E9 : 2A 09 39  "* 9"  ld hl,(X3909)
+28EC : EB  " "  ex de,hl
+28ED : 19  " "  add hl,de
+28EE : 44  "D"  ld b,h
+28EF : 4D  "M"  ld c,l
+28F0 : D1  " "  pop de
+28F1 : 2A 07 39  "* 9"  ld hl,(X3907)
+28F4 : 19  " "  add hl,de
+28F5 : EB  " "  ex de,hl
+28F6 : C9  " "  ret
+    ;
+28F7    L28F7:
+28F7 : 2A 15 39  "* 9"  ld hl,(X3915)
+28FA : 7D  "}"  ld a,l
+28FB    L28FB:
+28FB : B7  " "  or a
+28FC : C2 03 29  "  )"  jp nz,L2903
+28FF : B4  " "  or h
+2900 : C0  " "  ret nz
+2901 : EB  " "  ex de,hl
+2902 : C9  " "  ret
+    ;
+2903    L2903:
+2903 : 4A  "J"  ld c,d
+2904 : 16 00  "  "  ld d,000H
+2906 : F5  " "  push af
+2907 : CD 17 29  "  )"  call L2917
+290A : 1E 80  "  "  ld e,080H
+290C : 19  " "  add hl,de
+290D : 59  "Y"  ld e,c
+290E : 4C  "L"  ld c,h
+290F : F1  " "  pop af
+2910 : CD 17 29  "  )"  call L2917
+2913 : 59  "Y"  ld e,c
+2914 : 19  " "  add hl,de
+2915 : EB  " "  ex de,hl
+2916 : C9  " "  ret
+    ;
+2917    L2917:
+2917 : 06 08  "  "  ld b,008H
+2919 : 21 00 00  "!  "  ld hl,00000H
+291C    L291C:
+291C : 29  ")"  add hl,hl
+291D : 87  " "  add a,a
+291E : D2 22 29  " ")"  jp nc,L2922
+2921 : 19  " "  add hl,de
+2922    L2922:
+2922 : 05  " "  dec b
+2923 : C2 1C 29  "  )"  jp nz,L291C
+2926 : C9  " "  ret
+    ;
+2927    L2927:
+2927 : 2B  "+"  dec hl
+2928 : D7  " "  rst CHRGET
+2929 : C8  " "  ret z
+292A : CF  " "  rst SYNCHK
+292B : 2C  ","  inc l
+292C : FE 2C  " ,"  cp 02CH
+292E : C8  " "  ret z
+292F : C5  " "  push bc
+2930 : CD 85 09  "   "  call FRMEVL
+2933 : E3  " "  ex (sp),hl
+2934 : E5  " "  push hl
+2935 : CD 75 09  " u "  call CHKNUM
+2938 : C1  " "  pop bc
+2939 : 21 E7 38  "! 8"  ld hl,X38E7
+293C : 7E  "~"  ld a,(hl)
+293D : B7  " "  or a
+293E : CA 50 29  " P)"  jp z,L2950
+2941 : 2B  "+"  dec hl
+2942 : 7E  "~"  ld a,(hl)
+2943 : B7  " "  or a
+2944 : F2 50 29  " P)"  jp p,L2950
+2947 : E6 7F  "  "  and 07FH
+2949 : 77  "w"  ld (hl),a
+294A : 21 19 39  "! 9"  ld hl,X3919
+294D : 7E  "~"  ld a,(hl)
+294E : B1  " "  or c
+294F : 77  "w"  ld (hl),a
+2950    L2950:
+2950 : 01 22 7E  " "~"  ld bc,07E22H
+2953 : 11 83 F9  "   "  ld de,0F983H
+2956 : CD CB 13  "   "  call FMULT
+2959 : CD 79 29  " y)"  call L2979
+295C : CA 97 06  "   "  jp z,FCERR
+295F : CD 13 15  "   "  call PUSHF
+2962 : 2A 1A 39  "* 9"  ld hl,(X391A)
+2965 : 29  ")"  add hl,hl
+2966 : 29  ")"  add hl,hl
+2967 : 29  ")"  add hl,hl
+2968 : CD 20 23  "  #"  call L2320
+296B : CD 75 09  " u "  call CHKNUM
+296E : C1  " "  pop bc
+296F : D1  " "  pop de
+2970 : CD CB 13  "   "  call FMULT
+2973 : CD 04 23  "  #"  call L2304
+2976 : D1  " "  pop de
+2977 : EB  " "  ex de,hl
+2978 : C9  " "  ret
+    ;
+2979    L2979:
+2979 : 01 00 81  "   "  ld bc,08100H
+297C : 11 00 00  "   "  ld de,00000H
+297F : CD 5B 15  " [ "  call FCOMP
+2982 : 3D  "="  dec a
+2983 : C9  " "  ret
+    ;
+2984    L2984:
+2984 : 32 3B 39  "2;9"  ld (X393B),a
+2987 : F5  " "  push af
+2988 : CF  " "  rst SYNCHK
+2989 : 28 2B  "(+"  jr z,L29B6
+298B : CD 47 25  " G%"  call L2547
+298E : CD 12 2C  "  ,"  call L2C12
+2991 : F1  " "  pop af
+2992 : B7  " "  or a
+2993 : 20 6C  " l"  jr nz,L2A01
+2995 : CF  " "  rst SYNCHK
+2996 : A9  " "  xor c
+2997 : C5  " "  push bc
+2998 : D5  " "  push de
+2999 : CD 56 25  " V%"  call L2556
+299C : CD 12 2C  "  ,"  call L2C12
+299F : D1  " "  pop de
+29A0 : C1  " "  pop bc
+29A1 : E5  " "  push hl
+29A2 : CD C3 25  "  %"  call L25C3
+29A5 : DC CE 25  "  %"  call c,L25CE
+29A8 : 23  "#"  inc hl
+29A9 : 22 13 39  "" 9"  ld (X3913),hl
+29AC : CD B1 25  "  %"  call L25B1
+29AF : DC DB 25  "  %"  call c,L25DB
+29B2 : 23  "#"  inc hl
+29B3 : 22 11 39  "" 9"  ld (X3911),hl
+29B6    L29B6:
+29B6 : CD ED 2D  "  -"  call L2DED
+29B9 : E1  " "  pop hl
+29BA : CD 77 2A  " w*"  call L2A77
+29BD : E5  " "  push hl
+29BE : D5  " "  push de
+29BF : C5  " "  push bc
+29C0 : D5  " "  push de
+29C1 : EB  " "  ex de,hl
+29C2 : 2A 11 39  "* 9"  ld hl,(X3911)
+29C5 : 4D  "M"  ld c,l
+29C6 : 44  "D"  ld b,h
+29C7 : EB  " "  ex de,hl
+29C8 : CB 23  " #"  sla e
+29CA : CB 12  "  "  rl d
+29CC : 2A 13 39  "* 9"  ld hl,(X3913)
+29CF : C5  " "  push bc
+29D0 : 44  "D"  ld b,h
+29D1 : 4D  "M"  ld c,l
+29D2 : CD CA 15  "   "  call UMULT
+29D5 : C1  " "  pop bc
+29D6 : 11 04 00  "   "  ld de,00004H
+29D9 : 19  " "  add hl,de
+29DA : D1  " "  pop de
+29DB : 19  " "  add hl,de
+29DC : EB  " "  ex de,hl
+29DD : E1  " "  pop hl
+29DE : E7  " "  rst COMPAR
+29DF : DA 97 06  "   "  jp c,FCERR
+29E2 : E1  " "  pop hl
+29E3 : E7  " "  rst COMPAR
+29E4 : D2 97 06  "   "  jp nc,FCERR
+29E7 : 71  "q"  ld (hl),c
+29E8 : 23  "#"  inc hl
+29E9 : 70  "p"  ld (hl),b
+29EA : 23  "#"  inc hl
+29EB : EB  " "  ex de,hl
+29EC : 2A 13 39  "* 9"  ld hl,(X3913)
+29EF : EB  " "  ex de,hl
+29F0 : 73  "s"  ld (hl),e
+29F1 : 23  "#"  inc hl
+29F2 : 72  "r"  ld (hl),d
+29F3 : 23  "#"  inc hl
+29F4 : B7  " "  or a
+29F5 : 18 57  " W"  jr L2A4E
+    ;
+29F7 : F5  " "  push af
+29F8 : 21 00 00  "!  "  ld hl,00000H
+29FB    L29FB:
+29FB : 19  " "  add hl,de
+29FC : 3D  "="  dec a
+29FD : 20 FC  "  "  jr nz,L29FB
+29FF : F1  " "  pop af
+2A00 : C9  " "  ret
+    ;
+2A01    L2A01:
+2A01 : E5  " "  push hl
+2A02 : CD ED 2D  "  -"  call L2DED
+2A05 : E1  " "  pop hl
+2A06 : CD 77 2A  " w*"  call L2A77
+2A09 : D5  " "  push de
+2A0A : 2B  "+"  dec hl
+2A0B : D7  " "  rst CHRGET
+2A0C : 06 05  "  "  ld b,005H
+2A0E : 28 12  "( "  jr z,L2A22
+2A10 : CF  " "  rst SYNCHK
+2A11 : 2C  ","  inc l
+2A12 : EB  " "  ex de,hl
+2A13 : 21 9C 2A  "! *"  ld hl,02A9CH
+2A16    L2A16:
+2A16 : BE  " "  cp (hl)
+2A17 : 28 07  "( "  jr z,L2A20
+2A19 : 2B  "+"  dec hl
+2A1A : 05  " "  dec b
+2A1B : 20 F9  "  "  jr nz,L2A16
+2A1D : EB  " "  ex de,hl
+2A1E : D1  " "  pop de
+2A1F : C9  " "  ret
+    ;
+2A20    L2A20:
+2A20 : EB  " "  ex de,hl
+2A21 : D7  " "  rst CHRGET
+2A22    L2A22:
+2A22 : 05  " "  dec b
+2A23 : 78  "x"  ld a,b
+2A24 : E3  " "  ex (sp),hl
+2A25 : F5  " "  push af
+2A26 : 5E  "^"  ld e,(hl)
+2A27 : 23  "#"  inc hl
+2A28 : 56  "V"  ld d,(hl)
+2A29 : 23  "#"  inc hl
+2A2A : D5  " "  push de
+2A2B : E5  " "  push hl
+2A2C : 1B  " "  dec de
+2A2D : 2A 03 39  "* 9"  ld hl,(X3903)
+2A30 : EB  " "  ex de,hl
+2A31 : 19  " "  add hl,de
+2A32 : 38 0E  "8 "  jr c,L2A42
+2A34 : 44  "D"  ld b,h
+2A35 : 4D  "M"  ld c,l
+2A36 : E1  " "  pop hl
+2A37 : 5E  "^"  ld e,(hl)
+2A38 : 23  "#"  inc hl
+2A39 : 56  "V"  ld d,(hl)
+2A3A : 23  "#"  inc hl
+2A3B : D5  " "  push de
+2A3C : E5  " "  push hl
+2A3D : 2A 05 39  "* 9"  ld hl,(X3905)
+2A40 : 1B  " "  dec de
+2A41 : 19  " "  add hl,de
+2A42    L2A42:
+2A42 : DA 97 06  "   "  jp c,FCERR
+2A45 : EB  " "  ex de,hl
+2A46 : E1  " "  pop hl
+2A47 : CD 12 2C  "  ,"  call L2C12
+2A4A : D1  " "  pop de
+2A4B : C1  " "  pop bc
+2A4C : F1  " "  pop af
+2A4D : 37  "7"  scf
+2A4E    L2A4E:
+2A4E : D5  " "  push de
+2A4F : CD 00 2F  "  /"  call L2F00
+2A52 : D1  " "  pop de
+2A53    L2A53:
+2A53 : D5  " "  push de
+2A54 : CD 7D 2D  " }-"  call L2D7D
+2A57 : E5  " "  push hl
+2A58 : F5  " "  push af
+2A59 : 3A 3B 39  ":;9"  ld a,(X393B)
+2A5C : B7  " "  or a
+2A5D : 20 05  "  "  jr nz,L2A64
+2A5F : CD 22 2F  " "/"  call L2F22
+2A62 : 18 03  "  "  jr L2A67
+    ;
+2A64    L2A64:
+2A64 : CD 39 2F  " 9/"  call L2F39
+2A67    L2A67:
+2A67 : F1  " "  pop af
+2A68 : E1  " "  pop hl
+2A69 : CD 76 2D  " v-"  call L2D76
+2A6C : CD B1 2E  "  ."  call L2EB1
+2A6F : D1  " "  pop de
+2A70 : 1B  " "  dec de
+2A71 : 7A  "z"  ld a,d
+2A72 : B3  " "  or e
+2A73 : 20 DE  "  "  jr nz,L2A53
+2A75 : E1  " "  pop hl
+2A76 : C9  " "  ret
+    ;
+2A77    L2A77:
+2A77 : CF  " "  rst SYNCHK
+2A78 : 2C  ","  inc l
+2A79 : 3E 01  "> "  ld a,001H
+2A7B : 32 CB 38  "2 8"  ld (X38CB),a
+2A7E : CD D1 10  "   "  call PTRGET
+2A81 : C2 97 06  "   "  jp nz,FCERR
+2A84 : 32 CB 38  "2 8"  ld (X38CB),a
+2A87 : E5  " "  push hl
+2A88 : 60  "`"  ld h,b
+2A89 : 69  "i"  ld l,c
+2A8A : EB  " "  ex de,hl
+2A8B : 19  " "  add hl,de
+2A8C : E5  " "  push hl
+2A8D : 0A  " "  ld a,(bc)
+2A8E : 87  " "  add a,a
+2A8F : 6F  "o"  ld l,a
+2A90 : 26 00  "& "  ld h,000H
+2A92 : 03  " "  inc bc
+2A93 : 09  " "  add hl,bc
+2A94 : EB  " "  ex de,hl
+2A95 : C1  " "  pop bc
+2A96 : E1  " "  pop hl
+2A97 : C9  " "  ret
+    ;
+2A98 : AE  " "  xor (hl)
+2A99 : AD  " "  xor l
+2A9A : 9D  " "  sbc a,l
+2A9B : 9C  " "  sbc a,h
+2A9C : CF  " "  rst SYNCHK
+2A9D : 11 A7 2A  "  *"  ld de,$2AA7
+2AA0 : AF  " "  xor a
+2AA1 : 32 34 39  "249"  ld (X3934),a
+2AA4 : C3 24 2C  " $,"  jp L2C24
+    ;
+2AA7 : D5  " "  push de
+2AA8 : D5  " "  push de
+2AA9 : 2A C4 D8  "*  "  ld hl,(XD8C4)
+2AAC : 2A CC DE  "*  "  ld hl,(XDECC)
+2AAF : 2A D2 E1  "*  "  ld hl,(XE1D2)
+2AB2 : 2A 4D 01  "*M "  ld hl,(X014D)
+2AB5 : 2B  "+"  dec hl
+2AB6 : C5  " "  push bc
+2AB7 : F1  " "  pop af
+2AB8 : 2A C6 EC  "*  "  ld hl,(XECC6)
+2ABB : 2A C7 F9  "*  "  ld hl,(XF9C7)
+2ABE : 2A C8 E9  "*  "  ld hl,(XE9C8)
+2AC1 : 2A C1 BA  "*  "  ld hl,(XBAC1)
+2AC4 : 2B  "+"  dec hl
+2AC5 : 42  "B"  ld b,d
+2AC6 : B2  " "  or d
+2AC7 : 2B  "+"  dec hl
+2AC8 : 4E  "N"  ld c,(hl)
+2AC9 : AD  " "  xor l
+2ACA : 2B  "+"  dec hl
+2ACB : 58  "X"  ld e,b
+2ACC : 33  "3"  inc sp
+2ACD : 2D  "-"  dec l
+2ACE : C3 07 2C  "  ,"  jp L2C07
+    ;
+2AD1 : D3 C7  "  "  out (0C7H),a
+2AD3 : 2B  "+"  dec hl
+2AD4 : 00  " "  nop
+2AD5 : CD FA 26  "  &"  call L26FA
+2AD8 : 01 00 00  "   "  ld bc,0
+2ADB : C3 2B 2B  " ++"  jp L2B2B
+    ;
+2ADE : CD FA 26  "  &"  call L26FA
+2AE1 : 42  "B"  ld b,d
+2AE2 : 4B  "K"  ld c,e
+2AE3 : 11 00 00  "   "  ld de,00000H
+2AE6 : C3 2B 2B  " ++"  jp L2B2B
+    ;
+2AE9 : CD FA 26  "  &"  call L26FA
+2AEC : 42  "B"  ld b,d
+2AED : 4B  "K"  ld c,e
+2AEE : C3 2B 2B  " ++"  jp L2B2B
+    ;
+2AF1 : 42  "B"  ld b,d
+2AF2 : 4B  "K"  ld c,e
+2AF3    L2AF3:
+2AF3 : CD FA 26  "  &"  call L26FA
+2AF6 : C3 2B 2B  " ++"  jp L2B2B
+    ;
+2AF9 : CD FA 26  "  &"  call L26FA
+2AFC : 42  "B"  ld b,d
+2AFD : 4B  "K"  ld c,e
+2AFE : C3 F3 2A  "  *"  jp L2AF3
+    ;
+2B01 : CD 92 2C  "  ,"  call L2C92
+2B04 : 06 00  "  "  ld b,000H
+2B06 : FE 2B  " +"  cp 02BH
+2B08 : CA 11 2B  "  +"  jp z,L2B11
+2B0B : FE 2D  " -"  cp 02DH
+2B0D : CA 11 2B  "  +"  jp z,L2B11
+2B10 : 04  " "  inc b
+2B11    L2B11:
+2B11 : 78  "x"  ld a,b
+2B12 : F5  " "  push af
+2B13 : CD B5 2C  "  ,"  call L2CB5
+2B16 : CD C3 2C  "  ,"  call L2CC3
+2B19 : D5  " "  push de
+2B1A : CD 92 2C  "  ,"  call L2C92
+2B1D : FE 2C  " ,"  cp 02CH
+2B1F : C2 97 06  "   "  jp nz,FCERR
+2B22 : CD C3 2C  "  ,"  call L2CC3
+2B25 : C1  " "  pop bc
+2B26 : F1  " "  pop af
+2B27 : B7  " "  or a
+2B28 : C2 87 2B  "  +"  jp nz,L2B87
+2B2B    L2B2B:
+2B2B : CD D4 2B  "  +"  call L2BD4
+2B2E : D5  " "  push de
+2B2F : 50  "P"  ld d,b
+2B30 : 59  "Y"  ld e,c
+2B31 : CD D4 2B  "  +"  call L2BD4
+2B34 : EB  " "  ex de,hl
+2B35 : D1  " "  pop de
+2B36 : AF  " "  xor a
+2B37 : 32 25 39  "2%9"  ld (X3925),a
+2B3A : 3A 35 39  ":59"  ld a,(X3935)
+2B3D : 1F  " "  rra
+2B3E : 30 3A  "0:"  jr nc,L2B7A
+2B40 : F5  " "  push af
+2B41 : D5  " "  push de
+2B42 : E5  " "  push hl
+2B43 : CD 6F 2D  " o-"  call L2D6F
+2B46 : 7C  "|"  ld a,h
+2B47 : B7  " "  or a
+2B48 : 28 05  "( "  jr z,L2B4F
+2B4A : 3E 01  "> "  ld a,001H
+2B4C : 32 25 39  "2%9"  ld (X3925),a
+2B4F    L2B4F:
+2B4F : EB  " "  ex de,hl
+2B50 : 4D  "M"  ld c,l
+2B51 : E1  " "  pop hl
+2B52 : 3A 25 39  ":%9"  ld a,(X3925)
+2B55 : B7  " "  or a
+2B56 : 28 01  "( "  jr z,L2B59
+2B58 : E3  " "  ex (sp),hl
+2B59    L2B59:
+2B59 : EB  " "  ex de,hl
+2B5A : E5  " "  push hl
+2B5B : CD F7 2B  "  +"  call L2BF7
+2B5E : C1  " "  pop bc
+2B5F : E1  " "  pop hl
+2B60 : D5  " "  push de
+2B61 : EB  " "  ex de,hl
+2B62 : 21 00 00  "!  "  ld hl,00000H
+2B65    L2B65:
+2B65 : 19  " "  add hl,de
+2B66 : 10 FD  "  "  djnz L2B65
+2B68 : E5  " "  push hl
+2B69 : CD F7 2B  "  +"  call L2BF7
+2B6C : E1  " "  pop hl
+2B6D : 19  " "  add hl,de
+2B6E : D1  " "  pop de
+2B6F : 3A 25 39  ":%9"  ld a,(X3925)
+2B72 : B7  " "  or a
+2B73 : 28 01  "( "  jr z,L2B76
+2B75 : EB  " "  ex de,hl
+2B76    L2B76:
+2B76 : CD FA 26  "  &"  call L26FA
+2B79 : F1  " "  pop af
+2B7A    L2B7A:
+2B7A : 1F  " "  rra
+2B7B : D2 84 2B  "  +"  jp nc,L2B84
+2B7E : CD BB 25  "  %"  call L25BB
+2B81 : CD FA 26  "  &"  call L26FA
+2B84    L2B84:
+2B84 : CD E7 28  "  ("  call L28E7
+2B87    L2B87:
+2B87 : 3A 34 39  ":49"  ld a,(X3934)
+2B8A : 87  " "  add a,a
+2B8B : DA 9A 2B  "  +"  jp c,L2B9A
+2B8E : F5  " "  push af
+2B8F : C5  " "  push bc
+2B90 : D5  " "  push de
+2B91 : CD 2B 2E  " +."  call L2E2B
+2B94 : CD D8 28  "  ("  call L28D8
+2B97 : D1  " "  pop de
+2B98 : C1  " "  pop bc
+2B99 : F1  " "  pop af
+2B9A    L2B9A:
+2B9A : 87  " "  add a,a
+2B9B : DA A8 2B  "  +"  jp c,L2BA8
+2B9E : EB  " "  ex de,hl
+2B9F : 22 07 39  "" 9"  ld (X3907),hl
+2BA2 : EB  " "  ex de,hl
+2BA3 : 60  "`"  ld h,b
+2BA4 : 69  "i"  ld l,c
+2BA5 : 22 09 39  "" 9"  ld (X3909),hl
+2BA8    L2BA8:
+2BA8 : AF  " "  xor a
+2BA9 : 32 34 39  "249"  ld (X3934),a
+2BAC : C9  " "  ret
+    ;
+2BAD : 3E 40  ">@"  ld a,040H
+2BAF : C3 B4 2B  "  +"  jp L2BB4
+    ;
+2BB2 : 3E 80  "> "  ld a,080H
+2BB4    L2BB4:
+2BB4 : 21 34 39  "!49"  ld hl,X3934
+2BB7 : B6  " "  or (hl)
+2BB8 : 77  "w"  ld (hl),a
+2BB9 : C9  " "  ret
+    ;
+2BBA : D2 C7 2B  "  +"  jp nc,L2BC7
+2BBD : 7B  "{"  ld a,e
+2BBE : FE 04  "  "  cp 004H
+2BC0 : D2 C7 2B  "  +"  jp nc,L2BC7
+2BC3 : 32 35 39  "259"  ld (X3935),a
+2BC6 : C9  " "  ret
+    ;
+2BC7    L2BC7:
+2BC7 : D2 97 06  "   "  jp nc,FCERR
+2BCA : 7A  "z"  ld a,d
+2BCB : B7  " "  or a
+2BCC : C2 97 06  "   "  jp nz,FCERR
+2BCF : 7B  "{"  ld a,e
+2BD0 : 32 33 39  "239"  ld (X3933),a
+2BD3 : C9  " "  ret
+    ;
+2BD4    L2BD4:
+2BD4 : 3A 33 39  ":39"  ld a,(X3933)
+2BD7 : B7  " "  or a
+2BD8 : C8  " "  ret z
+2BD9 : 21 00 00  "!  "  ld hl,00000H
+2BDC    L2BDC:
+2BDC : 19  " "  add hl,de
+2BDD : 3D  "="  dec a
+2BDE : C2 DC 2B  "  +"  jp nz,L2BDC
+2BE1 : EB  " "  ex de,hl
+2BE2 : 7A  "z"  ld a,d
+2BE3 : 87  " "  add a,a
+2BE4 : F5  " "  push af
+2BE5 : D2 E9 2B  "  +"  jp nc,L2BE9
+2BE8 : 1B  " "  dec de
+2BE9    L2BE9:
+2BE9 : CD F0 26  "  &"  call L26F0
+2BEC : CD F0 26  "  &"  call L26F0
+2BEF : F1  " "  pop af
+2BF0 : D0  " "  ret nc
+2BF1 : 7A  "z"  ld a,d
+2BF2 : F6 C0  "  "  or 0C0H
+2BF4 : 57  "W"  ld d,a
+2BF5 : 13  " "  inc de
+2BF6 : C9  " "  ret
+    ;
+2BF7    L2BF7:
+2BF7 : 7A  "z"  ld a,d
+2BF8 : 87  " "  add a,a
+2BF9 : D2 03 2C  "  ,"  jp nc,L2C03
+2BFC : 21 46 2D  "!F-"  ld hl,02D46H
+2BFF : E5  " "  push hl
+2C00 : CD FA 26  "  &"  call L26FA
+2C03    L2C03:
+2C03 : 79  "y"  ld a,c
+2C04 : C3 FB 28  "  ("  jp L28FB
+    ;
+2C07    L2C07:
+2C07 : D2 C7 2B  "  +"  jp nc,L2BC7
+2C0A : 7B  "{"  ld a,e
+2C0B : CD 84 2D  "  -"  call L2D84
+2C0E : DA 97 06  "   "  jp c,FCERR
+2C11 : C9  " "  ret
+    ;
+2C12    L2C12:
+2C12 : E5  " "  push hl
+2C13 : CD 1F 2E  "  ."  call L2E1F
+2C16 : D2 97 06  "   "  jp nc,FCERR
+2C19 : E1  " "  pop hl
+2C1A : C9  " "  ret
+    ;
+2C1B : E5  " "  push hl
+2C1C : CD 2B 2E  " +."  call L2E2B
+2C1F : D2 97 06  "   "  jp nc,FCERR
+2C22 : E1  " "  pop hl
+2C23 : C9  " "  ret
+    ;
+2C24    L2C24:
+2C24 : EB  " "  ex de,hl
+2C25 : 22 39 39  ""99"  ld (X3939),hl
+2C28 : EB  " "  ex de,hl
+2C29 : CD 85 09  "   "  call FRMEVL
+2C2C : E5  " "  push hl
+2C2D : 11 00 00  "   "  ld de,00000H
+2C30 : D5  " "  push de
+2C31 : F5  " "  push af
+2C32    L2C32:
+2C32 : CD C6 0F  "   "  call FRESTR
+2C35 : CD 31 15  " 1 "  call MOVRM
+2C38 : 78  "x"  ld a,b
+2C39 : B1  " "  or c
+2C3A : 28 06  "( "  jr z,L2C42
+2C3C : 7B  "{"  ld a,e
+2C3D : B7  " "  or a
+2C3E : 28 02  "( "  jr z,L2C42
+2C40 : C5  " "  push bc
+2C41 : F5  " "  push af
+2C42    L2C42:
+2C42 : F1  " "  pop af
+2C43 : 32 38 39  "289"  ld (X3938),a
+2C46 : E1  " "  pop hl
+2C47 : 7C  "|"  ld a,h
+2C48 : B5  " "  or l
+2C49 : 28 68  "(h"  jr z,L2CB3
+2C4B : 22 36 39  ""69"  ld (X3936),hl
+2C4E : CD 98 2C  "  ,"  call L2C98
+2C51 : 28 EF  "( "  jr z,L2C42
+2C53 : 87  " "  add a,a
+2C54 : 4F  "O"  ld c,a
+2C55 : 2A 39 39  "*99"  ld hl,(X3939)
+2C58    L2C58:
+2C58 : 7E  "~"  ld a,(hl)
+2C59 : 87  " "  add a,a
+2C5A    L2C5A:
+2C5A : CC 97 06  "   "  call z,FCERR
+2C5D : B9  " "  cp c
+2C5E : 28 05  "( "  jr z,L2C65
+2C60 : 23  "#"  inc hl
+2C61 : 23  "#"  inc hl
+2C62 : 23  "#"  inc hl
+2C63 : 18 F3  "  "  jr L2C58
+    ;
+2C65    L2C65:
+2C65 : 01 4E 2C  " N,"  ld bc,02C4EH
+2C68 : C5  " "  push bc
+2C69 : 7E  "~"  ld a,(hl)
+2C6A : 4F  "O"  ld c,a
+2C6B : 87  " "  add a,a
+2C6C : 30 1E  "0 "  jr nc,L2C8C
+2C6E : B7  " "  or a
+2C6F : 1F  " "  rra
+2C70 : 4F  "O"  ld c,a
+2C71 : C5  " "  push bc
+2C72 : E5  " "  push hl
+2C73 : CD 98 2C  "  ,"  call L2C98
+2C76 : 11 01 00  "   "  ld de,00001H
+2C79 : 28 0E  "( "  jr z,L2C89
+2C7B : CD C6 0C  "   "  call ISLETC
+2C7E : 30 06  "0 "  jr nc,L2C86
+2C80 : CD C6 2C  "  ,"  call L2CC6
+2C83 : 37  "7"  scf
+2C84 : 18 04  "  "  jr L2C8A
+    ;
+2C86    L2C86:
+2C86 : CD B5 2C  "  ,"  call L2CB5
+2C89    L2C89:
+2C89 : B7  " "  or a
+2C8A    L2C8A:
+2C8A : E1  " "  pop hl
+2C8B : C1  " "  pop bc
+2C8C    L2C8C:
+2C8C : 23  "#"  inc hl
+2C8D : 7E  "~"  ld a,(hl)
+2C8E : 23  "#"  inc hl
+2C8F : 66  "f"  ld h,(hl)
+2C90 : 6F  "o"  ld l,a
+2C91 : E9  " "  jp (hl)      ;INFO: index jump
+    ;
+2C92    L2C92:
+2C92 : CD 98 2C  "  ,"  call L2C98
+2C95 : 28 C3  "( "  jr z,L2C5A
+2C97 : C9  " "  ret
+    ;
+2C98    L2C98:
+2C98 : E5  " "  push hl
+2C99    L2C99:
+2C99 : 21 38 39  "!89"  ld hl,X3938
+2C9C : 7E  "~"  ld a,(hl)
+2C9D : B7  " "  or a
+2C9E : 28 13  "( "  jr z,L2CB3
+2CA0 : 35  "5"  dec (hl)
+2CA1 : 2A 36 39  "*69"  ld hl,(X3936)
+2CA4 : 7E  "~"  ld a,(hl)
+2CA5 : 23  "#"  inc hl
+2CA6 : 22 36 39  ""69"  ld (X3936),hl
+2CA9 : FE 20  "  "  cp 020H
+2CAB : 28 EC  "( "  jr z,L2C99
+2CAD : FE 60  " `"  cp 060H
+2CAF : 38 02  "8 "  jr c,L2CB3
+2CB1 : D6 20  "  "  sub 020H
+2CB3    L2CB3:
+2CB3 : E1  " "  pop hl
+2CB4 : C9  " "  ret
+    ;
+2CB5    L2CB5:
+2CB5 : E5  " "  push hl
+2CB6 : 21 38 39  "!89"  ld hl,X3938
+2CB9 : 34  "4"  inc (hl)
+2CBA : 2A 36 39  "*69"  ld hl,(X3936)
+2CBD : 2B  "+"  dec hl
+2CBE : 22 36 39  ""69"  ld (X3936),hl
+2CC1 : E1  " "  pop hl
+2CC2 : C9  " "  ret
+    ;
+2CC3    L2CC3:
+2CC3 : CD 92 2C  "  ,"  call L2C92
+2CC6    L2CC6:
+2CC6 : FE 3D  " ="  cp 03DH
+2CC8 : 28 61  "(a"  jr z,L2D2B
+2CCA : FE 2B  " +"  cp 02BH
+2CCC : 28 F5  "( "  jr z,L2CC3
+2CCE : FE 2D  " -"  cp 02DH
+2CD0 : 20 06  "  "  jr nz,L2CD8
+2CD2 : 11 46 2D  " F-"  ld de,02D46H
+2CD5 : D5  " "  push de
+2CD6 : 18 EB  "  "  jr L2CC3
+    ;
+2CD8    L2CD8:
+2CD8 : 11 00 00  "   "  ld de,00000H
+2CDB : 06 04  "  "  ld b,004H
+2CDD    L2CDD:
+2CDD : FE 2C  " ,"  cp 02CH
+2CDF : 28 D4  "( "  jr z,L2CB5
+2CE1 : FE 3B  " ;"  cp 03BH
+2CE3 : C8  " "  ret z
+2CE4 : FE 3A  " :"  cp 03AH
+2CE6 : 30 CD  "0 "  jr nc,L2CB5
+2CE8 : FE 30  " 0"  cp 030H
+2CEA : 38 C9  "8 "  jr c,L2CB5
+2CEC : 6B  "k"  ld l,e
+2CED : 62  "b"  ld h,d
+2CEE : 29  ")"  add hl,hl
+2CEF : 29  ")"  add hl,hl
+2CF0 : 19  " "  add hl,de
+2CF1 : 29  ")"  add hl,hl
+2CF2 : D6 30  " 0"  sub 030H
+2CF4 : 5F  "_"  ld e,a
+2CF5 : 16 00  "  "  ld d,000H
+2CF7 : 19  " "  add hl,de
+2CF8 : EB  " "  ex de,hl
+2CF9 : CD 98 2C  "  ,"  call L2C98
+2CFC : C8  " "  ret z
+2CFD : 05  " "  dec b
+2CFE : 20 DD  "  "  jr nz,L2CDD
+2D00 : FE 30  " 0"  cp 030H
+2D02 : 38 D9  "8 "  jr c,L2CDD
+2D04 : FE 3A  " :"  cp 03AH
+2D06 : 30 D5  "0 "  jr nc,L2CDD
+2D08 : 18 1A  "  "  jr L2D24
+    ;
+2D0A    L2D0A:
+2D0A : CD 92 2C  "  ,"  call L2C92
+2D0D : 11 60 38  " `8"  ld de,BUF
+2D10 : D5  " "  push de
+2D11 : 06 20  "  "  ld b,' '
+2D13 : CD C6 0C  "   "  call ISLETC
+2D16 : 38 0C  "8 "  jr c,L2D24
+2D18    L2D18:
+2D18 : 12  " "  ld (de),a
+2D19 : 13  " "  inc de
+2D1A : FE 3B  " ;"  cp 03BH
+2D1C : 28 09  "( "  jr z,L2D27
+2D1E : CD 92 2C  "  ,"  call L2C92
+2D21 : 05  " "  dec b
+2D22 : 20 F4  "  "  jr nz,L2D18
+2D24    L2D24:
+2D24 : CD 97 06  "   "  call FCERR
+2D27    L2D27:
+2D27 : E1  " "  pop hl
+2D28 : C3 4E 0A  " N "  jp ISVAR
+    ;
+2D2B    L2D2B:
+2D2B : CD 0A 2D  "  -"  call L2D0A
+2D2E : CD 04 23  "  #"  call L2304
+2D31 : EB  " "  ex de,hl
+2D32 : C9  " "  ret
+    ;
+2D33 : CD 0A 2D  "  -"  call L2D0A
+2D36 : 3A 38 39  ":89"  ld a,(X3938)
+2D39 : 2A 36 39  "*69"  ld hl,(X3936)
+2D3C : E3  " "  ex (sp),hl
+2D3D : F5  " "  push af
+2D3E : 0E 02  "  "  ld c,002H
+2D40 : CD A0 0B  "   "  call GETSTK
+2D43 : C3 32 2C  " 2,"  jp L2C32
+    ;
+2D46 : AF  " "  xor a
+2D47 : 93  " "  sub e
+2D48 : 5F  "_"  ld e,a
+2D49 : 9A  " "  sbc a,d
+2D4A : 93  " "  sub e
+2D4B : 57  "W"  ld d,a
+2D4C : C9  " "  ret
+    ;
+2D4D    L2D4D:
+2D4D : F5  " "  push af
+2D4E : E5  " "  push hl
+2D4F : D9  " "  exx
+2D50 : 2A 01 38  "* 8"  ld hl,(X3801)
+2D53 : 3A 0D 38  ": 8"  ld a,(X380D)
+2D56 : 77  "w"  ld (hl),a
+2D57 : E1  " "  pop hl
+2D58 : 7D  "}"  ld a,l
+2D59 : 87  " "  add a,a
+2D5A : 87  " "  add a,a
+2D5B : 85  " "  add a,l
+2D5C : EB  " "  ex de,hl
+2D5D : 5A  "Z"  ld e,d
+2D5E : 16 00  "  "  ld d,000H
+2D60 : 62  "b"  ld h,d
+2D61 : 6F  "o"  ld l,a
+2D62 : 7B  "{"  ld a,e
+2D63 : 3D  "="  dec a
+2D64 : 29  ")"  add hl,hl
+2D65 : 29  ")"  add hl,hl
+2D66 : 29  ")"  add hl,hl
+2D67 : 19  " "  add hl,de
+2D68 : 11 00 30  "  0"  ld de,03000H
+2D6B : 19  " "  add hl,de
+2D6C : C3 E7 1D  "   "  jp TTYFIS
+    ;
+2D6F    L2D6F:
+2D6F : 11 CC 00  "   "  ld de,000CCH
+2D72 : 21 3E 01  "!> "  ld hl,0013EH
+2D75 : C9  " "  ret
+    ;
+2D76    L2D76:
+2D76 : 32 28 39  "2(9"  ld (X3928),a
+2D79 : 22 26 39  ""&9"  ld (X3926),hl
+2D7C : C9  " "  ret
+    ;
+2D7D    L2D7D:
+2D7D : 3A 28 39  ":(9"  ld a,(X3928)
+2D80 : 2A 26 39  "*&9"  ld hl,(X3926)
+2D83 : C9  " "  ret
+    ;
+2D84    L2D84:
+2D84 : FE 10  "  "  cp 010H
+2D86 : 3F  "?"  ccf
+2D87 : D8  " "  ret c
+2D88 : 32 02 39  "2 9"  ld (X3902),a
+2D8B : C9  " "  ret
+    ;
+2D8C    L2D8C:
+2D8C : 11 CA 1A  "   "  ld de,01ACAH
+2D8F : 3A 28 39  ":(9"  ld a,(X3928)
+2D92 : 83  " "  add a,e
+2D93 : 5F  "_"  ld e,a
+2D94 : 30 01  "0 "  jr nc,L2D97
+2D96 : 14  " "  inc d
+2D97    L2D97:
+2D97 : 1A  " "  ld a,(de)
+2D98 : C9  " "  ret
+    ;
+2D99    L2D99:
+2D99 : E5  " "  push hl
+2D9A : D5  " "  push de
+2D9B : 2A 26 39  "*&9"  ld hl,(X3926)
+2D9E : 7E  "~"  ld a,(hl)
+2D9F : F6 A0  "  "  or 0A0H
+2DA1 : AE  " "  xor (hl)
+2DA2 : 28 02  "( "  jr z,L2DA6
+2DA4 : 36 A0  "6 "  ld (hl),0A0H
+2DA6    L2DA6:
+2DA6 : CD 8C 2D  "  -"  call L2D8C
+2DA9 : B6  " "  or (hl)
+2DAA : 77  "w"  ld (hl),a
+2DAB : 11 00 04  "   "  ld de,00400H
+2DAE : 19  " "  add hl,de
+2DAF : 3A 02 39  ": 9"  ld a,(X3902)
+2DB2 : 87  " "  add a,a
+2DB3 : 87  " "  add a,a
+2DB4 : 87  " "  add a,a
+2DB5 : 87  " "  add a,a
+2DB6 : 57  "W"  ld d,a
+2DB7 : 5E  "^"  ld e,(hl)
+2DB8 : 3E 0F  "> "  ld a,00FH
+2DBA : A3  " "  and e
+2DBB : B2  " "  or d
+2DBC : 77  "w"  ld (hl),a
+2DBD : D1  " "  pop de
+2DBE : E1  " "  pop hl
+2DBF : C9  " "  ret
+    ;
+2DC0    L2DC0:
+2DC0 : 7D  "}"  ld a,l
+2DC1 : B4  " "  or h
+2DC2 : C8  " "  ret z
+2DC3 : CD 99 2D  "  -"  call L2D99
+2DC6 : CD DB 2E  "  ."  call L2EDB
+2DC9 : 2B  "+"  dec hl
+2DCA : 18 F4  "  "  jr L2DC0
+    ;
+2DCC : E5  " "  push hl
+2DCD : D5  " "  push de
+2DCE : 2A 26 39  "*&9"  ld hl,(X3926)
+2DD1 : 7E  "~"  ld a,(hl)
+2DD2 : F6 A0  "  "  or 0A0H
+2DD4 : AE  " "  xor (hl)
+2DD5 : 28 10  "( "  jr z,L2DE7
+2DD7    L2DD7:
+2DD7 : 11 00 04  "   "  ld de,00400H
+2DDA : 19  " "  add hl,de
+2DDB : 7E  "~"  ld a,(hl)
+2DDC : 28 04  "( "  jr z,L2DE2
+2DDE : 0F  " "  rrca
+2DDF : 0F  " "  rrca
+2DE0 : 0F  " "  rrca
+2DE1 : 0F  " "  rrca
+2DE2    L2DE2:
+2DE2 : E6 0F  "  "  and 00FH
+2DE4 : D1  " "  pop de
+2DE5 : E1  " "  pop hl
+2DE6 : C9  " "  ret
+    ;
+2DE7    L2DE7:
+2DE7 : CD 8C 2D  "  -"  call L2D8C
+2DEA : A6  " "  and (hl)
+2DEB : 18 EA  "  "  jr L2DD7
+    ;
+2DED    L2DED:
+2DED : E5  " "  push hl
+2DEE : D5  " "  push de
+2DEF : 21 28 30  "!(0"  ld hl,03028H
+2DF2 : 7B  "{"  ld a,e
+2DF3 : 11 28 00  " ( "  ld de,00028H
+2DF6 : 3C  "<"  inc a
+2DF7    L2DF7:
+2DF7 : 3D  "="  dec a
+2DF8 : 28 1B  "( "  jr z,L2E15
+2DFA : 19  " "  add hl,de
+2DFB : 18 FA  "  "  jr L2DF7
+    ;
+2DFD    L2DFD:
+2DFD : E5  " "  push hl
+2DFE : D5  " "  push de
+2DFF : 21 28 30  "!(0"  ld hl,03028H
+2E02 : 7B  "{"  ld a,e
+2E03 : 11 28 00  " ( "  ld de,00028H
+2E06    L2E06:
+2E06 : D6 03  "  "  sub 003H
+2E08 : 38 03  "8 "  jr c,L2E0D
+2E0A : 19  " "  add hl,de
+2E0B : 18 F9  "  "  jr L2E06
+    ;
+2E0D    L2E0D:
+2E0D : C6 03  "  "  add a,003H
+2E0F : 87  " "  add a,a
+2E10 : CB 29  " )"  sra c
+2E12 : 30 01  "0 "  jr nc,L2E15
+2E14 : 3C  "<"  inc a
+2E15    L2E15:
+2E15 : 09  " "  add hl,bc
+2E16 : 32 28 39  "2(9"  ld (X3928),a
+2E19 : 22 26 39  ""&9"  ld (X3926),hl
+2E1C : D1  " "  pop de
+2E1D : E1  " "  pop hl
+2E1E : C9  " "  ret
+    ;
+2E1F    L2E1F:
+2E1F : 3E 17  "> "  ld a,017H
+2E21 : 32 41 39  "2A9"  ld (X3941),a
+2E24 : 3E 27  ">'"  ld a,027H
+2E26 : 32 42 39  "2B9"  ld (X3942),a
+2E29 : 18 0A  "  "  jr L2E35
+    ;
+2E2B    L2E2B:
+2E2B : 3E 47  ">G"  ld a,047H
+2E2D : 32 41 39  "2A9"  ld (X3941),a
+2E30 : 3E 4F  ">O"  ld a,04FH
+2E32 : 32 42 39  "2B9"  ld (X3942),a
+2E35    L2E35:
+2E35 : E5  " "  push hl
+2E36 : C5  " "  push bc
+2E37 : D5  " "  push de
+2E38 : 3A 41 39  ":A9"  ld a,(X3941)
+2E3B : 26 00  "& "  ld h,000H
+2E3D : 6F  "o"  ld l,a
+2E3E : CB 7A  " z"  bit 7,d
+2E40 : 20 1F  "  "  jr nz,L2E61
+2E42 : E7  " "  rst COMPAR
+2E43    L2E43:
+2E43 : 50  "P"  ld d,b
+2E44 : 59  "Y"  ld e,c
+2E45 : 06 00  "  "  ld b,000H
+2E47 : 30 02  "0 "  jr nc,L2E4B
+2E49 : E3  " "  ex (sp),hl
+2E4A : 04  " "  inc b
+2E4B    L2E4B:
+2E4B : 3A 42 39  ":B9"  ld a,(X3942)
+2E4E : 26 00  "& "  ld h,000H
+2E50 : 6F  "o"  ld l,a
+2E51 : CB 7A  " z"  bit 7,d
+2E53 : 20 11  "  "  jr nz,L2E66
+2E55 : E7  " "  rst COMPAR
+2E56    L2E56:
+2E56 : D1  " "  pop de
+2E57 : 38 03  "8 "  jr c,L2E5C
+2E59 : CB 18  "  "  rr b
+2E5B : 06 E3  "  "  ld b,0E3H
+2E5D : C1  " "  pop bc
+2E5E : 3F  "?"  ccf
+2E5F : E1  " "  pop hl
+2E60 : C9  " "  ret
+    ;
+2E61    L2E61:
+2E61 : 2E 00  ". "  ld l,000H
+2E63 : 37  "7"  scf
+2E64 : 18 DD  "  "  jr L2E43
+    ;
+2E66    L2E66:
+2E66 : 2E 00  ". "  ld l,000H
+2E68 : 37  "7"  scf
+2E69 : 18 EB  "  "  jr L2E56
+    ;
+2E6B : FE 02  "  "  cp 002H
+2E6D : 30 07  "0 "  jr nc,L2E76
+2E6F : D5  " "  push de
+2E70 : 11 29 30  " )0"  ld de,03029H
+2E73 : E7  " "  rst COMPAR
+2E74 : D1  " "  pop de
+2E75 : D8  " "  ret c
+2E76    L2E76:
+2E76 : 3D  "="  dec a
+2E77 : 3D  "="  dec a
+2E78 : D0  " "  ret nc
+2E79 : C6 06  "  "  add a,006H
+2E7B : D5  " "  push de
+2E7C : 11 D8 FF  "   "  ld de,0FFD8H
+2E7F : 19  " "  add hl,de
+2E80 : D1  " "  pop de
+2E81 : B7  " "  or a
+2E82 : C9  " "  ret
+    ;
+2E83    L2E83:
+2E83 : FE 04  "  "  cp 004H
+2E85 : 38 08  "8 "  jr c,L2E8F
+2E87 : D5  " "  push de
+2E88 : 11 C0 33  "  3"  ld de,033C0H
+2E8B : E7  " "  rst COMPAR
+2E8C : D1  " "  pop de
+2E8D : 3F  "?"  ccf
+2E8E : D8  " "  ret c
+2E8F    L2E8F:
+2E8F : 3C  "<"  inc a
+2E90 : 3C  "<"  inc a
+2E91 : FE 06  "  "  cp 006H
+2E93 : 3F  "?"  ccf
+2E94 : D0  " "  ret nc
+2E95 : D6 06  "  "  sub 006H
+2E97 : D5  " "  push de
+2E98 : 11 28 00  " ( "  ld de,00028H
+2E9B : 19  " "  add hl,de
+2E9C : D1  " "  pop de
+2E9D : B7  " "  or a
+2E9E : C9  " "  ret
+    ;
+2E9F    L2E9F:
+2E9F : 3D  "="  dec a
+2EA0 : CB 47  " G"  bit 0,a
+2EA2 : C8  " "  ret z
+2EA3 : 3C  "<"  inc a
+2EA4 : 3C  "<"  inc a
+2EA5 : 2B  "+"  dec hl
+2EA6 : B7  " "  or a
+2EA7 : C9  " "  ret
+    ;
+2EA8    L2EA8:
+2EA8 : 3C  "<"  inc a
+2EA9 : CB 47  " G"  bit 0,a
+2EAB : C0  " "  ret nz
+2EAC : 3D  "="  dec a
+2EAD : 3D  "="  dec a
+2EAE : 23  "#"  inc hl
+2EAF : B7  " "  or a
+2EB0 : C9  " "  ret
+    ;
+2EB1    L2EB1:
+2EB1 : F5  " "  push af
+2EB2 : E5  " "  push hl
+2EB3 : CD 7D 2D  " }-"  call L2D7D
+2EB6 : 11 28 00  " ( "  ld de,00028H
+2EB9 : 19  " "  add hl,de
+2EBA : C3 F7 2E  "  ."  jp L2EF7
+    ;
+2EBD    L2EBD:
+2EBD : F5  " "  push af
+2EBE : E5  " "  push hl
+2EBF : CD 7D 2D  " }-"  call L2D7D
+2EC2 : CD 8F 2E  "  ."  call L2E8F
+2EC5 : 18 30  " 0"  jr L2EF7
+    ;
+2EC7 : F5  " "  push af
+2EC8 : E5  " "  push hl
+2EC9 : CD 7D 2D  " }-"  call L2D7D
+2ECC : CD 76 2E  " v."  call L2E76
+2ECF : 18 26  " &"  jr L2EF7
+    ;
+2ED1 : F5  " "  push af
+2ED2 : E5  " "  push hl
+2ED3 : CD 7D 2D  " }-"  call L2D7D
+2ED6 : CD 9F 2E  "  ."  call L2E9F
+2ED9 : 18 1C  "  "  jr L2EF7
+    ;
+2EDB    L2EDB:
+2EDB : F5  " "  push af
+2EDC : E5  " "  push hl
+2EDD : CD 7D 2D  " }-"  call L2D7D
+2EE0 : CD A8 2E  "  ."  call L2EA8
+2EE3 : 18 12  "  "  jr L2EF7
+    ;
+2EE5 : F5  " "  push af
+2EE6 : E5  " "  push hl
+2EE7 : CD 7D 2D  " }-"  call L2D7D
+2EEA : CD 83 2E  "  ."  call L2E83
+2EED : 18 08  "  "  jr L2EF7
+    ;
+2EEF : F5  " "  push af
+2EF0 : E5  " "  push hl
+2EF1 : CD 7D 2D  " }-"  call L2D7D
+2EF4 : CD 83 2E  "  ."  call L2E83
+2EF7    L2EF7:
+2EF7 : 32 28 39  "2(9"  ld (X3928),a
+2EFA : 22 26 39  ""&9"  ld (X3926),hl
+2EFD : E1  " "  pop hl
+2EFE : F1  " "  pop af
+2EFF : C9  " "  ret
+    ;
+2F00    L2F00:
+2F00 : 22 3C 39  ""<9"  ld (X393C),hl
+2F03 : 60  "`"  ld h,b
+2F04 : 69  "i"  ld l,c
+2F05 : 22 11 39  "" 9"  ld (X3911),hl
+2F08 : 87  " "  add a,a
+2F09 : 4F  "O"  ld c,a
+2F0A : 06 00  "  "  ld b,000H
+2F0C : 21 18 2F  "! /"  ld hl,02F18H
+2F0F : 09  " "  add hl,bc
+2F10 : 7E  "~"  ld a,(hl)
+2F11 : 23  "#"  inc hl
+2F12 : 66  "f"  ld h,(hl)
+2F13 : 6F  "o"  ld l,a
+2F14 : 22 3F 39  ""?9"  ld (X393F),hl
+2F17 : C9  " "  ret
+    ;
+2F18 : 6C  "l"  ld l,h
+2F19 : 2F  "/"  cpl
+2F1A : 6E  "n"  ld l,(hl)
+2F1B : 2F  "/"  cpl
+2F1C : 72  "r"  ld (hl),d
+2F1D : 2F  "/"  cpl
+2F1E : 73  "s"  ld (hl),e
+2F1F : 2F  "/"  cpl
+2F20 : 70  "p"  ld (hl),b
+2F21 : 2F  "/"  cpl
+2F22    L2F22:
+2F22 : CD 5F 2F  " _/"  call L2F5F
+2F25    L2F25:
+2F25 : 46  "F"  ld b,(hl)
+2F26 : 11 00 04  "   "  ld de,00400H
+2F29 : EB  " "  ex de,hl
+2F2A : 19  " "  add hl,de
+2F2B : 4E  "N"  ld c,(hl)
+2F2C : E1  " "  pop hl
+2F2D : 70  "p"  ld (hl),b
+2F2E : 23  "#"  inc hl
+2F2F : 71  "q"  ld (hl),c
+2F30 : 23  "#"  inc hl
+2F31 : E5  " "  push hl
+2F32 : EB  " "  ex de,hl
+2F33 : 23  "#"  inc hl
+2F34 : 3D  "="  dec a
+2F35 : 20 EE  "  "  jr nz,L2F25
+2F37 : 18 21  " !"  jr L2F5A
+    ;
+2F39    L2F39:
+2F39 : CD 5F 2F  " _/"  call L2F5F
+2F3C    L2F3C:
+2F3C : EB  " "  ex de,hl
+2F3D : 21 00 04  "!  "  ld hl,00400H
+2F40 : 19  " "  add hl,de
+2F41 : 4E  "N"  ld c,(hl)
+2F42 : E1  " "  pop hl
+2F43 : 46  "F"  ld b,(hl)
+2F44 : 23  "#"  inc hl
+2F45 : 08  " "  ex af,af'
+2F46 : 7E  "~"  ld a,(hl)
+2F47 : 23  "#"  inc hl
+2F48 : CD 3E 39  " >9"  call L393E
+2F4B : E5  " "  push hl
+2F4C : EB  " "  ex de,hl
+2F4D : 70  "p"  ld (hl),b
+2F4E : 11 00 04  "   "  ld de,00400H
+2F51 : EB  " "  ex de,hl
+2F52 : 19  " "  add hl,de
+2F53 : 77  "w"  ld (hl),a
+2F54 : EB  " "  ex de,hl
+2F55 : 23  "#"  inc hl
+2F56 : 08  " "  ex af,af'
+2F57 : 3D  "="  dec a
+2F58 : 20 E2  "  "  jr nz,L2F3C
+2F5A    L2F5A:
+2F5A : E1  " "  pop hl
+2F5B : 22 3C 39  ""<9"  ld (X393C),hl
+2F5E : C9  " "  ret
+    ;
+2F5F    L2F5F:
+2F5F : 2A 11 39  "* 9"  ld hl,(X3911)
+2F62 : 7D  "}"  ld a,l
+2F63 : 2A 3C 39  "*<9"  ld hl,(X393C)
+2F66 : E3  " "  ex (sp),hl
+2F67 : E5  " "  push hl
+2F68 : 2A 26 39  "*&9"  ld hl,(X3926)
+2F6B : C9  " "  ret
+    ;
+2F6C : B1  " "  or c
+2F6D : C9  " "  ret
+    ;
+2F6E : A1  " "  and c
+2F6F : C9  " "  ret
+    ;
+2F70 : A9  " "  xor c
+2F71 : C9  " "  ret
+    ;
+2F72 : 2F  "/"  cpl
+2F73 : C9  " "  ret
+    ;
+2F74 : FF  " "  rst USRFN
+2F75 : FF  " "  rst USRFN
+2F76 : 00  " "  nop
+2F77 : 00  " "  nop
+2F78 : FF  " "  rst USRFN
+2F79 : FF  " "  rst USRFN
+2F7A : 00  " "  nop
+2F7B : 00  " "  nop
+2F7C : FF  " "  rst USRFN
+2F7D : FF  " "  rst USRFN
+2F7E : 00  " "  nop
+2F7F : 00  " "  nop
+2F80 : FF  " "  rst USRFN
+2F81 : FF  " "  rst USRFN
+2F82 : 00  " "  nop
+2F83 : 00  " "  nop
+2F84 : FF  " "  rst USRFN
+2F85 : FF  " "  rst USRFN
+2F86 : 00  " "  nop
+2F87 : 00  " "  nop
+2F88 : FF  " "  rst USRFN
+2F89 : FF  " "  rst USRFN
+2F8A : 00  " "  nop
+2F8B : 00  " "  nop
+2F8C : FF  " "  rst USRFN
+2F8D : FF  " "  rst USRFN
+2F8E : 00  " "  nop
+2F8F : 00  " "  nop
+2F90 : FF  " "  rst USRFN
+2F91 : FF  " "  rst USRFN
+2F92 : 00  " "  nop
+2F93 : 00  " "  nop
+2F94 : FF  " "  rst USRFN
+2F95 : FF  " "  rst USRFN
+2F96 : 00  " "  nop
+2F97 : 00  " "  nop
+2F98 : FF  " "  rst USRFN
+2F99 : FF  " "  rst USRFN
+2F9A : 00  " "  nop
+2F9B : 00  " "  nop
+2F9C : FF  " "  rst USRFN
+2F9D : FF  " "  rst USRFN
+2F9E : 00  " "  nop
+2F9F : 00  " "  nop
+2FA0 : FF  " "  rst USRFN
+2FA1 : FF  " "  rst USRFN
+2FA2 : 00  " "  nop
+2FA3 : 00  " "  nop
+2FA4 : FF  " "  rst USRFN
+2FA5 : FF  " "  rst USRFN
+2FA6 : 00  " "  nop
+2FA7 : 00  " "  nop
+2FA8 : FF  " "  rst USRFN
+2FA9 : FF  " "  rst USRFN
+2FAA : 00  " "  nop
+2FAB : 00  " "  nop
+2FAC : FF  " "  rst USRFN
+2FAD : FF  " "  rst USRFN
+2FAE : 00  " "  nop
+2FAF : 00  " "  nop
+2FB0 : FF  " "  rst USRFN
+2FB1 : FF  " "  rst USRFN
+2FB2 : 00  " "  nop
+2FB3 : 00  " "  nop
+2FB4 : FF  " "  rst USRFN
+2FB5 : FF  " "  rst USRFN
+2FB6 : 00  " "  nop
+2FB7 : 00  " "  nop
+2FB8 : FF  " "  rst USRFN
+2FB9 : FF  " "  rst USRFN
+2FBA : 00  " "  nop
+2FBB : 00  " "  nop
+2FBC : FF  " "  rst USRFN
+2FBD : FF  " "  rst USRFN
+2FBE : 00  " "  nop
+2FBF : 00  " "  nop
+2FC0 : FF  " "  rst USRFN
+2FC1 : FF  " "  rst USRFN
+2FC2 : 00  " "  nop
+2FC3 : 00  " "  nop
+2FC4 : FF  " "  rst USRFN
+2FC5 : FF  " "  rst USRFN
+2FC6 : 00  " "  nop
+2FC7 : 00  " "  nop
+2FC8 : FF  " "  rst USRFN
+2FC9 : FF  " "  rst USRFN
+2FCA : 00  " "  nop
+2FCB : 00  " "  nop
+2FCC : FF  " "  rst USRFN
+2FCD : FF  " "  rst USRFN
+2FCE : 00  " "  nop
+2FCF : 00  " "  nop
+2FD0 : FF  " "  rst USRFN
+2FD1 : FF  " "  rst USRFN
+2FD2 : 00  " "  nop
+2FD3 : 00  " "  nop
+2FD4 : FF  " "  rst USRFN
+2FD5 : FF  " "  rst USRFN
+2FD6 : 00  " "  nop
+2FD7 : 00  " "  nop
+2FD8 : FF  " "  rst USRFN
+2FD9 : FF  " "  rst USRFN
+2FDA : 00  " "  nop
+2FDB : 00  " "  nop
+2FDC : FF  " "  rst USRFN
+2FDD : FF  " "  rst USRFN
+2FDE : 00  " "  nop
+2FDF : 00  " "  nop
+2FE0 : FF  " "  rst USRFN
+2FE1 : FF  " "  rst USRFN
+2FE2 : 00  " "  nop
+2FE3 : 00  " "  nop
+2FE4 : FF  " "  rst USRFN
+2FE5 : FF  " "  rst USRFN
+2FE6 : 00  " "  nop
+2FE7 : 00  " "  nop
+2FE8 : FF  " "  rst USRFN
+2FE9 : FF  " "  rst USRFN
+2FEA : 00  " "  nop
+2FEB : 00  " "  nop
+2FEC : FF  " "  rst USRFN
+2FED : FF  " "  rst USRFN
+2FEE : 00  " "  nop
+2FEF : 00  " "  nop
+2FF0 : FF  " "  rst USRFN
+2FF1 : FF  " "  rst USRFN
+2FF2 : 00  " "  nop
+2FF3 : 00  " "  nop
+2FF4 : FF  " "  rst USRFN
+2FF5 : FF  " "  rst USRFN
+2FF6 : 00  " "  nop
+2FF7 : 00  " "  nop
+2FF8 : FF  " "  rst USRFN
+2FF9 : FF  " "  rst USRFN
+2FFA : 00  " "  nop
+2FFB : 00  " "  nop
+2FFC : FF  " "  rst USRFN
+2FFD : FF  " "  rst USRFN
+2FFE : 00  " "  nop
+2FFF : 00  " "  nop
+
+;--------------------------------------------------------------
+Symbol table
+============
+
+Value  Type Name
+-----  ---- ----
+0000  Code START
+0008  Code SYNCHK
+0010  Code CHRGET
+0018  Code OUTCHR
+0020  Code COMPAR
+0028  Code FSIGN
+0038  Code USRFN
+014D  Data X014D
+03C4  Code SNERR
+03D0  Code UFERR
+0402  Code READY
+0428  Code EDENT
+049F  Code FNDLIN
+04F9  Code CRUNCX
+0598  Code LISPRT
+05A8  Code RESSRC
+0665  Code GONE5
+066B  Code CHRGTR
+066C  Code CHRGT2
+0682  Code FRCINT
+0697  Code FCERR
+069C  Code SCNLIN
+06F3  Code USERR
+0785  Code L0785
+0972  Code FRMNUM
+0975  Code CHKNUM
+0985  Code FRMEVL
+0A37  Code PARCHK
+0A4E  Code ISVAR
+0B23  Code FLOATD
+0B45  Code ERRDIR
+0B54  Code GETBYT
+0B95  Code BLTUC
+0BA0  Code GETSTK
+0BBE  Code SCRTCH
+0CC6  Code ISLETC
+0E59  Code L0E59
+0E9D  Code STROUT
+0EA0  Code STRPRT
+0FC6  Code FRESTR
+10D1  Code PTRGET
+10D6  Code PTRGT2
+13CB  Code FMULT
+141A  Code POPHRT
+142F  Code FDIV
+150B  Code NEG
+1513  Code PUSHF
+1531  Code MOVRM
+153A  Code MOVMF
+155B  Code FCOMP
+15CA  Code UMULT
+1675  Code LINPRT
+1770  Code PSHNEG
+1837  Code POLYX
+198A  Code OUTDO
+19DA  Code INCHR
+19E5  Code FININL
+19EA  Code CRDO
+1A25  Code ISCNTC
+1A2F  Code CQINCH
+1A55  Code L1A55
+1DE7  Code TTYFIS
+1E80  Code INCHRC
+1F28  Code KEYRES
+2021  Code XSTAR2
+2035  Code L2035
+207A  Code L207A
+20A7  Code L20A7
+20AD  Code L20AD
+20B1  Code L20B1
+20B4  Code L20B4
+2108  Code L2108
+2122  Code GONE24
+2154  Code L2154
+2155  Code L2155
+2158  Code L2158
+215C  Code L215C
+2160  Code L2160
+2162  Code KEYREX
+2165  Code L2165
+2169  Code L2169
+216C  Code L216C
+2170  Code L2170
+219C  Code L219C
+21EA  Code L21EA
+2217  Code L2217
+2267  Data X2267
+227F  Code L227F
+2285  Code L2285
+22AE  Code L22AE
+22B0  Code L22B0
+22B4  Code L22B4
+22B8  Code L22B8
+22C8  Code L22C8
+22CE  Code L22CE
+22D2  Code L22D2
+22DE  Code L22DE
+22E0  Code L22E0
+22F2  Code L22F2
+22FB  Code L22FB
+2304  Code L2304
+230E  Code L230E
+2320  Code L2320
+232C  Code LISPRX
+2334  Code MAKUPS
+233D  Code BUFLIN
+2352  Code L2352
+235F  Code L235F
+2370  Code L2370
+2373  Code INTGET
+2384  Code EEDITS
+2396  Code LLED
+23AC  Code LENLP
+23B6  Code DISPI
+23D1  Code NOTDGI
+23DB  Code NTZERD
+23EF  Code NOTLW4
+242B  Code SPED
+2437  Code KED
+243D  Code SED
+2447  Code SRCALP
+2457  Code NOTSRC
+245E  Code POPART
+2460  Code LED
+246A  Code DED
+2472  Code DELLP
+247F  Code TYPSLH
+2483  Code CED
+2486  Code CED2
+249F  Code NOTCCC
+24A9  Code HED
+24AC  Code XED
+24B1  Code IED
+24D7  Code TYPARW
+24D9  Code TYPAR1
+24E6  Code DELCHR
+24E8  Code CMPRSS
+24F5  Code NTARRW
+24FC  Code DINGI
+24FF  Code IEDG
+2501  Code OKINS
+2519  Code BAKED
+2526  Code CRED
+2529  Code EED
+252D  Code L252D
+253C  Code QED
+2547  Code L2547
+2556  Code L2556
+256C  Code L256C
+2575  Code L2575
+2586  Code L2586
+2590  Code L2590
+25A3  Code L25A3
+25B1  Code L25B1
+25BA  Code L25BA
+25BB  Code L25BB
+25C3  Code L25C3
+25CE  Code L25CE
+25D8  Code L25D8
+25DB  Code L25DB
+25E7  Data X25E7
+261F  Code L261F
+263B  Code L263B
+2651  Code L2651
+267B  Code L267B
+2698  Code L2698
+26AC  Code L26AC
+26BB  Code L26BB
+26CF  Code L26CF
+26D3  Code L26D3
+26D6  Code L26D6
+26F0  Code L26F0
+26F8  Code L26F8
+26FA  Code L26FA
+275B  Code L275B
+277E  Code L277E
+2794  Code L2794
+279E  Code L279E
+27AD  Code L27AD
+27CB  Code L27CB
+27E7  Code L27E7
+27F0  Code L27F0
+27FC  Code L27FC
+2844  Code L2844
+2846  Code L2846
+2871  Code L2871
+287B  Code L287B
+2885  Code L2885
+288C  Code L288C
+2897  Code L2897
+289E  Code L289E
+28A3  Code L28A3
+28B4  Code L28B4
+28D8  Code L28D8
+28E7  Code L28E7
+28F7  Code L28F7
+28FB  Code L28FB
+2903  Code L2903
+2917  Code L2917
+291C  Code L291C
+2922  Code L2922
+2927  Code L2927
+2950  Code L2950
+2979  Code L2979
+2984  Code L2984
+29B6  Code L29B6
+29FB  Code L29FB
+2A01  Code L2A01
+2A16  Code L2A16
+2A20  Code L2A20
+2A22  Code L2A22
+2A42  Code L2A42
+2A4E  Code L2A4E
+2A53  Code L2A53
+2A64  Code L2A64
+2A67  Code L2A67
+2A77  Code L2A77
+2AF3  Code L2AF3
+2B11  Code L2B11
+2B2B  Code L2B2B
+2B4F  Code L2B4F
+2B59  Code L2B59
+2B65  Code L2B65
+2B76  Code L2B76
+2B7A  Code L2B7A
+2B84  Code L2B84
+2B87  Code L2B87
+2B9A  Code L2B9A
+2BA8  Code L2BA8
+2BB4  Code L2BB4
+2BC7  Code L2BC7
+2BD4  Code L2BD4
+2BDC  Code L2BDC
+2BE9  Code L2BE9
+2BF7  Code L2BF7
+2C03  Code L2C03
+2C07  Code L2C07
+2C12  Code L2C12
+2C24  Code L2C24
+2C32  Code L2C32
+2C42  Code L2C42
+2C58  Code L2C58
+2C5A  Code L2C5A
+2C65  Code L2C65
+2C86  Code L2C86
+2C89  Code L2C89
+2C8A  Code L2C8A
+2C8C  Code L2C8C
+2C92  Code L2C92
+2C98  Code L2C98
+2C99  Code L2C99
+2CB3  Code L2CB3
+2CB5  Code L2CB5
+2CC3  Code L2CC3
+2CC6  Code L2CC6
+2CD8  Code L2CD8
+2CDD  Code L2CDD
+2D0A  Code L2D0A
+2D18  Code L2D18
+2D24  Code L2D24
+2D27  Code L2D27
+2D2B  Code L2D2B
+2D4D  Code L2D4D
+2D6F  Code L2D6F
+2D76  Code L2D76
+2D7D  Code L2D7D
+2D84  Code L2D84
+2D8C  Code L2D8C
+2D97  Code L2D97
+2D99  Code L2D99
+2DA6  Code L2DA6
+2DC0  Code L2DC0
+2DD7  Code L2DD7
+2DE2  Code L2DE2
+2DE7  Code L2DE7
+2DED  Code L2DED
+2DF7  Code L2DF7
+2DFD  Code L2DFD
+2E06  Code L2E06
+2E0D  Code L2E0D
+2E15  Code L2E15
+2E1F  Code L2E1F
+2E2B  Code L2E2B
+2E35  Code L2E35
+2E43  Code L2E43
+2E4B  Code L2E4B
+2E56  Code L2E56
+2E5C  Code L2E5C
+2E61  Code L2E61
+2E66  Code L2E66
+2E76  Code L2E76
+2E83  Code L2E83
+2E8F  Code L2E8F
+2E9F  Code L2E9F
+2EA8  Code L2EA8
+2EB1  Code L2EB1
+2EBD  Code L2EBD
+2EDB  Code L2EDB
+2EF7  Code L2EF7
+2F00  Code L2F00
+2F22  Code L2F22
+2F25  Code L2F25
+2F39  Code L2F39
+2F3C  Code L2F3C
+2F5A  Code L2F5A
+2F5F  Code L2F5F
+3801  Data X3801
+3806  Data HOOK
+380D  Data X380D
+384F  Data TXTTAB
+38CB  Data X38CB
+38DE  Data X38DE
+38E0  Data X38E0
+38E2  Data X38E2
+38E7  Data X38E7
+3900  Data X3900
+3902  Data X3902
+3903  Data X3903
+3905  Data X3905
+3907  Data X3907
+3909  Data X3909
+390B  Data X390B
+390B  Code L390B
+390C  Data X390C
+390E  Data X390E
+390E  Code L390E
+390F  Data X390F
+3911  Data X3911
+3913  Data X3913
+3915  Data X3915
+3917  Data X3917
+3919  Data X3919
+391A  Data X391A
+391C  Data X391C
+391D  Data X391D
+391F  Data X391F
+3921  Data X3921
+3923  Data X3923
+3925  Data X3925
+3926  Data X3926
+3928  Data X3928
+3929  Data X3929
+392B  Data X392B
+392F  Data X392F
+3931  Data X3931
+3933  Data X3933
+3934  Data X3934
+3935  Data X3935
+3936  Data X3936
+3938  Data X3938
+3939  Data X3939
+393B  Data X393B
+393C  Data X393C
+393E  Data X393E
+393E  Code L393E
+393F  Data X393F
+3941  Data X3941
+3942  Data X3942
+4152  Code L4152
+434F  Code L434F
+4CBB  Code L4CBB
+4E45  Code L4E45
+4E49  Code L4E49
+5249  Code L5249
+534C  Code L534C
+BAC1  Data XBAC1
+D8C4  Data XD8C4
+DECC  Data XDECC
+E1D2  Data XE1D2
+E9C8  Data XE9C8
+ECC6  Data XECC6
+F9C7  Data XF9C7
+FE78  Data XFE78
+
+Number of symbols:   374
+
+;--------------------------------------------------------------
