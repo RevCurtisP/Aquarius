@@ -2,7 +2,8 @@
 
 | File             | Description                                      |
 | -----------      | -------------------------------------------------|
-| aquarius-rom.lst | Commented ROM disassembly                        |
+| aquarius-rom.lst | Commented S2 BASIC disassembly                   |
+| aquarius-ext.lst | Commented Extended BASIC disassembly             |
 | makeasm.py       | Utility to convert disassembly to TASM .asm file |
 
 To convert disassembly to source file file:
