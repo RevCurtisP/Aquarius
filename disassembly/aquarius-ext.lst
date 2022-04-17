@@ -1,3 +1,9 @@
+
+
+
+                  [GWB] GRPACX  equ     $3909   ;[M80] LOW ORDER OF MANTISSA
+
+
 2000 : 2C 33 24  EXTBAS:  byte    ",3$$7+",0  ;;Extended BASIC Cartridge Signature
 2003 : 24 37 2B   
 2006 : 00            
@@ -19,7 +25,7 @@
 202A : 21 00 00           ld      HL,$0000    ;;
 202D : 22 31 39           ld      (X3931),HL  ;;
 2030 : 21 04 07           ld      HL,$0704    ;;
-2033 : 22 00 39           ld      (X3900),HL
+2033 : 22 00 39           ld      (DATTRS),HL ;;Default Graphic Attributes
 2036 : 21 48 39           ld      HL,$3948    ;;End of System RAM
 2039 : 36 00              ld      (HL),$00    ;;Store a 0 there 
 203B : 23                 inc     HL          ;;Set Beginning of BASIC Text
@@ -120,15 +126,15 @@
 20D9 : 80                 byte    $80         ;End of Table
 20DA
 20DA              ;;Extended Statement Dispatch Table       
-20DA : 7F 23      EXTDSP: word    $237F       ;;Do EDIT
-20DC : 4A 22              word    $224A       ;;
-20DE : 67 22              word    $2267       ;;
-20E0 : 46 22              word    $2246       ;;
-20E2 : E7 25              word    $25E7       ;;
-20E4 : 00 27              word    $2700       ;;
-20E6 : 6F 23              word    $236F       ;;
-20E8 : 6B 23              word    $236B       ;;
-20EA : 9D 2A              word    $2A9D       ;;  
+20DA : 7F 23            EXTDSP: word    EDIT            ;;$237F
+20DC : 4A 22                    word    LOCATE          ;;$224A
+20DE : 67 22                    word    MENU            ;;$2267
+20E0 : 46 22                    word    CLS             ;;$2246
+20E2 : E7 25                    word    LINE            ;;$25E7
+20E4 : 00 27                    word    CIRCLE          ;;$2700
+20E6 : 6F 23                    word    GET             ;;$236F
+20E8 : 6B 23                    word    PUT             ;;$236B
+20EA : 9D 2A                    word    DRAW            ;;$2A9D  
 
 20EC : 78 FE      NOTGOX: ld      hl,(XFE78)    ;*** What the heck is going on here???
 20EE : CB C2              set     0,d
@@ -225,7 +231,7 @@
 216D : 08  " "  ex af,af'
 216E : CF  " "  rst SYNCHK
 216F : 28 2B  "(+"  jr z,L219C
-2171 : CD 47 25  " G%"  call L2547
+2171 : CD 47 25  " G%"  call SCAN1
 2174 : C3 55 1A  " U "  jp L1A55
     ;
 2177 : E1         DODEF:  pop hl
@@ -320,7 +326,7 @@
 21FC : EF                 rst FSIGN
 21FD : FC 70 17           call m,PSHNEG
 2200 : FC 0B 15           call m,NEG
-2203 : 3A E7 38           ld a,(X38E7)
+2203 : 3A E7 38           ld a,(FAC)
 2206 : FE 81  "  "  cp 081H
 2208 : DA 17 22  "  ""  jp c,L2217
 220B : 01 00 81  "   "  ld bc,08100H
@@ -367,10 +373,12 @@
 2243 : 00  " "  nop
 2244 : 00  " "  nop
 2245 : 81  " "  add a,c
-2246 : 3E 0B  "> "  ld a,00BH
-2248 : DF  " "  rst OUTCHR
-2249 : C9  " "  ret
-    ;
+2246
+2246 :`                 ;[M80] CLS: CLear Screen issues an escape sequence to clear the CRT.
+2246 : 3E 0B      [M80] CLS:    ld      a,11            
+2248 : DF                       rst     OUTCHR          
+2249 : C9                       ret
+    ;LOCATE:
 224A : CD 54 0B  " T "  call GETBYT
 224D : F5  " "  push af
 224E : 3D  "="  dec a
@@ -388,22 +396,21 @@
 2262 : CD 4D 2D  " M-"  call L2D4D
 2265 : EB  " "  ex de,hl
 2266 : C9  " "  ret
-    ;
-2267    X2267:
-2267 : FE 40  " @"  cp 040H
-2269 : CC 6B 06  " k "  call z,CHRGTR
-226C : CD E0 22  "  ""  call L22E0
-226F : D5  " "  push de
-2270 : 1E 01  "  "  ld e,001H
-2272 : 7E  "~"  ld a,(hl)
-2273 : FE 2C  " ,"  cp 02CH
-2275 : 20 08  "  "  jr nz,L227F
-2277 : D7  " "  rst CHRGET
-2278 : CD 54 0B  " T "  call GETBYT
-227B : D5  " "  push de
-227C : CF  " "  rst SYNCHK
-227D : 3B  ";"  dec sp
-227E : D1  " "  pop de
+2267    
+2267 : FE 40            MENU:   cp 040H
+2269 : CC 6B 06                 call z,CHRGTR
+226C : CD E0 22                 call L22E0
+226F : D5                       push de
+2270 : 1E 01                    ld e,001H
+2272 : 7E                       ld a,(hl)
+2273 : FE 2C                    cp 02CH
+2275 : 20 08                    jr nz,L227F
+2277 : D7                       rst CHRGET
+2278 : CD 54 0B                 call GETBYT
+227B : D5                       push de
+227C : CF                       rst SYNCHK
+227D : 3B                       dec sp
+227E : D1                       pop de
 227F    L227F:
 227F : 4B  "K"  ld c,e
 2280 : 06 01  "  "  ld b,001H
@@ -509,37 +516,33 @@
 2300 : D8  " "  ret c
 2301 : 2E 17  ". "  ld l,017H
 2303 : C9  " "  ret
-    ;
-2304    L2304:
-2304 : EF  " "  rst FSIGN
-2305 : FA 0E 23  "  #"  jp m,L230E
-2308 : EB  " "  ex de,hl
-2309 : CD 82 06  "   "  call FRCINT
-230C : EB  " "  ex de,hl
-230D : C9  " "  ret
-    ;
-230E    L230E:
-230E : D5  " "  push de
-230F : CD 0B 15  "   "  call NEG
-2312 : CD 82 06  "   "  call FRCINT
-2315 : CD 0B 15  "   "  call NEG
-2318 : 21 00 00  "!  "  ld hl,00000H
-231B : B7  " "  or a
-231C : ED 52  " R"  sbc hl,de
-231E : D1  " "  pop de
-231F : C9  " "  ret
-    ;
-2320    L2320:
-2320 : E5  " "  push hl
-2321 : D5  " "  push de
-2322 : C5  " "  push bc
-2323 : 7C  "|"  ld a,h
-2324 : 55  "U"  ld d,l
-2325 : CD 23 0B  " # "  call FLOATD
-2328 : C1  " "  pop bc
-2329 : D1  " "  pop de
-232A : E1  " "  pop hl
-232B : C9  " "  ret
+2304    
+2304 : EF               FRCINX: rst     FSIGN           ;[M80] GET THE SIGN OF THE FAC IN A
+2305 : FA 0E 23                 jp      m,FRCINM        ;;If Positive
+2308 : EB                       ex      de,hl           ;;  Save DE in HL
+2309 : CD 82 06                 call    FRCINT          ;;  Convert FAC into Integer in DE
+230C : EB                       ex      de,hl           ;;  Put Result into HL, Restore DE
+230D : C9                       ret                     ;;Else
+230E : D5               FRCINM: push    de              ;;  Save DE
+230F : CD 0B 15                 call    NEG             ;;  Negate FAC
+2312 : CD 82 06                 call    FRCINT          ;;  Convert FAC into Integer in DE
+2315 : CD 0B 15                 call    NEG             ;;  Un-Negate FAC
+2318 : 21 00 00                 ld      hl,0            
+231B : B7                       or      a               
+231C : ED 52                    sbc     hl,de           ;;  Put 0 - Integer into HL
+231E : D1                       pop     de              ;;  and Restore DE
+231F : C9                       ret
+2320    
+2320 : E5         [GWB] MAKINT: push    hl              ;;Save Registers
+2321 : D5                       push    de
+2322 : C5                       push    bc
+2323 : 7C                       ld      a,h
+2324 : 55                       ld      d,l
+2325 : CD 23 0B                 call    FLOATD          ;;Put HL into FAC
+2328 : C1                       pop     bc              ;;Restore Registers
+2329 : D1                       pop     de
+232A : E1                       pop     hl
+232B : C9                       ret
     ;
 232C              ;;Print Null Terminated String
 232C : 7E         LISPRX: ld a,(hl)
@@ -588,29 +591,27 @@
 2366 : 2A 2F 39  "*/9"  ld hl,(X392F)
 2369 : F9  " "  ld sp,hl
 236A : C9  " "  ret
-    ;
+    ;PUT:
 236B : 3E 01  "> "  ld a,001H
 236D : 18 01  "  "  jr L2370
-    ;
-236F : AF  " "  xor a
+    ; 
+236F : AF               GET:    xor a
 2370    L2370:
-2370 : C3 84 29  "  )"  jp L2984
-    ;
-2373    INTGET:
-2373 : CD 85 09  "   "  call FRMEVL
-2376 : E5  " "  push hl
-2377 : CD 75 09  " u "  call CHKNUM
-237A : CD 82 06  "   "  call FRCINT
-237D : E1  " "  pop hl
-237E : C9  " "  ret
-    ;
-                      + ;[M80] EDIT COMMAND
-                      | ;[M80] [C] CONTAINS COUNT OF CHARACTERS IN LINE
-                      | ;[M80] [B] CONTAINS CURRENT CHARACTER POSITION 0=FIRST IN LINE.
-                      | ;[M80] [D] CONTAINS NUMBER OF TIMES TO REPEAT THIS SUBCOMMAND
-                      | ;[M80] [H,L] POINT TO CURRENT CHARACTER
-
-
+2370 : C3 84 29                 jp L2984
+2373    
+2373 : CD 85 09   [GWB] GETIN2: call    FRMEVL          ;[GWB] EVALUATE A FORMULA
+2376 : E5         {GWB} INTFR2: push    hl              ;[GWB] SAVE THE TEXT POINTER
+2377 : CD 75 09                 call    CHKNUM          ;[M65] MUST BE NUMBER
+237A : CD 82 06                 call    FRCINT          ;[GWB] CONVERT THE FORMULA TO AN INTEGER IN [H,L]
+237D : E1                       pop     hl              ;[GWB] RESTORE THE TEXT POINTER
+237E : C9                       ret
+237F
+237F                  + ;[M80] EDIT COMMAND
+237f                  | ;;; Need to check if this matches the code
+237F                  | ;[M80] [C] CONTAINS COUNT OF CHARACTERS IN LINE
+237F                  | ;[M80] [B] CONTAINS CURRENT CHARACTER POSITION 0=FIRST IN LINE.
+237F                  | ;[M80] [D] CONTAINS NUMBER OF TIMES TO REPEAT THIS SUBCOMMAND
+237F                  | ;[M80] [H,L] POINT TO CURRENT CHARACTER
 237F : CD 9C 06   [M80] EDIT:   call    SCNLIN          ;[M80[ GET THE ARGUMENT LINE NUMBER
 2382 : C0                       ret     nz              ;[M80] ERROR IF NOT END OF LINE
 2383 : E1         {M80} EREDIT  pop     hl              ;[M80] GET RID OF NEWSTT ADDRESS
@@ -904,80 +905,84 @@
 2540 : 3C                       inc a                   ;[M80] SET ZERO IF [D,E] = ALL ONES.
 2541 : CA E5 19                 jp z,FININL             ;[M80] TYPE CR AND STORE ZERO IN BUF.
 2544 : C3 02 04                 jp READY                ;[M80] OTHERWISE CALLED FROM MAIN
-    ;
-2547    L2547:
-2547 : 7E  "~"  ld a,(hl)
-2548 : FE 40  " @"  cp 040H
-254A : CC 6B 06  " k "  call z,CHRGTR
-254D : 01 00 00  "   "  ld bc,00000H
-2550 : 50  "P"  ld d,b
-2551 : 59  "Y"  ld e,c
-2552 : FE A9  "  "  cp 0A9H
-2554 : 28 16  "( "  jr z,L256C
-2556    L2556:
-2556 : 7E  "~"  ld a,(hl)
-2557 : FE A7  "  "  cp 0A7H
-2559 : F5  " "  push af
-255A : CC 6B 06  " k "  call z,CHRGTR
-255D : CF  " "  rst SYNCHK
-255E : 28 CD  "( "  jr z,L252D
-2560 : 73  "s"  ld (hl),e
-2561 : 23  "#"  inc hl
-2562 : D5  " "  push de
-2563 : CF  " "  rst SYNCHK
-2564 : 2C  ","  inc l
-2565 : CD 73 23  " s#"  call INTGET
-2568 : CF  " "  rst SYNCHK
-2569 : 29  ")"  add hl,hl
-256A : C1  " "  pop bc
-256B : F1  " "  pop af
-256C    L256C:
-256C : E5  " "  push hl
-256D : 2A 09 39  "* 9"  ld hl,(X3909)
-2570 : 28 03  "( "  jr z,L2575
-2572 : 21 00 00  "!  "  ld hl,00000H
-2575    L2575:
-2575 : 09  " "  add hl,bc
-2576 : 22 09 39  "" 9"  ld (X3909),hl
-2579 : 22 03 39  "" 9"  ld (X3903),hl
-257C : 44  "D"  ld b,h
-257D : 4D  "M"  ld c,l
-257E : 2A 07 39  "* 9"  ld hl,(X3907)
-2581 : 28 03  "( "  jr z,L2586
-2583 : 21 00 00  "!  "  ld hl,00000H
-2586    L2586:
-2586 : 19  " "  add hl,de
-2587 : 22 07 39  "" 9"  ld (X3907),hl
-258A : 22 05 39  "" 9"  ld (X3905),hl
-258D : EB  " "  ex de,hl
-258E : E1  " "  pop hl
-258F : C9  " "  ret
-    ;
-2590    L2590:
-2590 : 3A 00 39  ": 9"  ld a,(X3900)
-2593 : C5  " "  push bc
-2594 : D5  " "  push de
-2595 : 5F  "_"  ld e,a
-2596 : 2B  "+"  dec hl
-2597 : D7  " "  rst CHRGET
-2598 : 28 09  "( "  jr z,L25A3
-259A : CF  " "  rst SYNCHK
-259B : 2C  ","  inc l
-259C : FE 2C  " ,"  cp 02CH
-259E : 28 03  "( "  jr z,L25A3
-25A0 : CD 54 0B  " T "  call GETBYT
-25A3    L25A3:
-25A3 : 7B  "{"  ld a,e
-25A4 : E5  " "  push hl
-25A5 : CD 84 2D  "  -"  call L2D84
-25A8 : DA 97 06  "   "  jp c,FCERR
-25AB : E1  " "  pop hl
-25AC : D1  " "  pop de
-25AD : C1  " "  pop bc
-25AE : C3 6C 06  " l "  jp CHRGT2
+2547                    
+2547                  + ;[GWB] ALLOW A COORDINATE OF THE FORM (X,Y) OR STEP(X,Y)
+2547                  | ;[GWB] THE LATTER IS RELATIVE TO THE GRAPHICS AC.
+2547                  | ;[GWB] THE GRAPHICS AC IS UPDATED WITH THE NEW VALUE
+2547                  | ;[GWB] RESULT IS RETURNED WITH [B,C]=X AND [D,E]=Y
+2547                  | ;[GWB] CALL SCAN1 TO GET FIRST IN A SET OF TWO PAIRS SINCE IT ALLOWS
+2547                  | ;[GWB] A NULL ARGUMENT TO IMPLY THE CURRENT AC VALUE AND
+2547                  | ;[GWB] IT WILL SKIP A "@" IF ONE IS PRESENT
+2547 : 7E         [GWB] SCAN1:  ld      a,(hl)          ;[GWB] GET THE CURRENT CHARACTER
+2548 : FE 40                    cp      '@'             ;[GWB] ALLOW MEANINGLESS "@"
+254A : CC 6B 06                 call    z,CHRGTR        ;[GWB] BY SKIPPING OVER IT
+254D : 01 00 00                 ld      bc,0            ;[GWB] ASSUME NO COODINATES AT ALL (-SECOND)
+2550 : 50                       ld      d,b             
+2551 : 59                       ld      e,c             
+2552 : FE A9                    cp      MINUTK          ;[GWB] SEE IF ITS SAME AS PREVIOUS            
+2554 : 28 16                    jr      z,SCANN         ;[GWB] USE GRAPHICS ACCUMULATOR
+2556 :                  ;[GWB] THE STANDARD ENTRY POINT   
+2556 : 7E         [GWB] SCAND:  ld      a,(hl)          ;[GWB] GET THE CURRENT CHARACTER
+2557 : FE A7                    cp      STEPTK          ;[GWB] IS IT RELATIVE?
+2559 : F5                       push    af              ;[GWB] REMEMBER
+255A : CC 6B 06                 call    z,CHRGTR        ;[GWB] SKIP OVER $STEP TOKEN
+255D : CF                       rst     SYNCHK          
+255E : 28                       byte    '('             ;[GWB] SKIP OVER OPEN PAREN
+255F : CD 73 23                 call    GETIN2          ;[GWB] SCAN X INTO [D,E]
+2562 : D5                       push    de              ;SAVE WHILE SCANNING Y
+2563 : CF                       rst     SYNCHK          
+2564 : 2C                       byte    ','             ;[GWB] SCAN COMMA               
+2565 : CD 73 23                 call    GETIN2          ;[GWB] GET Y INTO [D,E]
+2568 : CF                       rst     SYNCHK          
+2569 : 29                       byte    ')'             
+256A : C1                       pop     bc              ;[GWB] GET BACK X INTO [B,C]             
+256B : F1                       pop     af              ;[GWB] RECALL IF RELATIVE OR NOT
+256C : E5         [GWB] SCANN:  push    hl              ;[GWB] SAVE TEXT POINTER
+256D : 2A 09 39                 ld      hl,(GRPACX)     ;[GWB] GET OLD POSITION
+2570 : 28 03                    jr      z,SCXREL        ;[GWB] IF ZERO,RELATIVE SO USE OLD BASE
+2572 : 21 00 00                 ld      hl,0            ;[GWB] IN ABSOLUTE CASE, JUST Y USE ARGEUMENT
+2575 : 09         [GWB] SCXREL: add     hl,bc           ;[GWB] ADD NEW VALUE
+2576 : 22 09 39                 ld      (GRPACX),hl     ;[GWB] UPDATE GRAPHICS ACCUMLATOR
+2579 : 22 03 39                 ld      (GXPOS),hl      ;[GWB] STORE SECOND COORDINTE FOR CALLER
+257C : 44                       ld      b,h             ;[GWB] RETURN X IN BC
+257D : 4D                       ld      c,l              
+257E : 2A 07 39                 ld      hl,(GRPACY)     ;[GWB] GET OLDY POSITION
+2581 : 28 03                    jr      z,SCYREL        ;[GWB] IF ZERO, RELATIVE SO USE OLD BASE
+2583 : 21 00 00  "              ld      hl,0            ;[GWB] ABSOLUTE SO OFFSET BY 0
+2586 : 19         [GWB] SCYREL: add     hl,de           
+2587 : 22 07 39                 ld      (GRPACY),hl     ;[GWB] UPDATE Y PART OF ACCUMULATOR
+258A : 22 05 39                 ld      (GYPOS),hl      ;[GWB] STORE Y FOR CALLER
+258D : EB                       ex      de,hl           ;[GWB] RETURN Y IN [D,E]
+258E : E1                       pop     hl              ;[GWB] GET BACK THE TEXT POINTER
+258F : C9                       ret
+2590    
+2590                  + ;[GWB] ATTRIBUTE SCAN
+2590                  | ;[GWB] LOOK AT THE CURRENT POSITION AND IF THERE IS AN ARGUMENT READ IT AS
+2590                  | ;[GWB] THE 8-BIT ATTRIBUTE VALUE TO SEND TO SETATR. IF STATEMENT HAS ENDED
+2590                  | ;[GWB] OR THERE IS A NULL ARGUMENT, SEND FORCLR  TO SETATR
+2590 : 3A 00 39   [GWB] ATRSCN: ld      a,(DATTRS)       ;[GWB] Get forground/background colors {See GETFBC}
+2593 : C5         {GWB} ATRENT: push    bc              ;[GWB] SAVE THE CURRENT POINT
+2594 : D5                       push    de              
+2595 : 5F                       ld      e,a
+2596 : 2B                       dec     hl              ;[GWB] SEE IF STATEMENT ENDED
+2597 : D7                       rst     CHRGET
+2598 : 28 09                    jr      z,ATRFIN        ;[GWB] USE DEFAULT
+259A : CF                       rst     SYNCHK
+259B : 2C                       byte    ','             ;[GWB]  INSIST ON COMMA
+259C : FE 2C                    cp      ','             ;[GWB] ANOTHER COMMA FOLLOWS?
+259E : 28 03                    jr      z,ATRFIN        ;[GWB] IF SO, NULL ARGUMENT SO USE DEFAULT
+25A0 : CD 54 0B                 call    GETBYT          ;[GWB] GET THE BYTE
+25A3 : 7B         [GWB] ATRFIN: ld      a,e             ;[GWB] GET ATTRIBUTE INTO [A]
+25A4 : E5                       push    hl              ;[GWB] SAVE THE TEXT POINTER
+25A5 : CD 84 2D                 call    SETATR          ;[GWB] SET THE ATTRIBUTE AS THE CURRENT ONE
+25A8 : DA 97 06                 jp      c,FCERR         ;[GWB] ILLEGAL ATTRIBUTES GIVE FUNCTION CALL
+25AB : E1                       pop     hl              
+25AC : D1                       pop     de              ;[GWB] GET BACK CURRENT POINT
+25AD : C1                       pop     bc              
+25AE : C3 6C 06                 jp      CHRGT2          
     ;
 25B1    L25B1:
-25B1 : 2A 03 39  "* 9"  ld hl,(X3903)
+25B1 : 2A 03 39  "* 9"  ld hl,(GXPOS)
 25B4 : 7D  "}"  ld a,l
 25B5 : 91  " "  sub c
 25B6 : 6F  "o"  ld l,a
@@ -986,18 +991,18 @@
 25B9 : 67  "g"  ld h,a
 25BA    L25BA:
 25BA : D0  " "  ret nc
-25BB    L25BB:
-25BB : AF  " "  xor a
-25BC : 95  " "  sub l
-25BD : 6F  "o"  ld l,a
-25BE : 9C  " "  sbc a,h
-25BF : 95  " "  sub l
-25C0 : 67  "g"  ld h,a
-25C1 : 37  "7"  scf
-25C2 : C9  " "  ret
+25BB    
+25BB : AF         [GWB] NEGHL:  xor       a             ;;HL = 0 - HL
+25BC : 95                       sub       l
+25BD : 6F                       ld        l,a
+25BE : 9C                       sbc       a,h
+25BF : 95                       sub       l
+25C0 : 67                       ld        h,a
+25C1 : 37                       scf
+25C2 : C9                       ret
     ;
 25C3    L25C3:
-25C3 : 2A 05 39  "* 9"  ld hl,(X3905)
+25C3 : 2A 05 39  "* 9"  ld hl,(GYPOS)
 25C6 : 7D  "}"  ld a,l
 25C7 : 93  " "  sub e
 25C8 : 6F  "o"  ld l,a
@@ -1008,9 +1013,9 @@
     ;
 25CE    L25CE:
 25CE : E5  " "  push hl
-25CF : 2A 05 39  "* 9"  ld hl,(X3905)
+25CF : 2A 05 39  "* 9"  ld hl,(GYPOS)
 25D2 : EB  " "  ex de,hl
-25D3 : 22 05 39  "" 9"  ld (X3905),hl
+25D3 : 22 05 39  "" 9"  ld (GYPOS),hl
 25D6 : E1  " "  pop hl
 25D7 : C9  " "  ret
     ;
@@ -1019,21 +1024,21 @@
 25DB    L25DB:
 25DB : E5  " "  push hl
 25DC : C5  " "  push bc
-25DD : 2A 03 39  "* 9"  ld hl,(X3903)
+25DD : 2A 03 39  "* 9"  ld hl,(GXPOS)
 25E0 : E3  " "  ex (sp),hl
-25E1 : 22 03 39  "" 9"  ld (X3903),hl
+25E1 : 22 03 39  "" 9"  ld (GXPOS),hl
 25E4 : C1  " "  pop bc
 25E5 : E1  " "  pop hl
 25E6 : C9  " "  ret
     ;
-25E7    X25E7:
-25E7 : CD 47 25  " G%"  call L2547
+25E7    LINE:
+25E7 : CD 47 25  " G%"  call SCAN1
 25EA : C5  " "  push bc
 25EB : D5  " "  push de
 25EC : CF  " "  rst SYNCHK
-25ED : A9  " "  xor c
-25EE : CD 56 25  " V%"  call L2556
-25F1 : CD 90 25  "  %"  call L2590
+25ED : A9  " "  byte 169
+25EE : CD 56 25  " V%"  call SCAND
+25F1 : CD 90 25  "  %"  call ATRSCN
 25F4 : D1  " "  pop de
 25F5 : C1  " "  pop bc
 25F6 : 28 43  "(C"  jr z,L263B
@@ -1045,9 +1050,9 @@
 25FE : CF  " "  rst SYNCHK
 25FF : 46  "F"  ld b,(hl)
 2600 : E5  " "  push hl
-2601 : CD 2B 2E  " +."  call L2E2B
+2601 : CD 2B 2E  " +."  call SCALXY
 2604 : CD D8 25  "  %"  call L25D8
-2607 : CD 2B 2E  " +."  call L2E2B
+2607 : CD 2B 2E  " +."  call SCALXY
 260A : CD C3 25  "  %"  call L25C3
 260D : DC CE 25  "  %"  call c,L25CE
 2610 : 23  "#"  inc hl
@@ -1056,7 +1061,7 @@
 2615 : DC DB 25  "  %"  call c,L25DB
 2618 : 23  "#"  inc hl
 2619 : E5  " "  push hl
-261A : CD FD 2D  "  -"  call L2DFD
+261A : CD FD 2D  "  -"  call MAPXYC
 261D : D1  " "  pop de
 261E : C1  " "  pop bc
 261F    L261F:
@@ -1084,11 +1089,11 @@
 263B : C5  " "  push bc
 263C : D5  " "  push de
 263D : E5  " "  push hl
-263E : CD 7B 26  " {&"  call L267B
-2641 : 2A 09 39  "* 9"  ld hl,(X3909)
-2644 : 22 03 39  "" 9"  ld (X3903),hl
-2647 : 2A 07 39  "* 9"  ld hl,(X3907)
-264A : 22 05 39  "" 9"  ld (X3905),hl
+263E : CD 7B 26  " {&"  call DOGRPH
+2641 : 2A 09 39  "* 9"  ld hl,(GRPACX)
+2644 : 22 03 39  "" 9"  ld (GXPOS),hl
+2647 : 2A 07 39  "* 9"  ld hl,(GRPACY)
+264A : 22 05 39  "" 9"  ld (GYPOS),hl
 264D : E1  " "  pop hl
 264E : D1  " "  pop de
 264F : C1  " "  pop bc
@@ -1096,34 +1101,34 @@
     ;
 2651    L2651:
 2651 : E5  " "  push hl
-2652 : 2A 05 39  "* 9"  ld hl,(X3905)
+2652 : 2A 05 39  "* 9"  ld hl,(GYPOS)
 2655 : E5  " "  push hl
 2656 : D5  " "  push de
 2657 : EB  " "  ex de,hl
 2658 : CD 3B 26  " ;&"  call L263B
 265B : E1  " "  pop hl
-265C : 22 05 39  "" 9"  ld (X3905),hl
+265C : 22 05 39  "" 9"  ld (GYPOS),hl
 265F : EB  " "  ex de,hl
 2660 : CD 3B 26  " ;&"  call L263B
 2663 : E1  " "  pop hl
-2664 : 22 05 39  "" 9"  ld (X3905),hl
-2667 : 2A 03 39  "* 9"  ld hl,(X3903)
+2664 : 22 05 39  "" 9"  ld (GYPOS),hl
+2667 : 2A 03 39  "* 9"  ld hl,(GXPOS)
 266A : C5  " "  push bc
 266B : 44  "D"  ld b,h
 266C : 4D  "M"  ld c,l
 266D : CD 3B 26  " ;&"  call L263B
 2670 : E1  " "  pop hl
-2671 : 22 03 39  "" 9"  ld (X3903),hl
+2671 : 22 03 39  "" 9"  ld (GXPOS),hl
 2674 : 44  "D"  ld b,h
 2675 : 4D  "M"  ld c,l
 2676 : CD 3B 26  " ;&"  call L263B
 2679 : E1  " "  pop hl
 267A : C9  " "  ret
     ;
-267B    L267B:
-267B : CD 2B 2E  " +."  call L2E2B
+267B    DOGRPH:
+267B : CD 2B 2E  " +."  call SCALXY
 267E : CD D8 25  "  %"  call L25D8
-2681 : CD 2B 2E  " +."  call L2E2B
+2681 : CD 2B 2E  " +."  call SCALXY
 2684 : CD C3 25  "  %"  call L25C3
 2687 : DC D8 25  "  %"  call c,L25D8
 268A : D5  " "  push de
@@ -1156,12 +1161,12 @@
 26BB    L26BB:
 26BB : D1  " "  pop de
 26BC : E5  " "  push hl
-26BD : CD BB 25  "  %"  call L25BB
+26BD : CD BB 25  "  %"  call NEGHL
 26C0 : 22 11 39  "" 9"  ld (X3911),hl
-26C3 : CD FD 2D  "  -"  call L2DFD
+26C3 : CD FD 2D  "  -"  call MAPXYC
 26C6 : D1  " "  pop de
 26C7 : D5  " "  push de
-26C8 : CD F0 26  "  &"  call L26F0
+26C8 : CD F0 26  "  &"  call HLFHL
 26CB : C1  " "  pop bc
 26CC : 03  " "  inc bc
 26CD : 18 07  "  "  jr L26D6
@@ -1174,7 +1179,7 @@
 26D3    L26D3:
 26D3 : CD 0B 39  "  9"  call L390B
 26D6    L26D6:
-26D6 : CD 99 2D  "  -"  call L2D99
+26D6 : CD 99 2D  "  -"  call SETC
 26D9 : 0B  " "  dec bc
 26DA : E5  " "  push hl
 26DB : 2A 13 39  "* 9"  ld hl,(X3913)
@@ -1190,431 +1195,434 @@
 26EA : C8  " "  ret z
 26EB : CD 0E 39  "  9"  call L390E
 26EE : 18 E3  "  "  jr L26D3
-    ;
-26F0    L26F0:
-26F0 : 7A  "z"  ld a,d
-26F1 : B7  " "  or a
-26F2 : 1F  " "  rra
-26F3 : 57  "W"  ld d,a
-26F4 : 7B  "{"  ld a,e
-26F5 : 1F  " "  rra
-26F6 : 5F  "_"  ld e,a
-26F7 : C9  " "  ret
-    ;
-26F8    L26F8:
+26F0    
+26F0 : 7A         [GWB] HLFHL:  ld a,d                  ;;Shift DE 3 Bits Right
+26F1 : B7                       or a
+26F2 : 1F                       rra
+26F3 : 57                       ld d,a
+26F4 : 7B                       ld a,e
+26F5 : 1F                       rra
+26F6 : 5F                       ld e,a
+26F7 : C9                       ret
+26F8    POPTRT:
 26F8 : E1  " "  pop hl
 26F9 : C9  " "  ret
-    ;
-26FA    L26FA:
-26FA : EB  " "  ex de,hl
-26FB : CD BB 25  "  %"  call L25BB
-26FE : EB  " "  ex de,hl
-26FF : C9  " "  ret
-    ;
-2700 : CD 47 25  " G%"  call L2547
-2703 : CF  " "  rst SYNCHK
-2704 : 2C  ","  inc l
-2705 : CD 73 23  " s#"  call INTGET
-2708 : 7A  "z"  ld a,d
-2709 : B7  " "  or a
-270A : FA 97 06  "   "  jp m,FCERR
-270D : E5  " "  push hl
-270E : EB  " "  ex de,hl
-270F : 22 03 39  "" 9"  ld (X3903),hl
-2712 : CD 20 23  "  #"  call L2320
-2715 : CD 75 09  " u "  call CHKNUM
-2718 : 01 35 80  " 5 "  ld bc,08035H
-271B : 11 F3 04  "   "  ld de,004F3H
-271E : CD CB 13  "   "  call FMULT
-2721 : CD 04 23  "  #"  call L2304
-2724 : 22 1A 39  "" 9"  ld (X391A),hl
-2727 : AF  " "  xor a
-2728 : 32 19 39  "2 9"  ld (X3919),a
-272B : 32 25 39  "2%9"  ld (X3925),a
-272E : E1  " "  pop hl
-272F : CD 90 25  "  %"  call L2590
-2732 : 0E 01  "  "  ld c,001H
-2734 : 11 00 00  "   "  ld de,00000H
-2737 : CD 27 29  " ')"  call L2927
-273A : D5  " "  push de
-273B : 0E 80  "  "  ld c,080H
-273D : 11 FF FF  "   "  ld de,0FFFFH
-2740 : CD 27 29  " ')"  call L2927
-2743 : E3  " "  ex (sp),hl
-2744 : AF  " "  xor a
-2745 : EB  " "  ex de,hl
-2746 : E7  " "  rst COMPAR
-2747 : 3E 00  "> "  ld a,000H
-2749 : D2 5B 27  " ['"  jp nc,L275B
-274C : 3D  "="  dec a
-274D : EB  " "  ex de,hl
-274E : F5  " "  push af
-274F : 3A 19 39  ": 9"  ld a,(X3919)
-2752 : 4F  "O"  ld c,a
-2753 : 07  " "  rlca
-2754 : 07  " "  rlca
-2755 : B1  " "  or c
-2756 : 0F  " "  rrca
-2757 : 32 19 39  "2 9"  ld (X3919),a
-275A : F1  " "  pop af
-275B    L275B:
-275B : 32 1C 39  "2 9"  ld (X391C),a
-275E : EB  " "  ex de,hl
-275F : 22 23 39  ""#9"  ld (X3923),hl
-2762 : EB  " "  ex de,hl
-2763 : 22 17 39  "" 9"  ld (X3917),hl
-2766 : E1  " "  pop hl
-2767 : 2B  "+"  dec hl
-2768 : D7  " "  rst CHRGET
-2769 : C2 7E 27  " ~'"  jp nz,L277E
-276C : E5  " "  push hl
-276D : CD 6F 2D  " o-"  call L2D6F
-2770 : 7C  "|"  ld a,h
-2771 : B7  " "  or a
-2772 : CA 9E 27  "  '"  jp z,L279E
-2775 : 3E 01  "> "  ld a,001H
-2777 : 32 25 39  "2%9"  ld (X3925),a
-277A : EB  " "  ex de,hl
-277B : C3 9E 27  "  '"  jp L279E
-    ;
-277E    L277E:
-277E : CF  " "  rst SYNCHK
-277F : 2C  ","  inc l
-2780 : CD 85 09  "   "  call FRMEVL
-2783 : E5  " "  push hl
-2784 : CD 75 09  " u "  call CHKNUM
-2787 : CD 79 29  " y)"  call L2979
-278A : C2 94 27  "  '"  jp nz,L2794
-278D : 3C  "<"  inc a
-278E : 32 25 39  "2%9"  ld (X3925),a
-2791 : CD 2F 14  " / "  call FDIV
-2794    L2794:
-2794 : 21 E7 38  "! 8"  ld hl,X38E7
-2797 : 7E  "~"  ld a,(hl)
-2798 : C6 08  "  "  add a,008H
-279A : 77  "w"  ld (hl),a
-279B : CD 04 23  "  #"  call L2304
-279E    L279E:
-279E : 22 15 39  "" 9"  ld (X3915),hl
-27A1 : 11 00 00  "   "  ld de,00000H
-27A4 : EB  " "  ex de,hl
-27A5 : 22 21 39  ""!9"  ld (X3921),hl
-27A8 : EB  " "  ex de,hl
-27A9 : 2A 03 39  "* 9"  ld hl,(X3903)
-27AC : 29  ")"  add hl,hl
-27AD    L27AD:
-27AD : CD 25 1A  " % "  call ISCNTC
-27B0 : 7B  "{"  ld a,e
-27B1 : 1F  " "  rra
-27B2 : DA CB 27  "  '"  jp c,L27CB
-27B5 : D5  " "  push de
-27B6 : E5  " "  push hl
-27B7 : 23  "#"  inc hl
-27B8 : EB  " "  ex de,hl
-27B9 : CD F0 26  "  &"  call L26F0
-27BC : EB  " "  ex de,hl
-27BD : 13  " "  inc de
-27BE : CD F0 26  "  &"  call L26F0
-27C1 : CD FC 27  "  '"  call L27FC
-27C4 : D1  " "  pop de
-27C5 : E1  " "  pop hl
-27C6 : E7  " "  rst COMPAR
-27C7 : D2 F8 26  "  &"  jp nc,L26F8
-27CA : EB  " "  ex de,hl
-27CB    L27CB:
-27CB : 44  "D"  ld b,h
-27CC : 4D  "M"  ld c,l
-27CD : 2A 21 39  "*!9"  ld hl,(X3921)
-27D0 : 23  "#"  inc hl
-27D1 : 19  " "  add hl,de
-27D2 : 19  " "  add hl,de
-27D3 : 7C  "|"  ld a,h
-27D4 : 87  " "  add a,a
-27D5 : DA E7 27  "  '"  jp c,L27E7
-27D8 : D5  " "  push de
-27D9 : EB  " "  ex de,hl
-27DA : 60  "`"  ld h,b
-27DB : 69  "i"  ld l,c
-27DC : 29  ")"  add hl,hl
-27DD : 2B  "+"  dec hl
-27DE : EB  " "  ex de,hl
-27DF : 7D  "}"  ld a,l
-27E0 : 93  " "  sub e
-27E1 : 6F  "o"  ld l,a
-27E2 : 7C  "|"  ld a,h
-27E3 : 9A  " "  sbc a,d
-27E4 : 67  "g"  ld h,a
-27E5 : 0B  " "  dec bc
-27E6 : D1  " "  pop de
-27E7    L27E7:
-27E7 : 22 21 39  ""!9"  ld (X3921),hl
-27EA : 60  "`"  ld h,b
-27EB : 69  "i"  ld l,c
-27EC : 13  " "  inc de
-27ED : C3 AD 27  "  '"  jp L27AD
-    ;
-27F0    L27F0:
-27F0 : D5  " "  push de
-27F1 : CD F7 28  "  ("  call L28F7
-27F4 : E1  " "  pop hl
-27F5 : 3A 25 39  ":%9"  ld a,(X3925)
-27F8 : B7  " "  or a
-27F9 : C8  " "  ret z
-27FA : EB  " "  ex de,hl
-27FB : C9  " "  ret
-    ;
-27FC    L27FC:
-27FC : EB  " "  ex de,hl
-27FD : 22 1D 39  "" 9"  ld (X391D),hl
-2800 : EB  " "  ex de,hl
-2801 : E5  " "  push hl
-2802 : 21 00 00  "!  "  ld hl,00000H
-2805 : 22 1F 39  "" 9"  ld (X391F),hl
-2808 : CD F0 27  "  '"  call L27F0
-280B : 22 29 39  "")9"  ld (X3929),hl
-280E : E1  " "  pop hl
-280F : EB  " "  ex de,hl
-2810 : E5  " "  push hl
-2811 : CD F0 27  "  '"  call L27F0
-2814 : EB  " "  ex de,hl
-2815 : 22 2B 39  ""+9"  ld (X392B),hl
-2818 : EB  " "  ex de,hl
-2819 : D1  " "  pop de
-281A : CD FA 26  "  &"  call L26FA
-281D : CD 44 28  " D("  call L2844
-2820 : E5  " "  push hl
-2821 : D5  " "  push de
-2822 : 2A 1A 39  "* 9"  ld hl,(X391A)
-2825 : 22 1F 39  "" 9"  ld (X391F),hl
-2828 : EB  " "  ex de,hl
-2829 : 2A 1D 39  "* 9"  ld hl,(X391D)
-282C : EB  " "  ex de,hl
-282D : 7D  "}"  ld a,l
-282E : 93  " "  sub e
-282F : 6F  "o"  ld l,a
-2830 : 7C  "|"  ld a,h
-2831 : 9A  " "  sbc a,d
-2832 : 67  "g"  ld h,a
-2833 : 22 1D 39  "" 9"  ld (X391D),hl
-2836 : 2A 29 39  "*)9"  ld hl,(X3929)
-2839 : CD BB 25  "  %"  call L25BB
-283C : 22 29 39  "")9"  ld (X3929),hl
-283F : D1  " "  pop de
-2840 : E1  " "  pop hl
-2841 : CD FA 26  "  &"  call L26FA
-2844    L2844:
-2844 : 3E 04  "> "  ld a,004H
-2846    L2846:
-2846 : F5  " "  push af
-2847 : E5  " "  push hl
-2848 : D5  " "  push de
-2849 : E5  " "  push hl
-284A : D5  " "  push de
-284B : EB  " "  ex de,hl
-284C : 2A 1F 39  "* 9"  ld hl,(X391F)
-284F : EB  " "  ex de,hl
-2850 : 2A 1A 39  "* 9"  ld hl,(X391A)
-2853 : 29  ")"  add hl,hl
-2854 : 19  " "  add hl,de
-2855 : 22 1F 39  "" 9"  ld (X391F),hl
-2858 : 2A 1D 39  "* 9"  ld hl,(X391D)
-285B : 19  " "  add hl,de
-285C : EB  " "  ex de,hl
-285D : 2A 23 39  "*#9"  ld hl,(X3923)
-2860 : E7  " "  rst COMPAR
-2861 : CA 85 28  "  ("  jp z,L2885
-2864 : D2 71 28  " q("  jp nc,L2871
-2867 : 2A 17 39  "* 9"  ld hl,(X3917)
-286A : E7  " "  rst COMPAR
-286B : CA 7B 28  " {("  jp z,L287B
-286E : D2 97 28  "  ("  jp nc,L2897
-2871    L2871:
-2871 : 3A 1C 39  ": 9"  ld a,(X391C)
-2874 : B7  " "  or a
-2875 : C2 A3 28  "  ("  jp nz,L28A3
-2878 : C3 9E 28  "  ("  jp L289E
-    ;
-287B    L287B:
-287B : 3A 19 39  ": 9"  ld a,(X3919)
-287E : 87  " "  add a,a
-287F : D2 A3 28  "  ("  jp nc,L28A3
-2882 : C3 8C 28  "  ("  jp L288C
-    ;
-2885    L2885:
-2885 : 3A 19 39  ": 9"  ld a,(X3919)
-2888 : 1F  " "  rra
-2889 : D2 A3 28  "  ("  jp nc,L28A3
-288C    L288C:
-288C : D1  " "  pop de
-288D : E1  " "  pop hl
-288E : CD E7 28  "  ("  call L28E7
-2891 : CD D8 28  "  ("  call L28D8
-2894 : C3 B4 28  "  ("  jp L28B4
-    ;
-2897    L2897:
-2897 : 3A 1C 39  ": 9"  ld a,(X391C)
-289A : B7  " "  or a
-289B : CA A3 28  "  ("  jp z,L28A3
-289E    L289E:
-289E : D1  " "  pop de
-289F : E1  " "  pop hl
-28A0 : C3 B4 28  "  ("  jp L28B4
-    ;
-28A3    L28A3:
-28A3 : D1  " "  pop de
-28A4 : E1  " "  pop hl
-28A5 : CD E7 28  "  ("  call L28E7
-28A8 : CD 2B 2E  " +."  call L2E2B
-28AB : D2 B4 28  "  ("  jp nc,L28B4
-28AE : CD FD 2D  "  -"  call L2DFD
-28B1 : CD 99 2D  "  -"  call L2D99
-28B4    L28B4:
-28B4 : D1  " "  pop de
-28B5 : E1  " "  pop hl
-28B6 : F1  " "  pop af
-28B7 : 3D  "="  dec a
-28B8 : C8  " "  ret z
-28B9 : F5  " "  push af
-28BA : D5  " "  push de
-28BB : EB  " "  ex de,hl
-28BC : 2A 29 39  "*)9"  ld hl,(X3929)
-28BF : EB  " "  ex de,hl
-28C0 : CD FA 26  "  &"  call L26FA
-28C3 : 22 29 39  "")9"  ld (X3929),hl
-28C6 : EB  " "  ex de,hl
-28C7 : D1  " "  pop de
-28C8 : E5  " "  push hl
-28C9 : 2A 2B 39  "*+9"  ld hl,(X392B)
-28CC : EB  " "  ex de,hl
-28CD : 22 2B 39  ""+9"  ld (X392B),hl
-28D0 : CD FA 26  "  &"  call L26FA
-28D3 : E1  " "  pop hl
-28D4 : F1  " "  pop af
-28D5 : C3 46 28  " F("  jp L2846
-    ;
-28D8    L28D8:
-28D8 : 2A 09 39  "* 9"  ld hl,(X3909)
-28DB : 22 03 39  "" 9"  ld (X3903),hl
-28DE : 2A 07 39  "* 9"  ld hl,(X3907)
-28E1 : 22 05 39  "" 9"  ld (X3905),hl
-28E4 : C3 7B 26  " {&"  jp L267B
-    ;
-28E7    L28E7:
-28E7 : D5  " "  push de
-28E8 : EB  " "  ex de,hl
-28E9 : 2A 09 39  "* 9"  ld hl,(X3909)
-28EC : EB  " "  ex de,hl
-28ED : 19  " "  add hl,de
-28EE : 44  "D"  ld b,h
-28EF : 4D  "M"  ld c,l
-28F0 : D1  " "  pop de
-28F1 : 2A 07 39  "* 9"  ld hl,(X3907)
-28F4 : 19  " "  add hl,de
-28F5 : EB  " "  ex de,hl
-28F6 : C9  " "  ret
-    ;
-28F7    L28F7:
-28F7 : 2A 15 39  "* 9"  ld hl,(X3915)
-28FA : 7D  "}"  ld a,l
-28FB    L28FB:
-28FB : B7  " "  or a
-28FC : C2 03 29  "  )"  jp nz,L2903
-28FF : B4  " "  or h
-2900 : C0  " "  ret nz
-2901 : EB  " "  ex de,hl
-2902 : C9  " "  ret
-    ;
-2903    L2903:
-2903 : 4A  "J"  ld c,d
-2904 : 16 00  "  "  ld d,000H
-2906 : F5  " "  push af
-2907 : CD 17 29  "  )"  call L2917
-290A : 1E 80  "  "  ld e,080H
-290C : 19  " "  add hl,de
-290D : 59  "Y"  ld e,c
-290E : 4C  "L"  ld c,h
-290F : F1  " "  pop af
-2910 : CD 17 29  "  )"  call L2917
-2913 : 59  "Y"  ld e,c
-2914 : 19  " "  add hl,de
-2915 : EB  " "  ex de,hl
-2916 : C9  " "  ret
-    ;
-2917    L2917:
-2917 : 06 08  "  "  ld b,008H
-2919 : 21 00 00  "!  "  ld hl,00000H
-291C    L291C:
-291C : 29  ")"  add hl,hl
-291D : 87  " "  add a,a
-291E : D2 22 29  " ")"  jp nc,L2922
-2921 : 19  " "  add hl,de
-2922    L2922:
-2922 : 05  " "  dec b
-2923 : C2 1C 29  "  )"  jp nz,L291C
-2926 : C9  " "  ret
-    ;
-2927    L2927:
-2927 : 2B  "+"  dec hl
-2928 : D7  " "  rst CHRGET
-2929 : C8  " "  ret z
-292A : CF  " "  rst SYNCHK
-292B : 2C  ","  inc l
-292C : FE 2C  " ,"  cp 02CH
-292E : C8  " "  ret z
-292F : C5  " "  push bc
-2930 : CD 85 09  "   "  call FRMEVL
-2933 : E3  " "  ex (sp),hl
-2934 : E5  " "  push hl
-2935 : CD 75 09  " u "  call CHKNUM
-2938 : C1  " "  pop bc
-2939 : 21 E7 38  "! 8"  ld hl,X38E7
-293C : 7E  "~"  ld a,(hl)
-293D : B7  " "  or a
-293E : CA 50 29  " P)"  jp z,L2950
-2941 : 2B  "+"  dec hl
-2942 : 7E  "~"  ld a,(hl)
-2943 : B7  " "  or a
-2944 : F2 50 29  " P)"  jp p,L2950
-2947 : E6 7F  "  "  and 07FH
-2949 : 77  "w"  ld (hl),a
-294A : 21 19 39  "! 9"  ld hl,X3919
-294D : 7E  "~"  ld a,(hl)
-294E : B1  " "  or c
-294F : 77  "w"  ld (hl),a
-2950    L2950:
-2950 : 01 22 7E  " "~"  ld bc,07E22H
-2953 : 11 83 F9  "   "  ld de,0F983H
-2956 : CD CB 13  "   "  call FMULT
-2959 : CD 79 29  " y)"  call L2979
-295C : CA 97 06  "   "  jp z,FCERR
-295F : CD 13 15  "   "  call PUSHF
-2962 : 2A 1A 39  "* 9"  ld hl,(X391A)
-2965 : 29  ")"  add hl,hl
-2966 : 29  ")"  add hl,hl
-2967 : 29  ")"  add hl,hl
-2968 : CD 20 23  "  #"  call L2320
-296B : CD 75 09  " u "  call CHKNUM
-296E : C1  " "  pop bc
-296F : D1  " "  pop de
-2970 : CD CB 13  "   "  call FMULT
-2973 : CD 04 23  "  #"  call L2304
-2976 : D1  " "  pop de
-2977 : EB  " "  ex de,hl
-2978 : C9  " "  ret
-    ;
-2979    L2979:
-2979 : 01 00 81  "   "  ld bc,08100H
-297C : 11 00 00  "   "  ld de,00000H
-297F : CD 5B 15  " [ "  call FCOMP
-2982 : 3D  "="  dec a
-2983 : C9  " "  ret
+26FA    
+26FA : EB         [GWB] NEGDE:  ex      de,hl           ;;DE = 0 - DE
+26FB : CD BB 25                 call    NEGHL
+26FE : EB                       ex      de,hl
+26FF : C9                       ret
+2700
+2700 : CD 47 25   [GWB] CIRCLE: call    SCAN1           ;[GWB] GET (X,Y) OF CENTER INTO GRPACX,Y
+2703 : CF                       rst     SYNCHK
+2704 : 2C                       byte    ','             ;[GWB] EAT COMMA
+2705 : CD 73 23                 call    GETIN2          ;[GWB] GET THE RADIUS
+2708 : 7A                       ld      a,d
+2709 : B7                       or      a
+270A : FA 97 06                 jp      m,FCERR
+270D : E5                       push    hl              ;[GWB] SAVE TXTPTR
+270E : EB                       ex      de,hl
+270F : 22 03 39                 ld      (GXPOS),hl      ;[GWB] SAVE HERE TILL START OF MAIN LOOP
+2712 : CD 20 23                 call    MAKINT          ;[GWB] PUT INTEGER INTO FAC
+2715 : CD 75 09                 call    CHKNUM          ;[M65] MUST BE NUMBER
+2718 : 01 35 80                 ld      bc,$8035        ;[GWB] LOAD REGS WITH SQR(2)/2
+271B : 11 F3 04                 ld      de,$04F3        
+271E : CD CB 13                 call    FMULT           ;[GWB] DO FLOATING PT MULTIPLY
+2721 : CD 04 23                 call    FRCINX          ;[GWB] CONVERT TO INTEGER & GET INTO [HL]
+2724 : 22 1A 39                 ld      (CNPNTS),hl     ;[GWB] CNPNTS=RADIUS*SQR(2)/2=# PTS TO PLOT
+2727 : AF                       xor     a               ;[GWB] ZERO OUT CLINEF - NO LINES TO CENTER
+2728 : 32 19 39                 ld      (CLINEF),a
+272B : 32 25 39                 ld      (CSCLXY),a
+272E : E1                       pop     hl              ;[GWB] REGET TXTPTR
+272F : CD 90 25                 call    ATRSCN          ;[GWB] SCAN POSSIBLE ATTRIBUTE
+2732 : 0E 01                    ld      c,1             ;[GWB] SET LO BIT IN CLINEF FOR LINE TO CNTR
+2734 : 11 00 00                 ld      de,0            ;[GWB] DEFAULT START COUNT = 0
+2737 : CD 27 29                 call    CGTCNT           
+273A : D5                       push    de              ;[GWB] SAVE COUNT FOR LATER COMPARISON
+273B : 0E 80                    ld      c,128           ;[GWB] SET HI BIT IN CLINEF FOR LINE TO CNTR
+273D : 11 FF FF                 ld      de,0-1          ;[GWB] DEFAULT END COUNT = INFINITY
+2740 : CD 27 29                 call    CGTCNT           
+2743 : E3                       ex      (sp),hl         ;[GWB] GET START COUNT, PUSH TXTPTR TILL DONE
+2744 : AF                       xor     a               
+2745 : EB                       ex      de,hl           ;[GWB] REVERSE REGS TO TEST FOR .LT.
+2746 : E7                       rst     COMPAR          ;[GWB] SEE IF END .GE. START
+2747 : 3E 00                    ld      a,0          
+2749 : D2 5B 27                 jp      nc,CSTPLT       ;[GWB] YES, PLOT POINTS BETWEEN STRT & END
+274C : 3D                       dec     a               ;[GWB] PLOT POINTS ABOVE & BELOW
+274D : EB                       ex      de,hl           ;[GWB] SWAP START AND END SO START .LT. END
+274E : F5                       push    af              ;[GWB] Swap sense of center line flags
+274F : 3A 19 39                 ld      a,(CLINEF)      
+2752 : 4F                       ld      c,a             
+2753 : 07                       rlca                    
+2754 : 07                       rlca                    
+2755 : B1                       or      c               
+2756 : 0F                       rrca                    
+2757 : 32 19 39                 ld      (CLINEF),a      ;[GWB] Store swapped flags
+275A : F1                       pop     af              
+275B    
+275B : 32 1C 39   [GWB] CSTPLT: ld      (CPLOTF),a      ;[GWB] SET UP PLOT POLARITY FLAG
+275E : EB                       ex      de,hl           
+275F : 22 23 39                 ld      (CSTCNT),hl     ;STORE START COUNT
+2762 : EB                       ex      de,hl           
+2763 : 22 17 39                 ld      (CENCNT),hl     ;[GWB] AND END COUNT
+2766 : E1                       pop     hl              ;[GWB] GET TXTPTR
+2767 : 2B                       dec     hl              ;[GWB] NOW SEE IF LAST CHAR WAS A COMMA
+2768 : D7                       rst     CHRGET          
+2769 : C2 7E 27                 jp      nz,CIRC1        ;[GWB] SOMETHING THERE
+276C : E5                       push    hl              ;[GWB] SAVE TXTPTR
+276D : CD 6F 2D                 call    GTASPC          ;[GWB] GET DEFAULT ASPECT RATIO INTO [HL]
+2770 : 7C                       ld      a,h             
+2771 : B7                       or      a               ;[GWB] IS ASPECT RATIO GREATER THAN ONE?
+2772 : CA 9E 27                 jp      z,CIRC2         ;[GWB] BRIF GOOD ASPECT RATIO
+2775 : 3E 01                    ld      a,1          
+2777 : 32 25 39                 ld      (CSCLXY),a      
+277A : EB                       ex      de,hl           ;[GWB] ASPECT RATIO IS GREATER THAN ONE, USE INVERSE
+277B : C3 9E 27                 jp      CIRC2           ;[GWB] NOW GO CONVERT TO FRACTION OF 256
+277E                                                    
+277E : CF         [GWB] CIRC1:  rst     SYNCHK          ;[GWB] EAT COMMA
+277F : 2C                       byte    ','             
+2780 : CD 85 09                 call    FRMEVL          ;[GWB] EVALUATE A FORMULA
+2783 : E5                       push    hl              ;[GWB] SAVE TXTPTR
+2784 : CD 75 09                 call    CHKNUM          ;[M65] MUST BE NUMBER
+2787 : CD 79 29                 call    CMPONE          ;[GWB] SEE IF GREATER THAN ONE
+278A : C2 94 27                 jp      nz,CIRC11       ;[GWB] LESS THAN ONE - SCALING Y
+278D : 3C                       inc     a               ;[GWB] MAKE [A] NZ
+278E : 32 25 39                 ld      (CSCLXY),a      ;[GWB] FLAG SCALING X
+2791 : CD 2F 14                 call    FDIV            ;[GWB] RATIO = 1/RATIO, MAKE NUMBER FRACTION OF 256
+2794                     
+2794 : 21 E7 38   [GWB] CIRC11: ld      hl,FAC          ;[GWB] BY MULTIPLYING BY 2^8 (256)
+2797 : 7E                       ld      a,(hl)               
+2798 : C6 08                    add     a,8             ;[GWB] ADD 8 TO EXPONENT
+279A : 77                       ld      (hl),a               
+279B : CD 04 23                 call    FRCINX          ;[GWB] MAKE IT AN INTEGER IN [HL]
+279E : 22 15 39   [GWB] CIRC2:  ld    (ASPECT),hl       ;[GWB] STORE ASPECT RATIO
+271A1                   
+271A1                +  ;[GWB]       CIRCLE ALGORITHM
+271A1                |  ;[GWB]
+271A1                |  ;[GWB]       [HL]=X=RADIUS * 2 (ONE BIT FRACTION FOR ROUNDING)
+271A1                |  ;[GWB]       [DE]=Y=0
+271A1                |  ;[GWB]       SUM =0
+271A1                |  ;[GWB] LOOP: IF Y IS EVEN THEN
+271A1                |  ;[GWB]             REFLECT((X+1)/2,(Y+1)/2) (I.E., PLOT POINTS)
+271A1                |  ;[GWB]             IF X.LT.Y THEN EXIT
+271A1                |  ;[GWB]       SUM=SUM+2*Y+1
+271A1                |  ;[GWB]       Y=Y+1
+271A1                |  ;[GWB]       IF SUM.GGWGRP.RNO
+271A1                |  ;[GWB]             SUM=SUM-2*X+1
+271A1                |  ;[GWB]             X=X-1
+271A1                |  ;[GWB]       ENDIF
+271A1                |  ;[GWB]       GOTO LOOP
+271A1                |  ;[GWB]
+27A1 : 11 00 00                 ld      de,0            ;[GWB] INIT Y = 0
+27A4 : EB                       ex      de,hl                
+27A5 : 22 21 39                 ld      (CRCSUM),hl     ;[GWB] SUM = 0
+27A8 : EB                       ex      de,hl                
+27A9 : 2A 03 39                 ld      hl,(GXPOS)      ;[GWB] X = RADIUS*2
+27AC : 29                       add     hl,hl               
+27AD    
+27AD : CD 25 1A   [GWB] CIRCLP: call    ISCNTC          ;[M80] CHECK FOR CONTROL-C
+27B0 : 7B                       ld      a,e             ;[GWB] TEST EVENNESS OF Y
+27B1 : 1F                       rra                     ;[GWB] TO SEE IF WE NEED TO PLOT
+27B2 : DA CB 27                 jp      c,CRCLP2        ;[GWB] Y IS ODD - DON'T TEST OR PLOT
+27B5 : D5                       push    de              ;[GWB] SAVE Y AND X
+27B6 : E5                       push    hl              
+27B7 : 23                       inc     hl              ;[GWB] ACTUAL COORDS ARE (X+1)/2,(Y+1)/2
+27B8 : EB                       ex      de,hl           
+27B9 : CD F0 26                 call    HLFHL           ;[GWB] (PLUS ONE BEFORE DIVIDE TO ROUND UP)
+27BC : EB                       ex      de,hl           
+27BD : 13                       inc     de              
+27BE : CD F0 26                 call    HLFHL           
+27C1 : CD FC 27                 call    CPLOT8          
+27C4 : D1                       pop     de              ;[GWB] RESTORE X AND Y
+27C5 : E1                       pop     hl              ;[GWB] INTO [DE] AND [HL] (BACKWARDS FOR CMP)
+27C6 : E7                       rst     COMPAR          ;[GWB] QUIT IF Y .GE. X
+27C7 : D2 F8 26                 jp      nc,POPTRT       ;[GWB] GO POP TXTPTR AND QUIT
+27CA : EB                       ex      de,hl           ;[GWB] GET OFFSETS INTO PROPER REGISTERS
+27CB : 44         [GWB] CRCLP2: ld      b,h             ;[GWB] [BC]=X
+27CC : 4D                       ld      c,l             
+27CD : 2A 21 39                 ld      hl,(CRCSUM)     
+27D0 : 23                       inc     hl              ;[GWB] SUM = SUM+2*Y+1
+27D1 : 19                       add     hl,de           
+27D2 : 19                       add     hl,de           
+27D3 : 7C                       ld      a,h             ;[GWB] NOW CHECK SIGN OF RESULT
+27D4 : 87                       add     a,a             
+27D5 : DA E7 27                 jp      c,CNODEX        ;[GWB] DON'T ADJUST X IF WAS NEGATIVE
+27D8 : D5                       push    de              ;[GWB] SAVE Y
+27D9 : EB                       ex      de,hl           ;[GWB] [DE]=SUM
+27DA : 60                       ld      h,b             ;[GWB] [HL]=X
+27DB : 69                       ld      l,c             ;[GWB] [HL]=2*X-1
+27DC : 29                       add     hl,hl           
+27DD : 2B                       dec     hl              
+27DE : EB                       ex      de,hl           ;[GWB] PREPARE TO SUBTRACT
+27DF : 7D                       ld      a,l             ;[GWB] CALC SUM-2*X+1
+27E0 : 93                       sub     e               
+27E1 : 6F                       ld      l,a             
+27E2 : 7C                       ld      a,h             
+27E3 : 9A                       sbc     a,d             
+27E4 : 67                       ld      h,a             
+27E5 : 0B                       dec     bc              ;[GWB] X=X-1
+27E6 : D1                       pop     de              ;[GWB] GET Y BACK
+27E7 : 22 21 39   [GWB] CNODEX: ld (CRCSUM),hl          ;[GWB] UPDATE CIRCLE SUM
+27EA : 60                       ld h,b                  ;[GWB] GET X BACK TO [HL]
+27EB : 69                       ld l,c                  
+27EC : 13                       inc de                  ;[GWB] Y=Y+1
+27ED : C3 AD 27  "              jp CIRCLP               
+27F0    
+27F0 : D5         [GWB] CPLSCX: push    de              
+27F1 : CD F7 28                 call    SCALEY           
+27F4 : E1                       pop     hl              ;[GWB] GET UNSCALED INTO [HL]
+27F5 : 3A 25 39                 ld      a,(CSCLXY)      ;[GWB] SEE WHETHER ASPECT WAS .GT. 1
+27F8 : B7                       or      a               
+27F9 : C8                       ret     z               ;[GWB] DON'T SWAP IF ZERO
+27FA : EB                       ex      de,hl           
+27FB : C9                       ret                     
+27FC    
+27FC                  + ;[GWB]
+27FC                  | ;[GWB] REFLECT THE POINTS AROUND CENTER
+27FC                  | ;[GWB] [HL]=X OFFSET FROM CENTER, [DE]=Y OFFSET FROM CENTER
+27FC                  | ;[GWB]
+27FC : EB         [GWB] CPLOT8: ex      de,hl           
+27FD : 22 1D 39                 ld      (CPCNT),hl      ;[GWB] POINT COUNT IS ALWAYS = Y
+2800 : EB                       ex      de,hl           
+2801 : E5                       push    hl              ;[GWB] SAVE X
+2802 : 21 00 00                 ld      hl,0            ;[GWB] START CPCNT8 OUT AT 0
+2805 : 22 1F 39                 ld      (CPCNT8),hl      
+2808 : CD F0 27                 call    CPLSCX          ;[GWB] SCALE Y AS APPROPRIATE
+280B : 22 29 39                 ld      (CXOFF),hl      ;[GWB] SAVE CXOFF
+280E : E1                       pop     hl              ;[GWB] GET BACK X
+280F : EB                       ex      de,hl           
+2810 : E5                       push    hl              ;[GWB] SAVE INITIAL [DE]
+2811 : CD F0 27                 call    CPLSCX          ;[GWB] SCALE X AS APPROPRIATE
+2814 : EB                       ex      de,hl           
+2815 : 22 2B 39                 ld      (CYOFF),hl      
+2818 : EB                       ex      de,hl           
+2819 : D1                       pop     de              ;[GWB] GET BACK INITIAL [DE]
+281A : CD FA 26                 call    NEGDE           ;[GWB] START: [DE]=-Y,[HL]=X,CXOFF=Y,CY=X
+281D : CD 44 28                 call    CPLOT4          ;[GWB] PLOT +X,-SY -Y,-SX -X,+SY +Y,-SX
+2820 : E5                       push    hl              
+2821 : D5                       push    de              
+2822 : 2A 1A 39                 ld      hl,(CNPNTS)     ;[GWB] GET # PNTS PER OCTANT
+2825 : 22 1F 39                 ld      (CPCNT8),hl     ;[GWB] AND SET FOR DOING ODD OCTANTS
+2828 : EB                       ex      de,hl           
+2829 : 2A 1D 39                 ld      hl,(CPCNT)      ;[GWB] GET POINT COUNT
+282C : EB                       ex      de,hl           
+282D : 7D                       ld      a,l             ;[GWB] ODD OCTANTS ARE BACKWARDS SO
+282E : 93                       sub     e               ;[GWB] PNTCNT = PNTS/OCT - PNTCN
+282F : 6F                       ld      l,a             
+2830 : 7C                       ld      a,h             
+2831 : 9A                       sbc     a,d             
+2832 : 67                       ld      h,a             
+2833 : 22 1D 39                 ld      (CPCNT),hl      ;[GWB] PNTCNT = PNTS/OCT - PNTCNT
+2836 : 2A 29 39                 ld      hl,(CXOFF)      ;[GWB] NEED TO NEGATE CXOFF TO START OUT RIGHT
+2839 : CD BB 25                 call    NEGHL           
+283C : 22 29 39                 ld      (CXOFF),hl      
+283F : D1                       pop     de              
+2840 : E1                       pop     hl              
+2841 : CD FA 26                 call    NEGDE           ;[GWB] ALSO NEED TO MAKE [DE]=-SX=-[DE], PLOT +Y,-SX -X,-SY -Y,+SX +X,+SY
+2844                                                    ;[GWB] (FALL THRU TO CPLOT4)
+2844 : 3E 04      [GWB] CPLOT4: ld      a,4             ;[GWB] LOOP FOUR TIMES
+2846    
+2846 : F5         [GWB] CPLOT:  push    af              ;[GWB] SAVE LOOP COUNT
+2847 : E5                       push    hl              ;[GWB] SAVE BOTH X & Y OFFSETS
+2848 : D5                       push    de              
+2849 : E5                       push    hl              ;[GWB] SAVE TWICE
+284A : D5                       push    de              
+284B : EB                       ex      de,hl           
+284C : 2A 1F 39                 ld      hl,(CPCNT8)     ;[GWB] GET NP*OCTANT*8
+284F : EB                       ex      de,hl           
+2850 : 2A 1A 39                 ld      hl,(CNPNTS)     ;[GWB] ADD SQR(2)*RADIUS FOR NEXT OCTANT
+2853 : 29                       add     hl,hl           
+2854 : 19                       add     hl,de           
+2855 : 22 1F 39                 ld      (CPCNT8),hl     ;[GWB] UPDATE FOR NEXT TIME
+2858 : 2A 1D 39                 ld      hl,(CPCNT)      ;[GWB] CALC THIS POINT'S POINT COUNT
+285B : 19                       add     hl,de           ;[GWB] ADD IN PNTCNT*OCTANT*NP
+285C : EB                       ex      de,hl           ;[GWB] SAVE THIS POINT'S COUNT IN [DE]
+285D : 2A 23 39                 ld      hl,(CSTCNT)     ;[GWB] GET START COUNT
+2860 : E7                       rst     COMPAR          
+2861 : CA 85 28                 jp      z,CLINSC        ;[GWB] SEE IF LINE TO CENTER REQUIRED
+2864 : D2 71 28                 jp      nc,CNBTWN       ;[GWB] IF SC .GT. PC, THEN NOT BETWEEN
+2867 : 2A 17 39                 ld      hl,(CENCNT)     ;[GWB] GET END COUNT
+286A : E7                       rst     COMPAR          
+286B : CA 7B 28                 jp      z,CLINEC        ;[GWB] GO SEE IF LINE FROM CENTER NEEDED
+286E : D2 97 28                 jp      nc,CBTWEN       ;[GWB] IF EC .GT. PC, THEN BETWEEN
+2871    
+2871 : 3A 1C 39   [GWB] CNBTWN: ld      a,(CPLOTF)      ;[GWB] SEE WHETHER TO PLOT OR NOT
+2874 : B7                       or      a               ;[GWB] IF NZ, PLOT POINTS NOT IN BETWEEN
+2875 : C2 A3 28                 jp      nz,CPLTIT       ;[GWB] NEED TO PLOT NOT-BETWEEN POINTS
+2878 : C3 9E 28                 jp      GCPLFN          ;[GWB] DON'T PLOT - FIX UP STACK & RETURN
+287B    
+287B : 3A 19 39   [GWB] CLINEC: ld      a,(CLINEF)      ;[GWB] GET CENTER LINE FLAG BYTE
+287E : 87                       add     a,a             ;[GWB] BIT 7=1 MEANS DRAW LINE FROM CENTER
+287F : D2 A3 28                 jp      nc,CPLTIT       ;[GWB] NO LINE REQUIRED - JUST PLOT POINT
+2882 : C3 8C 28                 jp      CLINE           ;[GWB] LINE REQUIRED.
+2885    
+2885 : 3A 19 39   [GWB] CLINSC: ld      a,(CLINEF)      ;[GWB] GET CENTER LINE FLAG BYTE
+2888 : 1F                       rra                     ;[GWB] BIT 0=1 MEANS LINE FROM CENTER NEEDED.
+2889 : D2 A3 28                 jp      nc,CPLTIT       ;[GWB] NO LINE REQUIRED - JUST PLOT POINT
+288C    
+288C : D1         [GWB] CLINE:  pop     de              ;[GWB] GET X & Y OFFSETS
+288D : E1                       pop     hl              
+288E : CD E7 28                 call    GTABSC          ;[GWB] GO CALC TRUE COORDINATE OF POINT
+2891 : CD D8 28                 call    CLINE2          ;[GWB] DRAW LINE FROM [BC],[DE] TO CENTER
+2894 : C3 B4 28                 jp      CPLFIN          
+2897                                                     
+2897 : 3A 1C 39   [GWB] CBTWEN: ld      a,(CPLOTF)      ;[GWB] SEE WHETHER PLOTTING BETWEENS OR NOT
+289A : B7                       or      a               
+289B : CA A3 28                 jp      z,CPLTIT        ;[GWB] IF Z, THEN DOING BETWEENS
+289E : D1         [GWB] GCPLFN: pop     de              ;[GWB] CLEAN UP STACK
+289F : E1                       pop     hl              
+28A0 : C3 B4 28                 jp      CPLFIN          
+28A3    
+28A3 : D1         [GWB] CPLTIT: pop     de              ;[GWB] GET X & Y OFFSETS
+28A4 : E1                       pop     hl              
+28A5 : CD E7 28                 call    GTABSC          ;[GWB] CALC TRUE COORDINATE OF POINT
+28A8 : CD 2B 2E                 call    SCALXY          ;[GWB] SEE IF POINT OFF SCREEN
+28AB : D2 B4 28                 jp      nc,CPLFIN       ;[GWB] NC IF POINT OFF SCREEN - NO PLOT
+28AE : CD FD 2D                 call    MAPXYC          
+28B1 : CD 99 2D                 call    SETC            ;[GWB] PLOT THE POINT
+28B4    
+28B4 : D1         [GWB] CPLFIN: pop     de              ;[GWB] GET BACK OFFSETS
+28B5 : E1                       pop     hl              
+28B6 : F1                       pop     af              ;[GWB] GET BACK LOOP COUNT
+28B7 : 3D                       dec     a               
+28B8 : C8                       ret     z               ;[GWB] QUIT IF DONE.
+28B9 : F5                       push    af              ;[GWB]  PUSH PSW
+28BA : D5                       push    de              ;[GWB] SAVE X OFFSET
+28BB : EB                       ex      de,hl           
+28BC : 2A 29 39                 ld      hl,(CXOFF)      ;[GWB] SWAP [HL] AND CXOFF
+28BF : EB                       ex      de,hl           
+28C0 : CD FA 26                 call    NEGDE           ;[GWB] NEGATE NEW [HL]
+28C3 : 22 29 39                 ld      (CXOFF),hl      
+28C6 : EB                       ex      de,hl           
+28C7 : D1                       pop     de              
+28C8 : E5                       push    hl              
+28C9 : 2A 2B 39                 ld      hl,(CYOFF)      ;[GWB] SWAP [DE] AND CYOFF
+28CC : EB                       ex      de,hl           ;[GWB] NEGATE NEW [DE]
+28CD : 22 2B 39                 ld      (CYOFF),hl      
+28D0 : CD FA 26                 call    NEGDE           
+28D3 : E1                       pop     hl              
+28D4 : F1                       pop     af              ;[GWB]  POP PSW
+28D5 : C3 46 28                 jp      CPLOT           ;[GWB] PLOT NEXT POINT
+28D8    
+28D8 : 2A 09 39   [GWB] CLINE2: ld      hl,(GRPACX)     ;[GWB] DRAW LINE FROM [BC],[DE]
+28DB : 22 03 39                 ld      (GXPOS),hl      ;[GWB] TO GRPACX,Y
+28DE : 2A 07 39                 ld      hl,(GRPACY)     
+28E1 : 22 05 39                 ld      (GYPOS),hl      
+28E4 : C3 7B 26                 jp      DOGRPH          ;[GWB] GO DRAW THE LINE
+28E7                   
+28E7                  + ;[GWB] GTABSC - GET ABSOLUTE COORDS
+28E7                  | ;[GWB] ([BC],[DE])=(GRPACX+[HL],GRPACY+[DE])
+28E7                  | ;[GWB]
+28E7 : D5         [GWB] GTABSC: push    de              ;[GWB] SAVE Y OFFSET FROM CENTER
+28E8 : EB                       ex      de,hl           
+28E9 : 2A 09 39                 ld      hl,(GRPACX)     ;[GWB] GET CENTER POS
+28EC : EB                       ex      de,hl           
+28ED : 19                       add     hl,de           ;[GWB] ADD TO DX
+28EE : 44                       ld      b,h             ;[GWB] [BC]=X CENTER + [HL]
+28EF : 4D                       ld      c,l             
+28F0 : D1                       pop     de              
+28F1 : 2A 07 39                 ld      hl,(GRPACY)     ;[GWB] GET CENTER Y
+28F4 : 19                       add     hl,de           
+28F5 : EB                       ex      de,hl           ;[GWB] [DE]=Y CENTER + [DE]
+28F6 : C9                       ret                     
+28F7    
+28F7 : 2A 15 39   [GWB] SCALEY: ld      hl,(ASPECT)     ;[GWB] CHECK FOR *0 AND *1 CASES
+28FA : 7D                       ld      a,l             
+28FB : B7         [GWB] SCALE2: or      a               ;[GWB] ENTRY TO DO [A]*[DE] ([A] NON-Z)
+28FC : C2 03 29                 jp      nz,SCAL2        ;[GWB] NON-ZERO
+28FF : B4                       or      h               ;[GWB] TEST HI BYTE
+2900 : C0                       ret     nz              ;[GWB] IF NZ, THEN WAS *1 CASE
+2901 : EB                       ex      de,hl           ;[GWB] WAS *0 CASE - PUT 0 IN [DE]
+2902 : C9                       ret                     
+2903    
+2903 : 4A         [GWB] SCAL2:  ld      c,d             
+2904 : 16 00                    ld      d,0             
+2906 : F5                       push    af              
+2907 : CD 17 29                 call    L2917           
+290A : 1E 80                    ld      e,80            
+290C : 19                       add     hl,de           ;??? [GWB] ADDI AX,128  - ROUND UP
+290D : 59                       ld      e,c             
+290E : 4C                       ld      c,h             
+290F : F1                       pop     af              
+2910 : CD 17 29                 call    L2917           
+2913 : 59                       ld      e,c             
+2914 : 19                       add     hl,de           
+2915 : EB                       ex      de,hl           
+2916 : C9                       ret                     
+2917    
+2917 : 06 08            L2917:  ld      b,8
+2919 : 21 00 00                 ld      hl,0
+291C : 29               L291C:  add     hl,hl
+291D : 87                       add     a,a
+291E : D2 22 29                 jp      nc,L2922
+2921 : 19                       add     hl,de
+2922 : 05               L2922:  dec     b
+2923 : C2 1C 29                 jp      nz,L291C
+2926 : C9                       ret     
+2927    
+2928                  + ;[GWB] PARSE THE BEGIN AND END ANGLES
+2928                  | ;[GWB]  SETTING APPROPRIATE BITS IN CLINEF IF NEG.
+2928                  | ;[GWB]
+2927 : 2B         [GWB] CGTCNT: dec     hl              
+2928 : D7                       rst     CHRGET          ;[GWB] GET CURRENT CHAR
+2929 : C8                       ret     z               ;[GWB] IF NOTHING, RETURN DFLT IN [DE]
+292A : CF                       rst     SYNCHK          
+292B : 2C                       byte    ','             ;[GWB] EAT THE COMMA
+292C : FE 2C                    cp      ','             ;[GWB] USE DEFAULT IF NO ARGUMENT.
+292E : C8                       ret     z               
+292F : C5                       push    bc              ;[GWB] SAVE FLAG BYTE IN [C]
+2930 : CD 85 09                 call    FRMEVL          ;[GWB] EVALUATE THE THING
+2933 : E3                       ex      (sp),hl         ;[GWB] XTHL
+2934 : E5                       push    hl              ;[GWB] POP FLAG BYTE, PUSH TXTPTR
+2935 : CD 75 09                 call    CHKNUM          ;[M65] MUST BE NUMBER
+2938 : C1                       pop     bc              ;[GWB] GET BACK FLAG BYTE
+2939 : 21 E7 38                 ld      hl,FAC          ;[GWB] NOW SEE WHETHER POSITIVE OR NOT
+293C : 7E                       ld      a,(hl)          ;[GWB] GET EXPONENT BYTE
+293D : B7                       or      a               
+293E : CA 50 29                 jp      z,CGTC2         ;[GWB] SET TO HIGH MANTISSA BYTE
+2941 : 2B                       dec     hl              
+2942 : 7E                       ld      a,(hl)          
+2943 : B7                       or      a               
+2944 : F2 50 29                 jp      p,CGTC2         
+2947 : E6 7F                    and     127             ;[GWB] MAKE IT POSITIVE
+2949 : 77                       ld      (hl),a          
+294A : 21 19 39                 ld      hl,CLINEF       ;[GWB] SET BIT IN [C] IN CLINEF
+294E : B1                       or      c               
+294D : 7E                       ld      a,(hl)          
+294F : 77                       ld      (hl),a          
+2950    CGTC2:
+2950 : 01 22 7E   [GWB] CGTC2:  ld      bc,7E22$        ;[GWB] LOAD REGS WITH 1/2*PI
+2953 : 11 83 F9                 ld      de,F983$        
+2956 : CD CB 13                 call    FMULT           ;[GWB] MULTIPLY BY 1/(2*PI) TO GET FRACTION
+2959 : CD 79 29                 call    CMPONE          ;[GWB] SEE IF RESULT IS GREATER THAN ONE
+295C : CA 97 06                 jp      z,FCERR         ;[GWB] FC ERROR IF SO
+295F : CD 13 15                 call    PUSHF           ;[GWB] SAVE FAC ON STAC
+2962 : 2A 1A 39                 ld      hl,(CNPNTS)     ;[GWB] GET NO. OF POINTS PER OCTANT
+2965 : 29                       add     hl,hl           ;[GWB] TIMES 8 FOR TRUE CIRCUMFERENCE
+2966 : 29                       add     hl,hl           
+2967 : 29                       add     hl,hl           
+2968 : CD 20 23                 call    MAKINT          ;[GWB] STICK IT IN FAC
+296B : CD 75 09                 call    CHKNUM          ;[M65] MUST BE NUMBER
+296E : C1                       pop     bc              ;[GWB] GET BACK ANG/2*PI IN REGS
+296F : D1                       pop     de              
+2970 : CD CB 13                 call    FMULT           ;[GWB] DO THE MULTIPLY
+2973 : CD 04 23                 call    FRCINX          ;[GWB] CONVERT TO INTEGER IN [HL]
+2976 : D1                       pop     de              ;[GWB] GET BACK TXTPTR
+2977 : EB                       ex      de,hl           
+2978 : C9                       ret                     
+2979    
+2979 : 01 00 81         CMPONE: ld bc,$8100             ;;Compare FAC with 1.0
+297C : 11 00 00                 ld de,$0000
+297F : CD 5B 15                 call FCOMP
+2982 : 3D                       dec a
+2983 : C9                       ret
     ;
 2984    L2984:
 2984 : 32 3B 39  "2;9"  ld (X393B),a
 2987 : F5  " "  push af
 2988 : CF  " "  rst SYNCHK
 2989 : 28 2B  "(+"  jr z,L29B6
-298B : CD 47 25  " G%"  call L2547
+298B : CD 47 25  " G%"  call SCAN1
 298E : CD 12 2C  "  ,"  call L2C12
 2991 : F1  " "  pop af
 2992 : B7  " "  or a
@@ -1623,7 +1631,7 @@
 2996 : A9  " "  xor c
 2997 : C5  " "  push bc
 2998 : D5  " "  push de
-2999 : CD 56 25  " V%"  call L2556
+2999 : CD 56 25  " V%"  call SCAND
 299C : CD 12 2C  "  ,"  call L2C12
 299F : D1  " "  pop de
 29A0 : C1  " "  pop bc
@@ -1730,7 +1738,7 @@
 2A2A : D5  " "  push de
 2A2B : E5  " "  push hl
 2A2C : 1B  " "  dec de
-2A2D : 2A 03 39  "* 9"  ld hl,(X3903)
+2A2D : 2A 03 39  "* 9"  ld hl,(GXPOS)
 2A30 : EB  " "  ex de,hl
 2A31 : 19  " "  add hl,de
 2A32 : 38 0E  "8 "  jr c,L2A42
@@ -1743,7 +1751,7 @@
 2A3A : 23  "#"  inc hl
 2A3B : D5  " "  push de
 2A3C : E5  " "  push hl
-2A3D : 2A 05 39  "* 9"  ld hl,(X3905)
+2A3D : 2A 05 39  "* 9"  ld hl,(GYPOS)
 2A40 : 1B  " "  dec de
 2A41 : 19  " "  add hl,de
 2A42    L2A42:
@@ -1815,6 +1823,8 @@
 2A9A : 9D  " "  sbc a,l
 2A9B : 9C  " "  sbc a,h
 2A9C : CF  " "  rst SYNCHK
+
+       DRAW:
 2A9D : 11 A7 2A  "  *"  ld de,$2AA7
 2AA0 : AF  " "  xor a
 2AA1 : 32 34 39  "249"  ld (X3934),a
@@ -1848,17 +1858,17 @@
 2AD1 : D3 C7  "  "  out (0C7H),a
 2AD3 : 2B  "+"  dec hl
 2AD4 : 00  " "  nop
-2AD5 : CD FA 26  "  &"  call L26FA
+2AD5 : CD FA 26  "  &"  call NEGDE
 2AD8 : 01 00 00  "   "  ld bc,0
 2ADB : C3 2B 2B  " ++"  jp L2B2B
     ;
-2ADE : CD FA 26  "  &"  call L26FA
+2ADE : CD FA 26  "  &"  call NEGDE
 2AE1 : 42  "B"  ld b,d
 2AE2 : 4B  "K"  ld c,e
 2AE3 : 11 00 00  "   "  ld de,00000H
 2AE6 : C3 2B 2B  " ++"  jp L2B2B
     ;
-2AE9 : CD FA 26  "  &"  call L26FA
+2AE9 : CD FA 26  "  &"  call NEGDE
 2AEC : 42  "B"  ld b,d
 2AED : 4B  "K"  ld c,e
 2AEE : C3 2B 2B  " ++"  jp L2B2B
@@ -1866,10 +1876,10 @@
 2AF1 : 42  "B"  ld b,d
 2AF2 : 4B  "K"  ld c,e
 2AF3    L2AF3:
-2AF3 : CD FA 26  "  &"  call L26FA
+2AF3 : CD FA 26  "  &"  call NEGDE
 2AF6 : C3 2B 2B  " ++"  jp L2B2B
     ;
-2AF9 : CD FA 26  "  &"  call L26FA
+2AF9 : CD FA 26  "  &"  call NEGDE
 2AFC : 42  "B"  ld b,d
 2AFD : 4B  "K"  ld c,e
 2AFE : C3 F3 2A  "  *"  jp L2AF3
@@ -1904,24 +1914,24 @@
 2B34 : EB  " "  ex de,hl
 2B35 : D1  " "  pop de
 2B36 : AF  " "  xor a
-2B37 : 32 25 39  "2%9"  ld (X3925),a
+2B37 : 32 25 39  "2%9"  ld (CSCLXY),a
 2B3A : 3A 35 39  ":59"  ld a,(X3935)
 2B3D : 1F  " "  rra
 2B3E : 30 3A  "0:"  jr nc,L2B7A
 2B40 : F5  " "  push af
 2B41 : D5  " "  push de
 2B42 : E5  " "  push hl
-2B43 : CD 6F 2D  " o-"  call L2D6F
+2B43 : CD 6F 2D  " o-"  call GTASPC
 2B46 : 7C  "|"  ld a,h
 2B47 : B7  " "  or a
 2B48 : 28 05  "( "  jr z,L2B4F
 2B4A : 3E 01  "> "  ld a,001H
-2B4C : 32 25 39  "2%9"  ld (X3925),a
+2B4C : 32 25 39  "2%9"  ld (CSCLXY),a
 2B4F    L2B4F:
 2B4F : EB  " "  ex de,hl
 2B50 : 4D  "M"  ld c,l
 2B51 : E1  " "  pop hl
-2B52 : 3A 25 39  ":%9"  ld a,(X3925)
+2B52 : 3A 25 39  ":%9"  ld a,(CSCLXY)
 2B55 : B7  " "  or a
 2B56 : 28 01  "( "  jr z,L2B59
 2B58 : E3  " "  ex (sp),hl
@@ -1942,20 +1952,20 @@
 2B6C : E1  " "  pop hl
 2B6D : 19  " "  add hl,de
 2B6E : D1  " "  pop de
-2B6F : 3A 25 39  ":%9"  ld a,(X3925)
+2B6F : 3A 25 39  ":%9"  ld a,(CSCLXY)
 2B72 : B7  " "  or a
 2B73 : 28 01  "( "  jr z,L2B76
 2B75 : EB  " "  ex de,hl
 2B76    L2B76:
-2B76 : CD FA 26  "  &"  call L26FA
+2B76 : CD FA 26  "  &"  call NEGDE
 2B79 : F1  " "  pop af
 2B7A    L2B7A:
 2B7A : 1F  " "  rra
 2B7B : D2 84 2B  "  +"  jp nc,L2B84
-2B7E : CD BB 25  "  %"  call L25BB
-2B81 : CD FA 26  "  &"  call L26FA
+2B7E : CD BB 25  "  %"  call NEGHL
+2B81 : CD FA 26  "  &"  call NEGDE
 2B84    L2B84:
-2B84 : CD E7 28  "  ("  call L28E7
+2B84 : CD E7 28  "  ("  call GTABSC
 2B87    L2B87:
 2B87 : 3A 34 39  ":49"  ld a,(X3934)
 2B8A : 87  " "  add a,a
@@ -1963,8 +1973,8 @@
 2B8E : F5  " "  push af
 2B8F : C5  " "  push bc
 2B90 : D5  " "  push de
-2B91 : CD 2B 2E  " +."  call L2E2B
-2B94 : CD D8 28  "  ("  call L28D8
+2B91 : CD 2B 2E  " +."  call SCALXY
+2B94 : CD D8 28  "  ("  call CLINE2
 2B97 : D1  " "  pop de
 2B98 : C1  " "  pop bc
 2B99 : F1  " "  pop af
@@ -1972,11 +1982,11 @@
 2B9A : 87  " "  add a,a
 2B9B : DA A8 2B  "  +"  jp c,L2BA8
 2B9E : EB  " "  ex de,hl
-2B9F : 22 07 39  "" 9"  ld (X3907),hl
+2B9F : 22 07 39  "" 9"  ld (GRPACY),hl
 2BA2 : EB  " "  ex de,hl
 2BA3 : 60  "`"  ld h,b
 2BA4 : 69  "i"  ld l,c
-2BA5 : 22 09 39  "" 9"  ld (X3909),hl
+2BA5 : 22 09 39  "" 9"  ld (GRPACX),hl
 2BA8    L2BA8:
 2BA8 : AF  " "  xor a
 2BA9 : 32 34 39  "249"  ld (X3934),a
@@ -2024,8 +2034,8 @@
 2BE5 : D2 E9 2B  "  +"  jp nc,L2BE9
 2BE8 : 1B  " "  dec de
 2BE9    L2BE9:
-2BE9 : CD F0 26  "  &"  call L26F0
-2BEC : CD F0 26  "  &"  call L26F0
+2BE9 : CD F0 26  "  &"  call HLFHL
+2BEC : CD F0 26  "  &"  call HLFHL
 2BEF : F1  " "  pop af
 2BF0 : D0  " "  ret nc
 2BF1 : 7A  "z"  ld a,d
@@ -2040,15 +2050,15 @@
 2BF9 : D2 03 2C  "  ,"  jp nc,L2C03
 2BFC : 21 46 2D  "!F-"  ld hl,02D46H
 2BFF : E5  " "  push hl
-2C00 : CD FA 26  "  &"  call L26FA
+2C00 : CD FA 26  "  &"  call NEGDE
 2C03    L2C03:
 2C03 : 79  "y"  ld a,c
-2C04 : C3 FB 28  "  ("  jp L28FB
+2C04 : C3 FB 28  "  ("  jp SCALE
     ;
 2C07    L2C07:
 2C07 : D2 C7 2B  "  +"  jp nc,L2BC7
 2C0A : 7B  "{"  ld a,e
-2C0B : CD 84 2D  "  -"  call L2D84
+2C0B : CD 84 2D  "  -"  call SETATR
 2C0E : DA 97 06  "   "  jp c,FCERR
 2C11 : C9  " "  ret
     ;
@@ -2060,7 +2070,7 @@
 2C1A : C9  " "  ret
     ;
 2C1B : E5  " "  push hl
-2C1C : CD 2B 2E  " +."  call L2E2B
+2C1C : CD 2B 2E  " +."  call SCALXY
 2C1F : D2 97 06  "   "  jp nc,FCERR
 2C22 : E1  " "  pop hl
 2C23 : C9  " "  ret
@@ -2251,7 +2261,7 @@
     ;
 2D2B    L2D2B:
 2D2B : CD 0A 2D  "  -"  call L2D0A
-2D2E : CD 04 23  "  #"  call L2304
+2D2E : CD 04 23  "  #"  call FRCINX
 2D31 : EB  " "  ex de,hl
 2D32 : C9  " "  ret
     ;
@@ -2299,7 +2309,7 @@
 2D6B : 19  " "  add hl,de
 2D6C : C3 E7 1D  "   "  jp TTYFIS
     ;
-2D6F    L2D6F:
+2D6F    GTASPC:
 2D6F : 11 CC 00  "   "  ld de,000CCH
 2D72 : 21 3E 01  "!> "  ld hl,0013EH
 2D75 : C9  " "  ret
@@ -2314,12 +2324,12 @@
 2D80 : 2A 26 39  "*&9"  ld hl,(X3926)
 2D83 : C9  " "  ret
     ;
-2D84    L2D84:
-2D84 : FE 10  "  "  cp 010H
-2D86 : 3F  "?"  ccf
-2D87 : D8  " "  ret c
-2D88 : 32 02 39  "2 9"  ld (X3902),a
-2D8B : C9  " "  ret
+2D84    
+2D84 : FE 10      [GWB] SETATR: cp      16
+2D86 : 3F                       ccf
+2D87 : D8                       ret     c
+2D88 : 32 02 39                 ld      (GATTRS),a
+2D8B : C9                       ret
     ;
 2D8C    L2D8C:
 2D8C : 11 CA 1A  "   "  ld de,01ACAH
@@ -2332,7 +2342,7 @@
 2D97 : 1A  " "  ld a,(de)
 2D98 : C9  " "  ret
     ;
-2D99    L2D99:
+2D99    SETC:
 2D99 : E5  " "  push hl
 2D9A : D5  " "  push de
 2D9B : 2A 26 39  "*&9"  ld hl,(X3926)
@@ -2347,7 +2357,7 @@
 2DAA : 77  "w"  ld (hl),a
 2DAB : 11 00 04  "   "  ld de,00400H
 2DAE : 19  " "  add hl,de
-2DAF : 3A 02 39  ": 9"  ld a,(X3902)
+2DAF : 3A 02 39  ": 9"  ld a,(GATTRS)
 2DB2 : 87  " "  add a,a
 2DB3 : 87  " "  add a,a
 2DB4 : 87  " "  add a,a
@@ -2366,7 +2376,7 @@
 2DC0 : 7D  "}"  ld a,l
 2DC1 : B4  " "  or h
 2DC2 : C8  " "  ret z
-2DC3 : CD 99 2D  "  -"  call L2D99
+2DC3 : CD 99 2D  "  -"  call SETC
 2DC6 : CD DB 2E  "  ."  call L2EDB
 2DC9 : 2B  "+"  dec hl
 2DCA : 18 F4  "  "  jr L2DC0
@@ -2411,7 +2421,7 @@
 2DFA : 19  " "  add hl,de
 2DFB : 18 FA  "  "  jr L2DF7
     ;
-2DFD    L2DFD:
+2DFD    MAPXYC:
 2DFD : E5  " "  push hl
 2DFE : D5  " "  push de
 2DFF : 21 28 30  "!(0"  ld hl,03028H
@@ -2444,7 +2454,7 @@
 2E26 : 32 42 39  "2B9"  ld (X3942),a
 2E29 : 18 0A  "  "  jr L2E35
     ;
-2E2B    L2E2B:
+2E2B    SCALXY:
 2E2B : 3E 47  ">G"  ld a,047H
 2E2D : 32 41 39  "2A9"  ld (X3941),a
 2E30 : 3E 4F  ">O"  ld a,04FH
@@ -2938,7 +2948,7 @@ Value  Type Name
 219C  Code L219C
 21EA  Code L21EA
 2217  Code L2217
-2267  Data X2267
+2267  Data MENU
 227F  Code L227F
 2285  Code L2285
 22AE  Code L22AE
@@ -2952,16 +2962,16 @@ Value  Type Name
 22E0  Code L22E0
 22F2  Code L22F2
 22FB  Code L22FB
-2304  Code L2304
-230E  Code L230E
-2320  Code L2320
+2304  Code FRCINX
+230E  Code FRCINM
+2320  Code MAKINT
 232C  Code LISPRX
 2334  Code MAKUPS
 233D  Code BUFLIN
 2352  Code L2352
 235F  Code L235F
 2370  Code L2370
-2373  Code INTGET
+2373  Code GETIN2
 2384  Code EEDITS
 2396  Code LLED
 23AC  Code LENLP
@@ -2998,16 +3008,16 @@ Value  Type Name
 2529  Code EED
 252D  Code L252D
 253C  Code QED
-2547  Code L2547
-2556  Code L2556
-256C  Code L256C
-2575  Code L2575
-2586  Code L2586
-2590  Code L2590
-25A3  Code L25A3
+2547  Code SCAN1
+2556  Code SCAND
+256C  Code SCANN
+2575  Code SCXREL
+2586  Code SCYREL
+2590  Code ATRSCN
+25A3  Code ATRFIN
 25B1  Code L25B1
 25BA  Code L25BA
-25BB  Code L25BB
+25BB  Code NEGHL
 25C3  Code L25C3
 25CE  Code L25CE
 25D8  Code L25D8
@@ -3016,46 +3026,46 @@ Value  Type Name
 261F  Code L261F
 263B  Code L263B
 2651  Code L2651
-267B  Code L267B
+267B  Code DOGRPH
 2698  Code L2698
 26AC  Code L26AC
 26BB  Code L26BB
 26CF  Code L26CF
 26D3  Code L26D3
 26D6  Code L26D6
-26F0  Code L26F0
-26F8  Code L26F8
-26FA  Code L26FA
-275B  Code L275B
-277E  Code L277E
-2794  Code L2794
-279E  Code L279E
-27AD  Code L27AD
-27CB  Code L27CB
-27E7  Code L27E7
-27F0  Code L27F0
-27FC  Code L27FC
-2844  Code L2844
-2846  Code L2846
-2871  Code L2871
-287B  Code L287B
-2885  Code L2885
-288C  Code L288C
-2897  Code L2897
-289E  Code L289E
-28A3  Code L28A3
-28B4  Code L28B4
-28D8  Code L28D8
-28E7  Code L28E7
-28F7  Code L28F7
-28FB  Code L28FB
-2903  Code L2903
+26F0  Code HLFHL
+26F8  Code POPTRT
+26FA  Code NEGDE
+275B  Code CSTPLT
+277E  Code CIRC1
+2794  Code CIRC11
+279E  Code CIRC2
+27AD  Code CIRCLP
+27CB  Code CRCLP2
+27E7  Code CNODEX
+27F0  Code CPLSCX
+27FC  Code CPLOT8
+2844  Code CPLOT4
+2846  Code CPLOT
+2871  Code CNBTWN
+287B  Code CLINEC
+2885  Code CLINSC
+288C  Code CLINE
+2897  Code CBTWEN
+289E  Code GCPLFN
+28A3  Code CPLTIT
+28B4  Code CPLFIN
+28D8  Code CLINE2
+28E7  Code GTABSC
+28F7  Code SCALEY
+28FB  Code SCALE
+2903  Code SCAL2
 2917  Code L2917
 291C  Code L291C
 2922  Code L2922
-2927  Code L2927
-2950  Code L2950
-2979  Code L2979
+2927  Code CGTCNT
+2950  Code CGTC2
+2979  Code CMPONE
 2984  Code L2984
 29B6  Code L29B6
 29FB  Code L29FB
@@ -3115,13 +3125,13 @@ Value  Type Name
 2D27  Code L2D27
 2D2B  Code L2D2B
 2D4D  Code L2D4D
-2D6F  Code L2D6F
+2D6F  Code GTASPC
 2D76  Code L2D76
 2D7D  Code L2D7D
-2D84  Code L2D84
+2D84  Code SETATR
 2D8C  Code L2D8C
 2D97  Code L2D97
-2D99  Code L2D99
+2D99  Code SETC
 2DA6  Code L2DA6
 2DC0  Code L2DC0
 2DD7  Code L2DD7
@@ -3129,12 +3139,12 @@ Value  Type Name
 2DE7  Code L2DE7
 2DED  Code L2DED
 2DF7  Code L2DF7
-2DFD  Code L2DFD
+2DFD  Code MAPXYC
 2E06  Code L2E06
 2E0D  Code L2E0D
 2E15  Code L2E15
 2E1F  Code L2E1F
-2E2B  Code L2E2B
+2E2B  Code SCALXY
 2E35  Code L2E35
 2E43  Code L2E43
 2E4B  Code L2E4B
@@ -3166,13 +3176,13 @@ Value  Type Name
 38DE  Data X38DE
 38E0  Data X38E0
 38E2  Data X38E2
-38E7  Data X38E7
-3900  Data X3900
-3902  Data X3902
-3903  Data X3903
-3905  Data X3905
-3907  Data X3907
-3909  Data X3909
+38E7  Data FAC
+3900  Data DATTRS
+3902  Data GATTRS
+3903  Data GXPOS
+3905  Data GYPOS
+3907  Data GRPACY
+3909  Data GRPACX
 390B  Data X390B
 390B  Code L390B
 390C  Data X390C
@@ -3181,20 +3191,20 @@ Value  Type Name
 390F  Data X390F
 3911  Data X3911
 3913  Data X3913
-3915  Data X3915
-3917  Data X3917
-3919  Data X3919
-391A  Data X391A
-391C  Data X391C
-391D  Data X391D
-391F  Data X391F
-3921  Data X3921
-3923  Data X3923
-3925  Data X3925
+3915  Data ASPECT
+3917  Data CENCNT
+3919  Data CLINEF
+391A  Data CNPNTS
+391C  Data CPLOTF
+391D  Data CPCNT
+391F  Data CPCNT8
+3921  Data CRCSUM
+3923  Data CSTCNT
+3925  Data CSCLXY
 3926  Data X3926
 3928  Data X3928
-3929  Data X3929
-392B  Data X392B
+3929  Data CXOFF
+392B  Data CYOFF
 392F  Data X392F
 3931  Data X3931
 3933  Data X3933
