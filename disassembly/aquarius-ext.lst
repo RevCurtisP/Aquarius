@@ -130,7 +130,7 @@
 20DC : 4A 22                    word    LOCATE          ;;$224A
 20DE : 67 22                    word    MENU            ;;$2267
 20E0 : 46 22                    word    CLS             ;;$2246
-20E2 : E7 25                    word    LINE            ;;$25E7
+20E2 : E7 25                    word    GLINE           ;;$25E7
 20E4 : 00 27                    word    CIRCLE          ;;$2700
 20E6 : 6F 23                    word    GET             ;;$236F
 20E8 : 6B 23                    word    PUT             ;;$236B
@@ -981,7 +981,7 @@
 25AD : C1                       pop     bc              
 25AE : C3 6C 06                 jp      CHRGT2          
     ;
-25B1    L25B1:
+25B1    XDELT:
 25B1 : 2A 03 39  "* 9"  ld hl,(GXPOS)
 25B4 : 7D  "}"  ld a,l
 25B5 : 91  " "  sub c
@@ -1001,7 +1001,7 @@
 25C1 : 37                       scf
 25C2 : C9                       ret
     ;
-25C3    L25C3:
+25C3    YDELT:
 25C3 : 2A 05 39  "* 9"  ld hl,(GYPOS)
 25C6 : 7D  "}"  ld a,l
 25C7 : 93  " "  sub e
@@ -1011,7 +1011,7 @@
 25CB : 67  "g"  ld h,a
 25CC : 18 EC  "  "  jr L25BA
     ;
-25CE    L25CE:
+25CE    XCHGY:
 25CE : E5  " "  push hl
 25CF : 2A 05 39  "* 9"  ld hl,(GYPOS)
 25D2 : EB  " "  ex de,hl
@@ -1019,9 +1019,9 @@
 25D6 : E1  " "  pop hl
 25D7 : C9  " "  ret
     ;
-25D8    L25D8:
-25D8 : CD CE 25  "  %"  call L25CE
-25DB    L25DB:
+25D8    XCHGAC:
+25D8 : CD CE 25  "  %"  call XCHGY
+25DB    XCHGX:
 25DB : E5  " "  push hl
 25DC : C5  " "  push bc
 25DD : 2A 03 39  "* 9"  ld hl,(GXPOS)
@@ -1030,146 +1030,165 @@
 25E4 : C1  " "  pop bc
 25E5 : E1  " "  pop hl
 25E6 : C9  " "  ret
-    ;
-25E7    LINE:
-25E7 : CD 47 25  " G%"  call SCAN1
-25EA : C5  " "  push bc
-25EB : D5  " "  push de
-25EC : CF  " "  rst SYNCHK
-25ED : A9  " "  byte 169
-25EE : CD 56 25  " V%"  call SCAND
-25F1 : CD 90 25  "  %"  call ATRSCN
-25F4 : D1  " "  pop de
-25F5 : C1  " "  pop bc
-25F6 : 28 43  "(C"  jr z,L263B
-25F8 : CF  " "  rst SYNCHK
-25F9 : 2C  ","  inc l
-25FA : CF  " "  rst SYNCHK
-25FB : 42  "B"  ld b,d
-25FC : 28 53  "(S"  jr z,L2651
-25FE : CF  " "  rst SYNCHK
-25FF : 46  "F"  ld b,(hl)
-2600 : E5  " "  push hl
-2601 : CD 2B 2E  " +."  call SCALXY
-2604 : CD D8 25  "  %"  call L25D8
-2607 : CD 2B 2E  " +."  call SCALXY
-260A : CD C3 25  "  %"  call L25C3
-260D : DC CE 25  "  %"  call c,L25CE
-2610 : 23  "#"  inc hl
-2611 : E5  " "  push hl
-2612 : CD B1 25  "  %"  call L25B1
-2615 : DC DB 25  "  %"  call c,L25DB
-2618 : 23  "#"  inc hl
-2619 : E5  " "  push hl
-261A : CD FD 2D  "  -"  call MAPXYC
-261D : D1  " "  pop de
-261E : C1  " "  pop bc
-261F    L261F:
-261F : D5  " "  push de
-2620 : C5  " "  push bc
-2621 : CD 7D 2D  " }-"  call L2D7D
-2624 : F5  " "  push af
-2625 : E5  " "  push hl
-2626 : EB  " "  ex de,hl
-2627 : CD C0 2D  "  -"  call L2DC0
-262A : E1  " "  pop hl
-262B : F1  " "  pop af
-262C : CD 76 2D  " v-"  call L2D76
-262F : CD BD 2E  "  ."  call L2EBD
-2632 : C1  " "  pop bc
-2633 : D1  " "  pop de
-2634 : 0B  " "  dec bc
-2635 : 78  "x"  ld a,b
-2636 : B1  " "  or c
-2637 : 20 E6  "  "  jr nz,L261F
-2639 : E1  " "  pop hl
-263A : C9  " "  ret
-    ;
-263B    L263B:
-263B : C5  " "  push bc
-263C : D5  " "  push de
-263D : E5  " "  push hl
-263E : CD 7B 26  " {&"  call DOGRPH
-2641 : 2A 09 39  "* 9"  ld hl,(GRPACX)
-2644 : 22 03 39  "" 9"  ld (GXPOS),hl
-2647 : 2A 07 39  "* 9"  ld hl,(GRPACY)
-264A : 22 05 39  "" 9"  ld (GYPOS),hl
-264D : E1  " "  pop hl
-264E : D1  " "  pop de
-264F : C1  " "  pop bc
-2650 : C9  " "  ret
-    ;
-2651    L2651:
-2651 : E5  " "  push hl
-2652 : 2A 05 39  "* 9"  ld hl,(GYPOS)
-2655 : E5  " "  push hl
-2656 : D5  " "  push de
-2657 : EB  " "  ex de,hl
-2658 : CD 3B 26  " ;&"  call L263B
-265B : E1  " "  pop hl
-265C : 22 05 39  "" 9"  ld (GYPOS),hl
-265F : EB  " "  ex de,hl
-2660 : CD 3B 26  " ;&"  call L263B
-2663 : E1  " "  pop hl
-2664 : 22 05 39  "" 9"  ld (GYPOS),hl
-2667 : 2A 03 39  "* 9"  ld hl,(GXPOS)
-266A : C5  " "  push bc
-266B : 44  "D"  ld b,h
-266C : 4D  "M"  ld c,l
-266D : CD 3B 26  " ;&"  call L263B
-2670 : E1  " "  pop hl
-2671 : 22 03 39  "" 9"  ld (GXPOS),hl
-2674 : 44  "D"  ld b,h
-2675 : 4D  "M"  ld c,l
-2676 : CD 3B 26  " ;&"  call L263B
-2679 : E1  " "  pop hl
-267A : C9  " "  ret
-    ;
-267B    DOGRPH:
-267B : CD 2B 2E  " +."  call SCALXY
-267E : CD D8 25  "  %"  call L25D8
-2681 : CD 2B 2E  " +."  call SCALXY
-2684 : CD C3 25  "  %"  call L25C3
-2687 : DC D8 25  "  %"  call c,L25D8
-268A : D5  " "  push de
-268B : E5  " "  push hl
-268C : CD B1 25  "  %"  call L25B1
-268F : EB  " "  ex de,hl
-2690 : 21 DB 2E  "! ."  ld hl,02EDBH
-2693 : 30 03  "0 "  jr nc,L2698
-2695 : 21 D1 2E  "! ."  ld hl,02ED1H
-2698    L2698:
-2698 : E3  " "  ex (sp),hl
-2699 : E7  " "  rst COMPAR
-269A : 30 10  "0 "  jr nc,L26AC
-269C : 22 13 39  "" 9"  ld (X3913),hl
-269F : E1  " "  pop hl
-26A0 : 22 0C 39  "" 9"  ld (X390C),hl
-26A3 : 21 BD 2E  "! ."  ld hl,02EBDH
-26A6 : 22 0F 39  "" 9"  ld (X390F),hl
-26A9 : EB  " "  ex de,hl
-26AA : 18 0F  "  "  jr L26BB
-    ;
-26AC    L26AC:
-26AC : E3  " "  ex (sp),hl
-26AD : 22 0F 39  "" 9"  ld (X390F),hl
-26B0 : 21 BD 2E  "! ."  ld hl,02EBDH
-26B3 : 22 0C 39  "" 9"  ld (X390C),hl
-26B6 : EB  " "  ex de,hl
-26B7 : 22 13 39  "" 9"  ld (X3913),hl
-26BA : E1  " "  pop hl
-26BB    L26BB:
-26BB : D1  " "  pop de
-26BC : E5  " "  push hl
-26BD : CD BB 25  "  %"  call NEGHL
-26C0 : 22 11 39  "" 9"  ld (X3911),hl
-26C3 : CD FD 2D  "  -"  call MAPXYC
-26C6 : D1  " "  pop de
-26C7 : D5  " "  push de
-26C8 : CD F0 26  "  &"  call HLFHL
-26CB : C1  " "  pop bc
-26CC : 03  " "  inc bc
-26CD : 18 07  "  "  jr L26D6
+25E7    
+25E7                  + ;[GWB] LINE [(X1,Y1)]-(X2,Y2) [,ATTRIBUTE[,B[F]]]
+25E7                  | ;[GWB] DRAW A LINE FROM (X1,Y1) TO (X2,Y2) EITHER
+25E7                  | ;[GWB] 1. STANDARD FORM -- JUST A LINE CONNECTING THE 2 POINTS
+25E7                  | ;[GWB] 2. ,B=BOXLINE -- RECTANGLE TREATING (X1,Y1) AND (X2,Y2) AS OPPOSITE CORNERS
+25E7                  | ;[GWB] 3. ,BF= BOXFILL --  FILLED RECTANGLE WITH (X1,Y1) AND (X2,Y2) AS OPPOSITE CORNERS
+25E7                  | ;[GWB]
+25E7 : CD 47 25   [GWB] GLINE:  call    SCAN1           ;[GWB] SCAN THE FIRST COORDINATE
+25EA : C5                       push    bc              ;[GWB] SAVE THE POINT
+25EB : D5                       push    de              
+25EC : CF                       rst     SYNCHK          
+25ED : A9                       byte    MINUTK          ;[GWB] MAKE SURE ITS PROPERLY SEPERATED
+25EE : CD 56 25                 call    SCAND           ;[GWB] SCAN THE SECOND SET
+25F1 : CD 90 25                 call    ATRSCN          ;[GWB] SCAN THE ATTRIBUTE
+25F4 : D1                       pop     de              ;[GWB] GET BACK THE FIRST POINT
+25F5 : C1                       pop     bc              
+25F6 : 28 43                    jr      z,DOLINE        ;[GWB] IF STATEMENT ENDED ITS A NORMAL LINE
+25F8 : CF                       rst     SYNCHK          
+25F9 : 2C                       byte    ','             ;[GWB] OTHERWISE MUST HAVE A COMMA
+25FA : CF                       rst     SYNCHK          
+25FB : 42                       ld      b,d             
+25FC : 28 53                    jr      z,BOXLIN        ;[GWB] IF JUST "B" THE NON-FILLED BOX
+25FE : CF                       rst     SYNCHK          
+25FF : 46                       byte    'F'             ;[GWB] MUST BE FILLED BOX
+2600 : E5         {GWB} DOBOXF: push    hl              ;[GWB] SAVE THE TEXT POINTER
+2601 : CD 2B 2E                 call    SCALXY          ;[GWB] SCALE FIRST POINT
+2604 : CD D8 25                 call    XCHGAC          ;[GWB] SWITCH POINTS
+2607 : CD 2B 2E                 call    SCALXY          ;[GWB] SCALE SECOND POINT
+260A : CD C3 25                 call    YDELT           ;[GWB] SEE HOW MANY LINES AND SET CARRY
+260D : DC CE 25                 call    c,XCHGY         ;[GWB] MAKE [D,E] THE SMALLEST Y
+2610 : 23                       inc     hl              ;[GWB] MAKE [H,L] INTO A COUNT
+2611 : E5                       push    hl              ;[GWB] SAVE COUNT OF LINES
+2612 : CD B1 25                 call    XDELT           ;[GWB] GET WIDTH AND SMALLEST X
+2615 : DC DB 25                 call    c,XCHGX         ;[GWB] MAKE [B,C] THE SMALLEST X
+2618 : 23                       inc     hl              ;[GWB] MAKE [H,L] INTO A WIDTH COUNT
+2619 : E5                       push    hl              ;[GWB] SAVE WIDTH COUNT
+261A : CD FD 2D                 call    MAPXYC          ;[GWB] MAP INTO A "C"
+261D : D1                       pop     de              ;[GWB] GET WIDTH COUNT
+261E : C1                       pop     bc              ;[GWB] GET LINE COUNT
+261F : D5         [GWB] BOXLOP: push    de              ;[GWB] SAVE WIDTH
+2620 : C5                       push    bc              ;[GWB] SAVE NUMBER OF LINES
+2621 : CD 7D 2D                 call    FETCHC          ;[GWB] LOOK AT CURRENT C
+2624 : F5                       push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C"
+2625 : E5                       push    hl              ;[GWB] SAVE ADDRESS
+2626 : EB                       ex      de,hl           ;[GWB] SET UP FOR NSETCX WITH COUNT
+2627 : CD C0 2D                 call    NSETCX          ;[GWB] IN [H,L] OF POINTS TO SETC
+262A : E1                       pop     hl              ;[GWB] GET BACK STARTING C
+262B : F1                       pop     af              ;[GWB] ADDRESS AND BIT MASK
+262C : CD 76 2D                 call    STOREC          ;[GWB] SET UP AS CURRENT "C"
+262F : CD BD 2E                 call    DOWNC           ;[GWB] MOVE TO NEXT LINE DOWN IN Y
+2632 : C1                       pop     bc              ;[GWB] GET BACK NUMBER OF LINES
+2633 : D1                       pop     de              ;[GWB] GET BACK WIDTH
+2634 : 0B                       dec     bc              ;[GWB] COUNT DOWN LINES
+2635 : 78                       ld      a,b             
+2636 : B1                       or      c               ;[GWB] SEE IF ANY LEFT
+2637 : 20 E6                    jr      nz,BOXLOP       ;[GWB] KEEP DRAWING MORE LINES
+2639 : E1                       pop     hl              
+263A : C9                       ret                     
+263B    
+263B : C5         [GWB] DOLINE: push    bc              ;[GWB] SAVE COORDINATES
+263C : D5                       push    de              
+263D : E5                       push    hl              ;[GWB] SAVE TEXT POINTER
+263E : CD 7B 26                 call    DOGRPH          
+2641 : 2A 09 39                 ld      hl,(GRPACX)     ;[GWB] RESTORE ORIGINAL SECOND COORDINATE
+2644 : 22 03 39                 ld      (GXPOS),hl      
+2647 : 2A 07 39                 ld      hl,(GRPACY)     ;[GWB] FOR BOXLIN CODE
+264A : 22 05 39                 ld      (GYPOS),hl      
+264D : E1                       pop     hl              ;[GWB] RESTORE TEXT POINTER
+264E : D1                       pop     de              
+264F : C1                       pop     bc              
+2650 : C9                       ret                     
+2651    
+2651 : E5         [GWB] BOXLIN: push    hl              ;[GWB] SAVE TEXT POINTER
+2652 : 2A 05 39                 ld      hl,(GYPOS)      
+2655 : E5                       push    hl              ;[GWB] SAVE Y2
+2656 : D5                       push    de              ;[GWB] SAVE Y1
+2657 : EB                       ex      de,hl           ;[GWB] MOVE Y2 TO Y1
+2658 : CD 3B 26                 call    DOLINE          ;[GWB] DO TOP LINE
+265B : E1                       pop     hl              ;[GWB] MOVE Y1 TO Y2
+265C : 22 05 39                 ld      (GYPOS),hl      
+265F : EB                       ex      de,hl           ;[GWB] RESTORE Y1 TO [D,E]
+2660 : CD 3B 26                 call    DOLINE          
+2663 : E1                       pop     hl              ;[GWB] GET BACK Y2
+2664 : 22 05 39                 ld      (GYPOS),hl      ;[GWB] AND RESTORE
+2667 : 2A 03 39                 ld      hl,(GXPOS)      ;[GWB] GET X2
+266A : C5                       push    bc              ;[GWB] SAVE X1
+266B : 44                       ld      b,h             ;[GWB] SET X1=X2
+266C : 4D                       ld      c,l             
+266D : CD 3B 26                 call    DOLINE          
+2670 : E1                       pop     hl              
+2671 : 22 03 39                 ld      (GXPOS),hl      ;[GWB] SET X2=X1
+2674 : 44                       ld      b,h             ;[GWB] RESTORE X1 TO [B,C]
+2675 : 4D                       ld      c,l             
+2676 : CD 3B 26                 call    DOLINE          
+2679 : E1                       pop     hl              ;[GWB] RESTORE THE TEXT POINTER
+267A : C9                       ret                     
+267B    
+267B : CD 2B 2E   [GWB] DOGRPH: call    SCALXY          ;[GWB] CHEATY SCALING - JUST TRUNCATE FOR NOW
+267E : CD D8 25                 call    XCHGAC          
+2681 : CD 2B 2E                 call    SCALXY          
+2684 : CD C3 25   {GWB} DOGRP2  call    YDELT           ;[GWB] GET COUNT DIFFERENCE IN [H,L]
+2687 : DC D8 25                 call    c,XCHGAC        ;[GWB] IF CURRENT Y IS SMALLER NO EXCHANGE
+268A : D5                       push    de              ;[GWB] SAVE Y1 COORDINATE
+268B : E5                       push    hl              ;[GWB] SAVE DELTA Y
+268C : CD B1 25                 call    XDELT           
+268F : EB                       ex      de,hl           ;[GWB] PUT DELTA X INTO [D,E]
+2690 : 21 DB 2E                 ld      hl,RIGHTC       ;[GWB] ASSUME X WILL GO RIGHT
+2693 : 30 03                    jr      nc,LINCN2        
+2695 : 21 D1 2E                 ld      hl,LEFTC        
+2698 : E3         [gwb] LINCN2: ex      (sp),hl         ;[GWB] XTHL
+2699 : E7                       rst     COMPAR          ;[GWB] SEE WHICH DELTA IS BIGGER
+269A : 30 10                    jr      nc,YDLTBG       ;[GWB] YDELTA IS BIGGER OR EQUAL 
+269C : 22 13 39                 ld      (MINDEL),hl     ;[GWB] SAVE MINOR AXIS DELTA (Y)
+269F : E1                       pop     hl              ;[GWB] GET X ACTION ROUTINE
+26A0 : 22 0C 39                 ld      (MAXUPD+1),hl   ;[GWB] SAVE IN MAJOR ACTION ADDRESS
+26A3 : 21 BD 2E                 ld      hl,DOWNC       	;[GWB] ALWAYS INCREMENT 
+26A6 : 22 0F 39                 ld      (MINUPD+1),hl   ;[GWB] WHICH IS THE MINOR AXIS
+26A9 : EB                       ex      de,hl           ;[GWB] [H,L]=DELTA X=MAJOR DELTA
+26AA : 18 0F                    jr      LINCN3          ;[GWB] MERGE WITH YDLTBG CASE AND DO DRAW
+26AC    
+26AC : E3         [GWB] YDLTBG: ex      (sp),hl         ;[GWB] XTHL
+26B0 : 21 BD 2E                 ld      hl,DOWNC        ;[GWB] Y IS ALWAYS INCREMENT MODE
+26AD : 22 0F 39                 ld      (MINUPD+1),hl   ;[GWB] SAVE ADDRESS OF MINOR AXIS UPDATE
+26B3 : 22 0C 39                 ld      (MAXUPD+1),hl   ;[GWB] SAVE AS MAJOR AXIS UPDATE
+26B6 : EB                       ex      de,hl           ;[GWB] [H,L]=DELTA X
+26B7 : 22 13 39                 ld      (MINDEL),hl     ;[GWB] SAVE MINOR DELTA
+26BA : E1                       pop     hl              ;[GWB] [H,L]=DELTA Y=MAJOR DELTA
+26BB    
+26BB : D1         [GWB] LINCN3: pop     de              ;[GWB] GET BACK Y1 
+26BC                  + ;
+26BC                  | ;[GWB] MAJOR AXIS IS ONE WITH THE LARGEST DELTA
+26BC                  | ;[GWB] MINOR IS THE OTHER
+26BC                  | ;[GWB] READY TO DRAW NOW
+26BC                  | ;[GWB] MINUPD+1=ADDRESS TO GO TO UPDATE MINOR AXIS COORDINATE
+26BC                  | ;[GWB] MAXUPD+1=ADDRESS TO GO TO UPDATE MAJOR AXIS COORDINATE
+26BC                  | ;[GWB] [H,L]=MAJOR AXIS DELTA=# OF POINTS-1
+26BC                  | ;[GWB] MINDEL=DELTA ON MINOR AXIS
+26BC                  | ;[GWB]
+26BC                  | ;[GWB] IDEA IS
+26BC                  | ;[GWB]  SET SUM=MAJOR DELTA/2
+26BC                  | ;[GWB]  [B,C]=# OF POINTS
+26BC                  | ;[GWB]  MAXDEL=-MAJOR DELTA (CONVENIENT FOR ADDING)
+26BC                  | ;[GWB] LINE LOOP (LINLP3):
+26BC                  | ;[GWB]       DRAW AT CURRENT POSITION
+26BC                  | ;[GWB]       UPDATE MAJOR AXIS
+26BC                  | ;[GWB]       SUM=SUM+MINOR DELTA
+26BC                  | ;[GWB]       IF SUM.GT.MAJOR DELTA THEN UPDATE MINOR AND SUM=SUM-MAJOR DELTA
+26BC                  | ;[GWB]       DECREMENT [B,C] AND TEST FOR 0 -- LOOP IF NOT
+26BC                  | ;[GWB] END LOOP
+26BC : E5                       push    hl             ;[GWB] SAVE FOR SETTING UP COUNT
+26BD : CD BB 25                 call    NEGHL          
+26C0 : 22 11 39                 ld      (MAXDEL),hl    ;[GWB] SAVE MAJOR DELTA FOR SUMMING
+26C3 : CD FD 2D                 call    MAPXYC         ;[GWB] GET POSITION INTO BITMSK AND [H,L]  
+26C6 : D1                       pop     de             
+26C7 : D5                       push    de             ;[GWB] START SUM AT MAXDEL/2 
+26C8 : CD F0 26                 call    HLFHL          
+26CB : C1                       pop     bc             ;[GWB] GET COUNT IN [B,C]
+26CC : 03                       inc     bc             ;[GWB] NUMBER OF POINTS IS DELTA PLUS ONE 
+26CD : 18 07                    jr      LINLP3           
     ;
 26CF    L26CF:
 26CF : E1  " "  pop hl
@@ -1178,14 +1197,14 @@
 26D2 : C8  " "  ret z
 26D3    L26D3:
 26D3 : CD 0B 39  "  9"  call L390B
-26D6    L26D6:
+26D6    LINLP3:
 26D6 : CD 99 2D  "  -"  call SETC
 26D9 : 0B  " "  dec bc
 26DA : E5  " "  push hl
-26DB : 2A 13 39  "* 9"  ld hl,(X3913)
+26DB : 2A 13 39  "* 9"  ld hl,(MINDEL)
 26DE : 19  " "  add hl,de
 26DF : EB  " "  ex de,hl
-26E0 : 2A 11 39  "* 9"  ld hl,(X3911)
+26E0 : 2A 11 39  "* 9"  ld hl,(MAXDEL)
 26E3 : 19  " "  add hl,de
 26E4 : 30 E9  "0 "  jr nc,L26CF
 26E6 : EB  " "  ex de,hl
@@ -1230,16 +1249,16 @@
 271E : CD CB 13                 call    FMULT           ;[GWB] DO FLOATING PT MULTIPLY
 2721 : CD 04 23                 call    FRCINX          ;[GWB] CONVERT TO INTEGER & GET INTO [HL]
 2724 : 22 1A 39                 ld      (CNPNTS),hl     ;[GWB] CNPNTS=RADIUS*SQR(2)/2=# PTS TO PLOT
-2727 : AF                       xor     a               ;[GWB] ZERO OUT CLINEF - NO LINES TO CENTER
-2728 : 32 19 39                 ld      (CLINEF),a
+2727 : AF                       xor     a               ;[GWB] ZERO OUT GLINEF - NO LINES TO CENTER
+2728 : 32 19 39                 ld      (GLINEF),a
 272B : 32 25 39                 ld      (CSCLXY),a
 272E : E1                       pop     hl              ;[GWB] REGET TXTPTR
 272F : CD 90 25                 call    ATRSCN          ;[GWB] SCAN POSSIBLE ATTRIBUTE
-2732 : 0E 01                    ld      c,1             ;[GWB] SET LO BIT IN CLINEF FOR LINE TO CNTR
+2732 : 0E 01                    ld      c,1             ;[GWB] SET LO BIT IN GLINEF FOR LINE TO CNTR
 2734 : 11 00 00                 ld      de,0            ;[GWB] DEFAULT START COUNT = 0
 2737 : CD 27 29                 call    CGTCNT           
 273A : D5                       push    de              ;[GWB] SAVE COUNT FOR LATER COMPARISON
-273B : 0E 80                    ld      c,128           ;[GWB] SET HI BIT IN CLINEF FOR LINE TO CNTR
+273B : 0E 80                    ld      c,128           ;[GWB] SET HI BIT IN GLINEF FOR LINE TO CNTR
 273D : 11 FF FF                 ld      de,0-1          ;[GWB] DEFAULT END COUNT = INFINITY
 2740 : CD 27 29                 call    CGTCNT           
 2743 : E3                       ex      (sp),hl         ;[GWB] GET START COUNT, PUSH TXTPTR TILL DONE
@@ -1251,13 +1270,13 @@
 274C : 3D                       dec     a               ;[GWB] PLOT POINTS ABOVE & BELOW
 274D : EB                       ex      de,hl           ;[GWB] SWAP START AND END SO START .LT. END
 274E : F5                       push    af              ;[GWB] Swap sense of center line flags
-274F : 3A 19 39                 ld      a,(CLINEF)      
+274F : 3A 19 39                 ld      a,(GLINEF)      
 2752 : 4F                       ld      c,a             
 2753 : 07                       rlca                    
 2754 : 07                       rlca                    
 2755 : B1                       or      c               
 2756 : 0F                       rrca                    
-2757 : 32 19 39                 ld      (CLINEF),a      ;[GWB] Store swapped flags
+2757 : 32 19 39                 ld      (GLINEF),a      ;[GWB] Store swapped flags
 275A : F1                       pop     af              
 275B    
 275B : 32 1C 39   [GWB] CSTPLT: ld      (CPLOTF),a      ;[GWB] SET UP PLOT POLARITY FLAG
@@ -1443,7 +1462,7 @@
 2864 : D2 71 28                 jp      nc,CNBTWN       ;[GWB] IF SC .GT. PC, THEN NOT BETWEEN
 2867 : 2A 17 39                 ld      hl,(CENCNT)     ;[GWB] GET END COUNT
 286A : E7                       rst     COMPAR          
-286B : CA 7B 28                 jp      z,CLINEC        ;[GWB] GO SEE IF LINE FROM CENTER NEEDED
+286B : CA 7B 28                 jp      z,GLINEC        ;[GWB] GO SEE IF LINE FROM CENTER NEEDED
 286E : D2 97 28                 jp      nc,CBTWEN       ;[GWB] IF EC .GT. PC, THEN BETWEEN
 2871    
 2871 : 3A 1C 39   [GWB] CNBTWN: ld      a,(CPLOTF)      ;[GWB] SEE WHETHER TO PLOT OR NOT
@@ -1451,19 +1470,19 @@
 2875 : C2 A3 28                 jp      nz,CPLTIT       ;[GWB] NEED TO PLOT NOT-BETWEEN POINTS
 2878 : C3 9E 28                 jp      GCPLFN          ;[GWB] DON'T PLOT - FIX UP STACK & RETURN
 287B    
-287B : 3A 19 39   [GWB] CLINEC: ld      a,(CLINEF)      ;[GWB] GET CENTER LINE FLAG BYTE
+287B : 3A 19 39   [GWB] GLINEC: ld      a,(GLINEF)      ;[GWB] GET CENTER LINE FLAG BYTE
 287E : 87                       add     a,a             ;[GWB] BIT 7=1 MEANS DRAW LINE FROM CENTER
 287F : D2 A3 28                 jp      nc,CPLTIT       ;[GWB] NO LINE REQUIRED - JUST PLOT POINT
 2882 : C3 8C 28                 jp      CLINE           ;[GWB] LINE REQUIRED.
 2885    
-2885 : 3A 19 39   [GWB] CLINSC: ld      a,(CLINEF)      ;[GWB] GET CENTER LINE FLAG BYTE
+2885 : 3A 19 39   [GWB] CLINSC: ld      a,(GLINEF)      ;[GWB] GET CENTER LINE FLAG BYTE
 2888 : 1F                       rra                     ;[GWB] BIT 0=1 MEANS LINE FROM CENTER NEEDED.
 2889 : D2 A3 28                 jp      nc,CPLTIT       ;[GWB] NO LINE REQUIRED - JUST PLOT POINT
 288C    
 288C : D1         [GWB] CLINE:  pop     de              ;[GWB] GET X & Y OFFSETS
 288D : E1                       pop     hl              
 288E : CD E7 28                 call    GTABSC          ;[GWB] GO CALC TRUE COORDINATE OF POINT
-2891 : CD D8 28                 call    CLINE2          ;[GWB] DRAW LINE FROM [BC],[DE] TO CENTER
+2891 : CD D8 28                 call    GLINE2          ;[GWB] DRAW LINE FROM [BC],[DE] TO CENTER
 2894 : C3 B4 28                 jp      CPLFIN          
 2897                                                     
 2897 : 3A 1C 39   [GWB] CBTWEN: ld      a,(CPLOTF)      ;[GWB] SEE WHETHER PLOTTING BETWEENS OR NOT
@@ -1504,7 +1523,7 @@
 28D4 : F1                       pop     af              ;[GWB]  POP PSW
 28D5 : C3 46 28                 jp      CPLOT           ;[GWB] PLOT NEXT POINT
 28D8    
-28D8 : 2A 09 39   [GWB] CLINE2: ld      hl,(GRPACX)     ;[GWB] DRAW LINE FROM [BC],[DE]
+28D8 : 2A 09 39   [GWB] GLINE2: ld      hl,(GRPACX)     ;[GWB] DRAW LINE FROM [BC],[DE]
 28DB : 22 03 39                 ld      (GXPOS),hl      ;[GWB] TO GRPACX,Y
 28DE : 2A 07 39                 ld      hl,(GRPACY)     
 28E1 : 22 05 39                 ld      (GYPOS),hl      
@@ -1561,7 +1580,7 @@
 2926 : C9                       ret     
 2927    
 2928                  + ;[GWB] PARSE THE BEGIN AND END ANGLES
-2928                  | ;[GWB]  SETTING APPROPRIATE BITS IN CLINEF IF NEG.
+2928                  | ;[GWB]  SETTING APPROPRIATE BITS IN GLINEF IF NEG.
 2928                  | ;[GWB]
 2927 : 2B         [GWB] CGTCNT: dec     hl              
 2928 : D7                       rst     CHRGET          ;[GWB] GET CURRENT CHAR
@@ -1586,7 +1605,7 @@
 2944 : F2 50 29                 jp      p,CGTC2         
 2947 : E6 7F                    and     127             ;[GWB] MAKE IT POSITIVE
 2949 : 77                       ld      (hl),a          
-294A : 21 19 39                 ld      hl,CLINEF       ;[GWB] SET BIT IN [C] IN CLINEF
+294A : 21 19 39                 ld      hl,GLINEF       ;[GWB] SET BIT IN [C] IN GLINEF
 294E : B1                       or      c               
 294D : 7E                       ld      a,(hl)          
 294F : 77                       ld      (hl),a          
@@ -1636,14 +1655,14 @@
 299F : D1  " "  pop de
 29A0 : C1  " "  pop bc
 29A1 : E5  " "  push hl
-29A2 : CD C3 25  "  %"  call L25C3
-29A5 : DC CE 25  "  %"  call c,L25CE
+29A2 : CD C3 25  "  %"  call YDELT
+29A5 : DC CE 25  "  %"  call c,XCHGY
 29A8 : 23  "#"  inc hl
-29A9 : 22 13 39  "" 9"  ld (X3913),hl
-29AC : CD B1 25  "  %"  call L25B1
-29AF : DC DB 25  "  %"  call c,L25DB
+29A9 : 22 13 39  "" 9"  ld (MINDEL),hl
+29AC : CD B1 25  "  %"  call XDELT
+29AF : DC DB 25  "  %"  call c,XCHGX
 29B2 : 23  "#"  inc hl
-29B3 : 22 11 39  "" 9"  ld (X3911),hl
+29B3 : 22 11 39  "" 9"  ld (MAXDEL),hl
 29B6    L29B6:
 29B6 : CD ED 2D  "  -"  call L2DED
 29B9 : E1  " "  pop hl
@@ -1653,13 +1672,13 @@
 29BF : C5  " "  push bc
 29C0 : D5  " "  push de
 29C1 : EB  " "  ex de,hl
-29C2 : 2A 11 39  "* 9"  ld hl,(X3911)
+29C2 : 2A 11 39  "* 9"  ld hl,(MAXDEL)
 29C5 : 4D  "M"  ld c,l
 29C6 : 44  "D"  ld b,h
 29C7 : EB  " "  ex de,hl
 29C8 : CB 23  " #"  sla e
 29CA : CB 12  "  "  rl d
-29CC : 2A 13 39  "* 9"  ld hl,(X3913)
+29CC : 2A 13 39  "* 9"  ld hl,(MINDEL)
 29CF : C5  " "  push bc
 29D0 : 44  "D"  ld b,h
 29D1 : 4D  "M"  ld c,l
@@ -1681,7 +1700,7 @@
 29E9 : 70  "p"  ld (hl),b
 29EA : 23  "#"  inc hl
 29EB : EB  " "  ex de,hl
-29EC : 2A 13 39  "* 9"  ld hl,(X3913)
+29EC : 2A 13 39  "* 9"  ld hl,(MINDEL)
 29EF : EB  " "  ex de,hl
 29F0 : 73  "s"  ld (hl),e
 29F1 : 23  "#"  inc hl
@@ -1769,7 +1788,7 @@
 2A52 : D1  " "  pop de
 2A53    L2A53:
 2A53 : D5  " "  push de
-2A54 : CD 7D 2D  " }-"  call L2D7D
+2A54 : CD 7D 2D  " }-"  call FETCHC
 2A57 : E5  " "  push hl
 2A58 : F5  " "  push af
 2A59 : 3A 3B 39  ":;9"  ld a,(X393B)
@@ -1783,7 +1802,7 @@
 2A67    L2A67:
 2A67 : F1  " "  pop af
 2A68 : E1  " "  pop hl
-2A69 : CD 76 2D  " v-"  call L2D76
+2A69 : CD 76 2D  " v-"  call STOREC
 2A6C : CD B1 2E  "  ."  call L2EB1
 2A6F : D1  " "  pop de
 2A70 : 1B  " "  dec de
@@ -1974,7 +1993,7 @@
 2B8F : C5  " "  push bc
 2B90 : D5  " "  push de
 2B91 : CD 2B 2E  " +."  call SCALXY
-2B94 : CD D8 28  "  ("  call CLINE2
+2B94 : CD D8 28  "  ("  call GLINE2
 2B97 : D1  " "  pop de
 2B98 : C1  " "  pop bc
 2B99 : F1  " "  pop af
@@ -2314,12 +2333,12 @@
 2D72 : 21 3E 01  "!> "  ld hl,0013EH
 2D75 : C9  " "  ret
     ;
-2D76    L2D76:
+2D76    STOREC:
 2D76 : 32 28 39  "2(9"  ld (X3928),a
 2D79 : 22 26 39  ""&9"  ld (X3926),hl
 2D7C : C9  " "  ret
     ;
-2D7D    L2D7D:
+2D7D    FETCHC:
 2D7D : 3A 28 39  ":(9"  ld a,(X3928)
 2D80 : 2A 26 39  "*&9"  ld hl,(X3926)
 2D83 : C9  " "  ret
@@ -2372,14 +2391,14 @@
 2DBE : E1  " "  pop hl
 2DBF : C9  " "  ret
     ;
-2DC0    L2DC0:
+2DC0    NSETCX:
 2DC0 : 7D  "}"  ld a,l
 2DC1 : B4  " "  or h
 2DC2 : C8  " "  ret z
 2DC3 : CD 99 2D  "  -"  call SETC
-2DC6 : CD DB 2E  "  ."  call L2EDB
+2DC6 : CD DB 2E  "  ."  call RIGHTC
 2DC9 : 2B  "+"  dec hl
-2DCA : 18 F4  "  "  jr L2DC0
+2DCA : 18 F4  "  "  jr NSETCX
     ;
 2DCC : E5  " "  push hl
 2DCD : D5  " "  push de
@@ -2420,32 +2439,27 @@
 2DF8 : 28 1B  "( "  jr z,L2E15
 2DFA : 19  " "  add hl,de
 2DFB : 18 FA  "  "  jr L2DF7
-    ;
-2DFD    MAPXYC:
-2DFD : E5  " "  push hl
-2DFE : D5  " "  push de
-2DFF : 21 28 30  "!(0"  ld hl,03028H
-2E02 : 7B  "{"  ld a,e
-2E03 : 11 28 00  " ( "  ld de,00028H
-2E06    L2E06:
-2E06 : D6 03  "  "  sub 003H
-2E08 : 38 03  "8 "  jr c,L2E0D
-2E0A : 19  " "  add hl,de
-2E0B : 18 F9  "  "  jr L2E06
-    ;
-2E0D    L2E0D:
-2E0D : C6 03  "  "  add a,003H
-2E0F : 87  " "  add a,a
-2E10 : CB 29  " )"  sra c
-2E12 : 30 01  "0 "  jr nc,L2E15
-2E14 : 3C  "<"  inc a
-2E15    L2E15:
-2E15 : 09  " "  add hl,bc
-2E16 : 32 28 39  "2(9"  ld (X3928),a
-2E19 : 22 26 39  ""&9"  ld (X3926),hl
-2E1C : D1  " "  pop de
-2E1D : E1  " "  pop hl
-2E1E : C9  " "  ret
+2DFD    
+2DFD : E5         [GWB] MAPXYC: push    hl
+2DFE : D5                       push    de
+2DFF : 21 28 30                 ld      hl,$3028
+2E02 : 7B                       ld      a,e
+2E03 : 11 28 00                 ld      de,$0028
+2E06 : D6 03            L2E06:  sub     3
+2E08 : 38 03                    jr      c,L2E0D
+2E0A : 19                       add     hl,de
+2E0B : 18 F9                    jr      L2E06
+2E0D : C6 03            L2E0D:  add     a,3
+2E0F : 87                       add     a,a
+2E10 : CB 29                    sra     c
+2E12 : 30 01                    jr      nc,L2E15
+2E14 : 3C                       inc     a
+2E15 : 09               L2E15:  add     hl,bc
+2E16 : 32 28 39                 ld      (X3928),a
+2E19 : 22 26 39                 ld      (X3926),hl
+2E1C : D1                       pop     de
+2E1D : E1                       pop     hl
+2E1E : C9                       ret
     ;
 2E1F    L2E1F:
 2E1F : 3E 17  "> "  ld a,017H
@@ -2568,46 +2582,46 @@
 2EB1    L2EB1:
 2EB1 : F5  " "  push af
 2EB2 : E5  " "  push hl
-2EB3 : CD 7D 2D  " }-"  call L2D7D
+2EB3 : CD 7D 2D  " }-"  call FETCHC
 2EB6 : 11 28 00  " ( "  ld de,00028H
 2EB9 : 19  " "  add hl,de
 2EBA : C3 F7 2E  "  ."  jp L2EF7
     ;
-2EBD    L2EBD:
+2EBD    DOWNC:
 2EBD : F5  " "  push af
 2EBE : E5  " "  push hl
-2EBF : CD 7D 2D  " }-"  call L2D7D
+2EBF : CD 7D 2D  " }-"  call FETCHC
 2EC2 : CD 8F 2E  "  ."  call L2E8F
 2EC5 : 18 30  " 0"  jr L2EF7
     ;
 2EC7 : F5  " "  push af
 2EC8 : E5  " "  push hl
-2EC9 : CD 7D 2D  " }-"  call L2D7D
+2EC9 : CD 7D 2D  " }-"  call FETCHC
 2ECC : CD 76 2E  " v."  call L2E76
 2ECF : 18 26  " &"  jr L2EF7
     ;
-2ED1 : F5  " "  push af
-2ED2 : E5  " "  push hl
-2ED3 : CD 7D 2D  " }-"  call L2D7D
-2ED6 : CD 9F 2E  "  ."  call L2E9F
-2ED9 : 18 1C  "  "  jr L2EF7
+2ED1 : F5         [GWB] LEFTC:  push    af
+2ED2 : E5                       push    hl
+2ED3 : CD 7D 2D                 call    FETCHC
+2ED6 : CD 9F 2E                 call    L2E9F
+2ED9 : 18 1C                    jr      L2EF7
     ;
-2EDB    L2EDB:
-2EDB : F5  " "  push af
-2EDC : E5  " "  push hl
-2EDD : CD 7D 2D  " }-"  call L2D7D
-2EE0 : CD A8 2E  "  ."  call L2EA8
-2EE3 : 18 12  "  "  jr L2EF7
+2EDB    
+2EDB : F5         [GWB] RIGHTC: push    af
+2EDC : E5                       push    hl
+2EDD : CD 7D 2D                 call    FETCHC
+2EE0 : CD A8 2E                 call    L2EA8
+2EE3 : 18 12                    jr      L2EF7
     ;
 2EE5 : F5  " "  push af
 2EE6 : E5  " "  push hl
-2EE7 : CD 7D 2D  " }-"  call L2D7D
+2EE7 : CD 7D 2D  " }-"  call FETCHC
 2EEA : CD 83 2E  "  ."  call L2E83
 2EED : 18 08  "  "  jr L2EF7
     ;
 2EEF : F5  " "  push af
 2EF0 : E5  " "  push hl
-2EF1 : CD 7D 2D  " }-"  call L2D7D
+2EF1 : CD 7D 2D  " }-"  call FETCHC
 2EF4 : CD 83 2E  "  ."  call L2E83
 2EF7    L2EF7:
 2EF7 : 32 28 39  "2(9"  ld (X3928),a
@@ -2620,7 +2634,7 @@
 2F00 : 22 3C 39  ""<9"  ld (X393C),hl
 2F03 : 60  "`"  ld h,b
 2F04 : 69  "i"  ld l,c
-2F05 : 22 11 39  "" 9"  ld (X3911),hl
+2F05 : 22 11 39  "" 9"  ld (MAXDEL),hl
 2F08 : 87  " "  add a,a
 2F09 : 4F  "O"  ld c,a
 2F0A : 06 00  "  "  ld b,000H
@@ -2695,7 +2709,7 @@
 2F5E : C9  " "  ret
     ;
 2F5F    L2F5F:
-2F5F : 2A 11 39  "* 9"  ld hl,(X3911)
+2F5F : 2A 11 39  "* 9"  ld hl,(MAXDEL)
 2F62 : 7D  "}"  ld a,l
 2F63 : 2A 3C 39  "*<9"  ld hl,(X393C)
 2F66 : E3  " "  ex (sp),hl
@@ -3015,24 +3029,24 @@ Value  Type Name
 2586  Code SCYREL
 2590  Code ATRSCN
 25A3  Code ATRFIN
-25B1  Code L25B1
+25B1  Code XDELT
 25BA  Code L25BA
 25BB  Code NEGHL
-25C3  Code L25C3
-25CE  Code L25CE
-25D8  Code L25D8
-25DB  Code L25DB
+25C3  Code YDELT
+25CE  Code XCHGY
+25D8  Code XCHGAC
+25DB  Code XCHGX
 25E7  Data X25E7
-261F  Code L261F
-263B  Code L263B
-2651  Code L2651
+261F  Code BOXLOP
+263B  Code DOLINE
+2651  Code BOXLIN
 267B  Code DOGRPH
-2698  Code L2698
-26AC  Code L26AC
-26BB  Code L26BB
+2698  Code LINCN2
+26AC  Code YDLTBG
+26BB  Code LINCN3
 26CF  Code L26CF
 26D3  Code L26D3
-26D6  Code L26D6
+26D6  Code LINLP3
 26F0  Code HLFHL
 26F8  Code POPTRT
 26FA  Code NEGDE
@@ -3048,14 +3062,14 @@ Value  Type Name
 2844  Code CPLOT4
 2846  Code CPLOT
 2871  Code CNBTWN
-287B  Code CLINEC
+287B  Code GLINEC
 2885  Code CLINSC
 288C  Code CLINE
 2897  Code CBTWEN
 289E  Code GCPLFN
 28A3  Code CPLTIT
 28B4  Code CPLFIN
-28D8  Code CLINE2
+28D8  Code GLINE2
 28E7  Code GTABSC
 28F7  Code SCALEY
 28FB  Code SCALE
@@ -3126,14 +3140,14 @@ Value  Type Name
 2D2B  Code L2D2B
 2D4D  Code L2D4D
 2D6F  Code GTASPC
-2D76  Code L2D76
-2D7D  Code L2D7D
+2D76  Code STOREC
+2D7D  Code FETCHC
 2D84  Code SETATR
 2D8C  Code L2D8C
 2D97  Code L2D97
 2D99  Code SETC
 2DA6  Code L2DA6
-2DC0  Code L2DC0
+2DC0  Code NSETCX
 2DD7  Code L2DD7
 2DE2  Code L2DE2
 2DE7  Code L2DE7
@@ -3158,8 +3172,8 @@ Value  Type Name
 2E9F  Code L2E9F
 2EA8  Code L2EA8
 2EB1  Code L2EB1
-2EBD  Code L2EBD
-2EDB  Code L2EDB
+2EBD  Code DOWNC
+2EDB  Code RIGHTC
 2EF7  Code L2EF7
 2F00  Code L2F00
 2F22  Code L2F22
@@ -3185,15 +3199,15 @@ Value  Type Name
 3909  Data GRPACX
 390B  Data X390B
 390B  Code L390B
-390C  Data X390C
+390C  Data MAXUPD+1
 390E  Data X390E
 390E  Code L390E
-390F  Data X390F
-3911  Data X3911
-3913  Data X3913
+390F  Data MINUPD+1
+3911  Data MAXDEL
+3913  Data MINDEL
 3915  Data ASPECT
 3917  Data CENCNT
-3919  Data CLINEF
+3919  Data GLINEF
 391A  Data CNPNTS
 391C  Data CPLOTF
 391D  Data CPCNT
