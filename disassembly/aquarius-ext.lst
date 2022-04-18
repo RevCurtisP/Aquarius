@@ -77,7 +77,7 @@
 208B : AD 20      HOOKD:  word    UNHOOK      ;;Hook Not Implemented
 208D : EC 20              word    NOTGOX      ;;(NOTGOS)
 208E : A5 20              word    OUTDOX      ;;(OUTDO)
-2091 : F9 21              word    DOATN       ;;ATN Routine
+2091 : F9 21              word   ATN1       ;;ATN Routine
 2093 : 77 21              word    DODEF       ;;DEF FN Routine
 2095 : A1 21              word    DOFN        ;;FN() Routine
 2097 : 37 21              word    INCHRX      ;;INCHR Hook
@@ -159,7 +159,7 @@
 210A : 4F                 ld      c,a
 210E : C3 A8 05           jp      RESSRC
   
-210B : 11 B1 20           ld      de,$20B1
+210B : 11 B1 20           ld      de,EXTLST
     ;
 2111 : C1         GONE23: pop     bc          ;Pop Return Address
 2112 : F1                 pop     af          ;Restore Accumulator and Flags
@@ -189,35 +189,31 @@
 2139 : E1                 pop   hl
 213A : CD 80 1E           call INCHRC
 213D : D9                 exx
-213E : 21 B1 20           ld hl,$20B1
-2141 : FE 0F              cp $0F
+213E : 21 B1 20           ld hl,EXTLST        ;;Get Extended Reserves Words Address
+2141 : FE 0F              cp 15               ;;Ctrl-O?
 2143 : 28 0F              jr z,L2154
-2145 : FE 19              cp $19
+2145 : FE 19              cp 25               ;;Ctrl-Y?
 2147 : 28 0F              jr z,L2158
-2149 : FE 10              cp $10
+2149 : FE 10              cp 16               ;;Ctrl-P? 
 214B : 28 13              jr z,L2160
-214D : FE 1E              cp $1E
+214D : FE 1E              cp 30               ;;Ctrl-^?
 214F : 28 0B              jr z,L215C
 2151 : B7                 or a
 2152 : D9                 exx
 2153 : C9                 ret
-    ;
 2154    L2154:
 2154 : 0E 06              ld c,6
 2156 : 18 0A              jr KEYREX
-    ;
 2158    L2158:
 2158 : 0E 01              ld c,1
 215A : 18 06              jr KEYREX
-    ;
 215C    L215C:
 215C : 0E 09              ld c,9
 215E : 18 02              jr KEYREX
-    ;           
 2160    L2160:            
 2160 : 0E 05              ld c,5
 2162 : C3 28 1F   KEYREX: jp KEYRES
-    ;
+
 2165    L2165:
 2165 : F1  " "  pop af
 2166 : AF  " "  xor a
@@ -319,60 +315,50 @@
 21F2 : 4F  "O"  ld c,a
 21F3 : CD D6 10  "   "  call PTRGT2
 21F6 : C3 75 09  " u "  jp CHKNUM
-    ;
-21F9 : E1         DOATN:  pop hl
-21FA : F1                 pop af
-21FB : E1                 pop hl
-21FC : EF                 rst FSIGN
-21FD : FC 70 17           call m,PSHNEG
-2200 : FC 0B 15           call m,NEG
-2203 : 3A E7 38           ld a,(FAC)
-2206 : FE 81  "  "  cp 081H
-2208 : DA 17 22  "  ""  jp c,L2217
-220B : 01 00 81  "   "  ld bc,08100H
-220E : 51  "Q"  ld d,c
-220F : 59  "Y"  ld e,c
-2210 : CD 2F 14  " / "  call FDIV
-2213 : 21 58 12  "!X "  ld hl,01258H
-2216 : E5  " "  push hl
-2217    L2217:
-2217 : 21 21 22  "!!""  ld hl,02221H
-221A : CD 37 18  " 7 "  call POLYX
-221D : 21 53 19  "!S "  ld hl,01953H
-2220 : C9  " "  ret
-    ;
-2221 : 09  " "  add hl,bc
-2222 : 4A  "J"  ld c,d
-2223 : D7  " "  rst CHRGET
-2224 : 3B  ";"  dec sp
-2225 : 78  "x"  ld a,b
-2226 : 02  " "  ld (bc),a
-2227 : 6E  "n"  ld l,(hl)
-2228 : 84  " "  add a,h
-2229 : 7B  "{"  ld a,e
-222A : FE C1  "  "  cp 0C1H
-222C : 2F  "/"  cpl
-222D : 7C  "|"  ld a,h
-222E : 74  "t"  ld (hl),h
-222F : 31 9A 7D  "1 }"  ld sp,07D9AH
-2232 : 84  " "  add a,h
-2233 : 3D  "="  dec a
-2234 : 5A  "Z"  ld e,d
-2235 : 7D  "}"  ld a,l
-2236 : C8  " "  ret z
-2237 : 7F  " "  ld a,a
-2238 : 91  " "  sub c
-2239 : 7E  "~"  ld a,(hl)
-223A : E4 BB 4C  "  L"  call po,L4CBB
-223D : 7E  "~"  ld a,(hl)
-223E : 6C  "l"  ld l,h
-223F : AA  " "  xor d
-2240 : AA  " "  xor d
-2241 : 7F  " "  ld a,a
-2242 : 00  " "  nop
-2243 : 00  " "  nop
-2244 : 00  " "  nop
-2245 : 81  " "  add a,c
+21F9 
+21F9                  + ;[M80] ARCTANGENT FUNCTION
+21F9					        | ;[M80] IDEA: USE IDENTITIES TO GET ARG BETWEEN 0 AND 1 AND THEN USE AN
+21F9					        | ;[M80] APPROXIMATION POLYNOMIAL TO COMPUTE ARCTAN(X)
+21F9 : E1              ATN1:   pop     hl
+21FA : F1                       pop     af
+21FB : E1                       pop     hl
+21FC : EF                       rst     FSIGN           ;[M80] SEE IF ARG IS NEGATIVE
+21FD : FC 70 17                 call    m,PSHNEG        ;[M80] IF ARG IS NEGATIVE, USE:
+2200 : FC 0B 15                 call    m,NEG           ;[M80]    ARCTAN(X)=-ARCTAN(-X
+2203 : 3A E7 38                 ld      a,(FAC)         ;[M80] SEE IF FAC .GT. 1
+2206 : FE 81                    cp      129            
+2208 : DA 17 22                 jp      c,ATN2          ;[M80] GET THE CONSTANT 1
+220B : 01 00 81                 ld      bc,129*128      ;[M80] GET THE CONSTANT 1
+220E : 51                       ld      d,c             
+220F : 59                       ld      e,c             ;[M80] COMPUTE RECIPROCAL TO USE THE IDENTITY:
+2210 : CD 2F 14                 call    FDIV            ;[M80]   ARCTAN(X)=PI/2-ARCTAN(1/X)
+2213 : 21 58 12                 ld      hl,FSUBS        ;[M80] PUT FSUBS ON THE STACK SO WE WILL RETURN       
+2216 : E5                       push    hl              ;[M80]  TO IT AND SUBTRACT THE REULT FROM PI/2
+2217 : 21 21 22   [M80] ATN2:   ld      hl,ATNCON       ;[M80] EVALUATE APPROXIMATION POLYNOMIAL
+221A : CD 37 18                 call    POLYX           
+221D : 21 53 19                 ld      hl,PI2          ;[M80] GET POINTER TO PI/2 IN CASE WE HAVE TO
+2220 : C9                       ret                     ;[M80]  SUBTRACT THE RESULT FROM PI/2
+2221
+2221                    ;CONSTANTS FOR ATN
+2221 : 09         [M80] ATNCON: byte    9               ;DEGREE
+2222 : 4A D7 3B                 byte    $4A,$D7,$3B,$78 ; .002866226
+2225 : 78  
+2226 : 02 6E 84                 byte    $02,$6E,$84,$7B ; -.01616574
+2229 : 7B         
+222A : FE C1 2F                 byte    $FE,$C1,$2F,$2F ; .04290961
+222D : 7C  
+222E : 74 31 9A                 byte    $74,$31,$9A,$7D ; -.07528964
+2231 : 7D                       
+2232 : 84 3D 5A                 byte    $84,$3D,$5A,$7D ; .1065626
+2235 : 7D                       
+2236 : C8 7F 91                 byte    $C8,$7F,$91,$7E ; -.142089
+2239 : 7E                       
+223A : E4 BB 4C                 byte    $E4,$BB,$4C,$7E ; .1999355
+223D : 7E                       
+223E : 6C AA AA                 byte    $6C,$AA,$AA,$7F ; -.3333315
+2241 : 7F                       
+2242 : 00 00 00                 byte    $00,$00,$00,$81 ; 1.0
+2245 : 81  
 2246
 2246 :`                 ;[M80] CLS: CLear Screen issues an escape sequence to clear the CRT.
 2246 : 3E 0B      [M80] CLS:    ld      a,11            
@@ -401,7 +387,7 @@
 2266 : C9                       ret                     
 2267    
 2267                    ;;;This Statement appears to be unique to the Aquarius
-2267 : FE 40            MENU:   cp                'A'-1
+2267 : FE 40            MENU:   cp      'A'-1
 2269 : CC 6B 06                 call z,CHRGTR
 226C : CD E0 22                 call L22E0
 226F : D5                       push de
@@ -2803,6 +2789,7 @@ Value  Type Name
 0FC6  Code FRESTR
 10D1  Code PTRGET
 10D6  Code PTRGT2
+1258  Code FSUBS
 13CB  Code FMULT
 141A  Code POPHRT
 142F  Code FDIV
@@ -2815,6 +2802,7 @@ Value  Type Name
 1675  Code LINPRT
 1770  Code PSHNEG
 1837  Code POLYX
+1953  Data PI2
 198A  Code OUTDO
 19DA  Code INCHR
 19E5  Code FININL
@@ -2846,7 +2834,8 @@ Value  Type Name
 2170  Code L2170
 219C  Code L219C
 21EA  Code L21EA
-2217  Code L2217
+2217  Code ATN2
+2221  Data ATNCON
 2267  Data MENU
 227F  Code L227F
 2285  Code L2285
