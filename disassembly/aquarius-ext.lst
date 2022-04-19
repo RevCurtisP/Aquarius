@@ -78,8 +78,8 @@
 208D : EC 20              word    NOTGOX      ;;(NOTGOS)
 208E : A5 20              word    OUTDOX      ;;(OUTDO)
 2091 : F9 21              word   ATN1       ;;ATN Routine
-2093 : 77 21              word    DODEF       ;;DEF FN Routine
-2095 : A1 21              word    DOFN        ;;FN() Routine
+2093 : 77 21              word    DEFX       ;;DEF FN Routine
+2095 : A1 21              word    FNDOER        ;;FN() Routine
 2097 : 37 21              word    INCHRX      ;;INCHR Hook
 2099 : FF 20              word    LISTHK      ;;LIST Hook
 209B : 11 21              word    GONE23      ;;GONE2
@@ -213,108 +213,129 @@
 2160    L2160:            
 2160 : 0E 05              ld c,5
 2162 : C3 28 1F   KEYREX: jp KEYRES
-
-2165    L2165:
-2165 : F1  " "  pop af
-2166 : AF  " "  xor a
-2167 : 18 03  "  "  jr L216C
-    ;
-2169    L2169:
-2169 : F1  " "  pop af
-216A : 3E 01  "> "  ld a,001H
-216C    L216C:
-216C : 23  "#"  inc hl
-216D : 08  " "  ex af,af'
-216E : CF  " "  rst SYNCHK
-216F : 28 2B  "(+"  jr z,L219C
+2165    
+2165 : F1               L2165:  pop     af
+2166 : AF                       xor     a
+2167 : 18 03                    jr      L216C
+2169 : F1               L2169:  pop     af
+216A : 3E 01                    ld      a,1
+216C : 23               L216C:  inc     hl
+216D : 08                       ex      af,af'
+216E : CF                       rst     SYNCHK
+216F : 28                       byte    '('
+2170 : 2B  
 2171 : CD 47 25  " G%"  call SCAN1
 2174 : C3 55 1A  " U "  jp L1A55
-    ;
-2177 : E1         DODEF:  pop hl
-2178 : F1                 pop af
-2179 : E1                 pop hl
-217A : CD EA 21           call L21EA
-217D : CD 45 0B           call ERRDIR
-2180 : 01 1C 07  "   "  ld bc,0071CH
-2183 : C5  " "  push bc
-2184 : D5  " "  push de
-2185 : CF  " "  rst SYNCHK
-2186 : 28 CD  "( "  jr z,L2155
-2188 : D1  " "  pop de
-2189 : 10 E5  "  "  djnz L2170
-218B : EB  " "  ex de,hl
-218C : 2B  "+"  dec hl
-218D : 56  "V"  ld d,(hl)
-218E : 2B  "+"  dec hl
-218F : 5E  "^"  ld e,(hl)
-2190 : E1  " "  pop hl
-2191 : CD 75 09  " u "  call CHKNUM
-2194 : CF  " "  rst SYNCHK
-2195 : 29  ")"  add hl,hl
-2196 : CF  " "  rst SYNCHK
-2197 : B0  " "  or b
-2198 : 44  "D"  ld b,h
-2199 : 4D  "M"  ld c,l
-219A : E3  " "  ex (sp),hl
-219B : 71  "q"  ld (hl),c
-219C    L219C:
-219C : 23  "#"  inc hl
-219D : 70  "p"  ld (hl),b
-219E : C3 59 0E  " Y "  jp L0E59
-    ;
-21A1 : E1         DOFN:   pop hl
-21A2 : F1                 pop af
-21A3 : E1                 pop hl
-21A4 : CD EA 21           call L21EA
-21A7 : D5  " "  push de
-21A8 : CD 37 0A  " 7 "  call PARCHK
-21AB : CD 75 09  " u "  call CHKNUM
-21AE : E3  " "  ex (sp),hl
-21AF : 5E  "^"  ld e,(hl)
-21B0 : 23  "#"  inc hl
-21B1 : 56  "V"  ld d,(hl)
-21B2 : 23  "#"  inc hl
-21B3 : 7A  "z"  ld a,d
-21B4 : B3  " "  or e
-21B5 : CA D0 03  "   "  jp z,UFERR
-21B8 : 7E  "~"  ld a,(hl)
-21B9 : 23  "#"  inc hl
-21BA : 66  "f"  ld h,(hl)
-21BB : 6F  "o"  ld l,a
-21BC : E5  " "  push hl
-21BD : 2A DE 38  "* 8"  ld hl,(X38DE)
-21C0 : E3  " "  ex (sp),hl
-21C1 : 22 DE 38  "" 8"  ld (X38DE),hl
-21C4 : 2A E2 38  "* 8"  ld hl,(X38E2)
-21C7 : E5  " "  push hl
-21C8 : 2A E0 38  "* 8"  ld hl,(X38E0)
-21CB : E5  " "  push hl
-21CC : 21 E0 38  "! 8"  ld hl,X38E0
-21CF : D5  " "  push de
-21D0 : CD 3A 15  " : "  call MOVMF
-21D3 : E1  " "  pop hl
-21D4 : CD 72 09  " r "  call FRMNUM
-21D7 : 2B  "+"  dec hl
-21D8 : D7  " "  rst CHRGET
-21D9 : C2 C4 03  "   "  jp nz,SNERR
-21DC : E1  " "  pop hl
-21DD : 22 E0 38  "" 8"  ld (X38E0),hl
-21E0 : E1  " "  pop hl
-21E1 : 22 E2 38  "" 8"  ld (X38E2),hl
-21E4 : E1  " "  pop hl
-21E5 : 22 DE 38  "" 8"  ld (X38DE),hl
-21E8 : E1  " "  pop hl
-21E9 : C9  " "  ret
-    ;
-21EA    L21EA:
-21EA : CF  " "  rst SYNCHK
-21EB : A2  " "  and d
-21EC : 3E 80  "> "  ld a,080H
-21EE : 32 CB 38  "2 8"  ld (SUBFLG),a
-21F1 : B6  " "  or (hl)
-21F2 : 4F  "O"  ld c,a
-21F3 : CD D6 10  "   "  call PTRGT2
-21F6 : C3 75 09  " u "  jp CHKNUM
+2177
+2177 :                + ;[M80]	SIMPLE-USER-DEFINED-FUNCTION CODE
+2177 :                | ;[M80]
+2177 :                | ;[M80] IN THE 8K VERSION (SEE LATER COMMENT FOR EXTENDED)
+2177 :                | ;[M80] NOTE ONLY SINGLE ARGUMENTS ARE ALLOWED TO FUNCTIONS
+2177 :                | ;[M80] AND FUNCTIONS MUST BE OF THE SINGLE LINE FORM:
+2177 :                | ;[M80] DEF FNA(X)=X^2+X-2
+2177 :                | ;[M80] NO STRINGS CAN BE INVOLVED WITH THESE FUNCTIONS
+2177 :                | ;[M80]
+2177 :                | ;[M80] IDEA: CREATE A FUNNY SIMPLE VARIABLE ENTRY
+2177 :                | ;[M80] WHOSE FIRST CHARACTER (SECOND WORD IN MEMORY)
+2177 :                | ;[M80] HAS THE 200 BIT SET.
+2177 :                | ;[M80] THE VALUE WILL BE:
+2177 :                | ;[M80]
+2177 :                | ;[M80] 	A TXTPTR TO THE FORMULA
+2177 :                | ;[M80]	THE NAME OF THE PARAMETER VARIABLE
+2177 :                | ;[M80]
+2177 :                | ;[M80] FUNCTION NAMES CAN BE LIKE "FNA4"
+2177 :                | ;[M80]
+2177 : E1               DEFX:   pop     hl              
+2178 : F1                       pop     af              
+2179 : E1                       pop     hl              
+217A : CD EA 21                 call    GETFNM          ;[M80] GET A POINTER TO THE FUNCTION NAME
+217D : CD 45 0B                 call    ERRDIR          ;[M80] DEF IS "ILLEGAL DIRECT"
+2180 :                                                  ;[M80] MEMORY, RESTORE THE TXTPTRAND GO TO "DATA" 
+2180 :                                                  ;[M80] SKIPPING THE REST OF THE FORMULA
+2180 : 01 1C 07                 ld      bc,0071CH       
+2183 : C5                       push    bc              
+2184 : D5                       push    de              
+2185 : CF                       rst     SYNCHK          
+2186 : 28                       byte    '('             ;{GWB} SKIP OVER OPEN PAREN
+2187 : CD D1 10                 call    PTRGET          ;[M80] GET POINTER TO DUMMY VAR(CREATE VAR)
+2189 : E5                       push    hl              
+218B : EB                       ex      de,hl           
+218C : 2B                       dec     hl              
+218D : 56                       ld      d,(hl)          
+218E : 2B                       dec     hl              
+218F : 5E                       ld      e,(hl)          
+2190 : E1                       pop     hl              
+2191 : CD 75 09                 call    CHKNUM          
+2194 : CF                       rst     SYNCHK          
+2195 : 29                       byte    ')'             ;{M80} MUST BE FOLLOWED BY )
+2196 : CF                       rst     SYNCHK          
+2197 : B0                       byte    $B0
+2198 : 44                       ld      b,h             
+2199 : 4D                       ld      c,l             
+219A : E3                       ex      (sp),hl         
+219B : 71                       ld      (hl),c          
+219C : 23                       inc     hl              
+219D : 70                       ld      (hl),b          
+219E : C3 59 0E                 jp      STRADX           
+21A1
+21A1 : E1         [M80] FNDOER: pop     hl              
+21A2 : F1                       pop     af              
+21A3 : E1                       pop     hl              
+21A4 : CD EA 21                 call    GETFNM          ;[M80] GET A POINTER TO THE FUNCTION NAME
+21A7 : D5                       push    de                
+21A8 : CD 37 0A                 call    PARCHK          ;{M80} RECURSIVELY EVALUATE THE FORMULA
+21AB : CD 75 09                 call    CHKNUM          ;{M65} MUST BE NUMBER
+21AE : E3                       ex      (sp),hl         ;[M80] SAVE THE TEXT POINTER THAT POINTS PAST THE 
+21AF :                                                  ;[M80] FUNCTION NAME IN THE CALL
+21AF : 5E                       ld      e,(hl)          ;[H,L]=VALUE OF THE FUNCTION
+21B0 : 23                       inc     hl              
+21B1 : 56                       ld      d,(hl)          
+21B2 : 23                       inc     hl              ;[M80] WHICH IS A TEXT POINTER AT THE FORMAL
+21B3 : 7A                       ld      a,d             ;[M80] PARAMETER LIST IN THE DEFINITION
+21B4 : B3                       or      e               ;[M80] A ZERO TEXT POINTER MEANS THE FUNCTION 
+21B5 :                                                  ;[M80] WAS NEVER DEFINED
+21B5 : CA D0 03                 jp      z,UFERR         ;[M80] IF SO, GIVEN AN "UNDEFINED FUNCTION" ERROR
+21B8 : 7E                       ld      a,(hl)          
+21B9 : 23                       inc     hl              
+21BA : 66                       ld      h,(hl)          
+21BB : 6F                       ld      l,a             
+21BC : E5                       push    hl              ;SAVE THE NEW VALUE FOR PRMSTK
+21BD : 2A DE 38                 ld      hl,(X38DE)      
+21C0 : E3                       ex      (sp),hl         
+21C1 : 22 DE 38                 ld      (X38DE),hl      
+21C4 : 2A E2 38                 ld      hl,(X38E2)      
+21C7 : E5                       push    hl              
+21C8 : 2A E0 38                 ld      hl,(X38E0)      
+21CB : E5                       push    hl              
+21CC : 21 E0 38                 ld      hl,X38E0        
+21CF : D5                       push    de              
+21D0 : CD 3A 15                 call    MOVMF           
+21D3 : E1                       pop     hl              
+21D4 : CD 72 09                 call    FRMNUM          ;AND EVALUATE THE DEFINITION FORMULA
+21D7 : 2B                       dec     hl              ;CAN HAVE RECURSION AT THIS POINT
+21D8 : D7                       rst     CHRGET          ;SEE IF THE STATEMENT ENDED RIGHT
+21D9 : C2 C4 03                 jp      nz,SNERR        ;THIS IS A CHEAT, SINCE THE LINE 
+21DC :                                                  ;NUMBER OF THE ERROR WILL BE THE CALLERS
+21DC :                                                  ;LINE # INSTEAD OF THE DEFINITIONS LINE #
+21DC : E1                       pop     hl              
+21DD : 22 E0 38                 ld      (X38E0),hl      
+21E0 : E1                       pop     hl              
+21E1 : 22 E2 38                 ld      (X38E2),hl      
+21E4 : E1                       pop     hl              
+21E5 : 22 DE 38                 ld      (X38DE),hl      
+21E8 : E1                       pop     hl              ;GET BACK THE TEXT POINTER
+21E9 : C9                       ret                     
+21EA    
+21EA                  + ; [M80] SUBROUTINE TO GET A POINTER TO A FUNCTION NAME
+21EA                  | ; [M80] 
+21EA : CF         [M80] GETFNM: rst     SYNCHK          
+21EB : A2                       byte    FNTK            ; [M80] MUST START WITH "FN"
+21EC : 3E 80                    ld      a,128           ; [M80] DONT ALLOW AN ARRAY
+21EE : 32 CB 38                 ld      (SUBFLG),a      ; [M80] DON'T RECOGNIZE THE "(" AS THE START OF AN ARRAY REFEREENCE
+21F1 : B6                       or      (hl)            ; [M80] PUT FUNCTION BIT ON
+21F2 : 4F                       ld      c,a             ; [M80] GET FIRST CHARACTER INTO [C]
+21F3 : CD D6 10                 call    PTRGT2          
+21F6 : C3 75 09                 jp      CHKNUM          
 21F9 
 21F9                  + ;[M80] ARCTANGENT FUNCTION
 21F9					        | ;[M80] IDEA: USE IDENTITIES TO GET ARG BETWEEN 0 AND 1 AND THEN USE AN
@@ -387,125 +408,119 @@
 2266 : C9                       ret                     
 2267    
 2267                    ;;;This Statement appears to be unique to the Aquarius
-2267 : FE 40            MENU:   cp      'A'-1
-2269 : CC 6B 06                 call z,CHRGTR
-226C : CD E0 22                 call L22E0
-226F : D5                       push de
-2270 : 1E 01                    ld e,001H
-2272 : 7E                       ld a,(hl)
-2273 : FE 2C                    cp 02CH
-2275 : 20 08                    jr nz,L227F
-2277 : D7                       rst CHRGET
-2278 : CD 54 0B                 call GETBYT
-227B : D5                       push de
-227C : CF                       rst SYNCHK
-227D : 3B                       dec sp
-227E : D1                       pop de
-227F    L227F:
-227F : 4B  "K"  ld c,e
-2280 : 06 01  "  "  ld b,001H
-2282 : D1  " "  pop de
-2283 : D5  " "  push de
-2284 : C5  " "  push bc
-2285    L2285:
-2285 : E5  " "  push hl
-2286 : EB  " "  ex de,hl
-2287 : E5  " "  push hl
-2288 : CD 4D 2D  " M-"  call MOVEIT
-228B : 3E 2E  ">."  ld a,02EH
-228D : DF  " "  rst OUTCHR
-228E : E1  " "  pop hl
-228F : E3  " "  ex (sp),hl
-2290 : CD 85 09  "   "  call FRMEVL
-2293 : E5  " "  push hl
-2294 : CD C6 0F  "   "  call FRESTR
-2297 : CD A0 0E  "   "  call STRPRT
-229A : E1  " "  pop hl
-229B : D1  " "  pop de
-229C : C1  " "  pop bc
-229D : 7E  "~"  ld a,(hl)
-229E : FE 2C  " ,"  cp 02CH
-22A0 : 20 0C  "  "  jr nz,L22AE
-22A2 : EB  " "  ex de,hl
-22A3 : 04  " "  inc b
-22A4 : CD FB 22  "  ""  call L22FB
-22A7 : C5  " "  push bc
-22A8 : E5  " "  push hl
-22A9 : EB  " "  ex de,hl
-22AA : D7  " "  rst CHRGET
-22AB : D1  " "  pop de
-22AC : 18 D7  "  "  jr L2285
-    ;
-22AE    L22AE:
-22AE : FE 88  "  "  cp 088H
-22B0    L22B0:
-22B0 : C2 C4 03  "   "  jp nz,SNERR
-22B3 : E3  " "  ex (sp),hl
-22B4    L22B4:
-22B4 : E5  " "  push hl
-22B5 : C5  " "  push bc
-22B6 : 1E 00  "  "  ld e,000H
-22B8    L22B8:
-22B8 : CD CE 22  "  ""  call L22CE
-22BB : 1C  " "  inc e
-22BC : 38 0A  "8 "  jr c,L22C8
-22BE : CD FB 22  "  ""  call L22FB
-22C1 : 05  " "  dec b
-22C2 : 20 F4  "  "  jr nz,L22B8
-22C4 : C1  " "  pop bc
-22C5 : E1  " "  pop hl
-22C6 : 18 EC  "  "  jr L22B4
-    ;
-22C8    L22C8:
-22C8 : E1  " "  pop hl
-22C9 : E1  " "  pop hl
-22CA : E1  " "  pop hl
-22CB : C3 85 07  "   "  jp L0785
-    ;
-22CE    L22CE:
-22CE : C5  " "  push bc
-22CF : CD 4D 2D  " M-"  call MOVEIT
-22D2    L22D2:
-22D2 : CD 2F 1A  " / "  call CQINCH
-22D5 : FE 0D  "  "  cp 00DH
-22D7 : 37  "7"  scf
-22D8 : 28 04  "( "  jr z,L22DE
-22DA : FE 20  "  "  cp 020H
-22DC : 20 F4  "  "  jr nz,L22D2
-22DE    L22DE:
-22DE : C1  " "  pop bc
-22DF : C9  " "  ret
-    ;
-22E0    L22E0:
-22E0 : CF  " "  rst SYNCHK
-22E1 : 28 CD  "( "  jr z,L22B0
-22E3 : 54  "T"  ld d,h
-22E4 : 0B  " "  dec bc
-22E5 : FE 26  " &"  cp 026H
-22E7 : 30 09  "0 "  jr nc,L22F2
-22E9 : 3C  "<"  inc a
-22EA : F5  " "  push af
-22EB : CF  " "  rst SYNCHK
-22EC : 2C  ","  inc l
-22ED : CD 54 0B  " T "  call GETBYT
-22F0 : FE 25  " %"  cp 025H
-22F2    L22F2:
-22F2 : D2 97 06  "   "  jp nc,FCERR
-22F5 : D1  " "  pop de
-22F6 : 3C  "<"  inc a
-22F7 : 5F  "_"  ld e,a
-22F8 : CF  " "  rst SYNCHK
-22F9 : 29  ")"  add hl,hl
-22FA : C9  " "  ret
-    ;
-22FB    L22FB:
-22FB : 7D  "}"  ld a,l
-22FC : 81  " "  add a,c
-22FD : 6F  "o"  ld l,a
-22FE : FE 18  "  "  cp 018H
-2300 : D8  " "  ret c
-2301 : 2E 17  ". "  ld l,017H
-2303 : C9  " "  ret
+2267 :                  ;;The MENU Statement
+2267 :                  ;;Syntax: MENU (xpos,ypos), spacing, 
+2267 :                  ;;             "string-1","string-2",...,"string-n" 
+2267 :                  ;;              GOTO line-1,line-2,...,line-n
+2267 : FE 40            MENU:   cp      '@'             ;{GWB} ALLOW MEANINGLESS "@"
+2269 : CC 6B 06                 call    z,CHRGTR        ;{GWB} BY SKIPPING OVER IT
+226C : CD E0 22                 call    SCANX           ;;DE = Coords (X,Y) 
+226F : D5                       push    de              ;;Stack = Coords
+2270 : 1E 01                    ld      e,1             ;;DE = Options [?, Spacing]
+2272 : 7E                       ld      a,(hl)          
+2273 : FE 2C                    cp      ','             ;;Is Next Character a Comma?
+2275 : 20 08                    jr      nz,MENU2        ;;If So
+2277 : D7                       rst     CHRGET          ;;  Eat Comma
+2278 : CD 54 0B                 call    GETBYT          ;;  E = Spacing
+227B : D5                       push    de              ;;  Stack = Options, Coords             
+227C : CF                       rst     SYNCHK          
+227D : 3B                       byte    ';'             ;;  Must be a Semicolon              
+227E : D1                       pop     de              ;;  DE = Spaoing, Stack = Coords
+227F : 4B               MENU2:  ld      c,e             ;;BC = Options [Counter, Spacing]
+2280 : 06 01                    ld      b,1             ;;
+2282 : D1                       pop     de              ;;DE = Coords
+2283 : D5                       push    de              ;;Stack = Coords
+2284 : C5                       push    bc              ;;Stack = Options, Coords
+2285 :                          ;;Evaluate and Print String
+2285 : E5               MENUS:  push    hl              ;;Stack = Text Pointer, Options. Coords
+2286 : EB                       ex      de,hl           ;;DE = Text Pointer, H: = Coords  
+2287 : E5                       push    hl              ;;Stack = Coords, Text Pointer, Options. Coords
+2288 : CD 4D 2D                 call    MOVEIT          ;;Move Cursor to H,L
+228B : 3E 2E                    ld      a,'.'                     
+228D : DF                       rst     OUTCHR          ;;Print a Period
+228E : E1                       pop     hl              ;;HL = Coords, Stack = Text Pointer, Options. Coords
+228F : E3                       ex      (sp),hl         ;;HL = Text Pointer, Stack = 
+2290 : CD 85 09                 call    FRMEVL          ;;Evaluate a String
+2293 : E5                       push    hl              ;;Stack = Text Pointer, Coords, Options. Coords
+2294 : CD C6 0F                 call    FRESTR          ;[M80] FREE UP TEMP POINTED TO BY FACLO
+2297 : CD A0 0E                 call    STRPRT          ;;Print the String
+229A : E1                       pop     hl              ;;HL = Text Pointer, Stack =  Coords, Options. Coords
+229B : D1                       pop     de              ;;DE = Coords, Stack = Options. Coords
+229C : C1                       pop     bc              ;;BC = Options, Stack = Coords
+229D : 7E                       ld      a,(hl)          
+229E : FE 2C                    cp      ','             ;;Is Next Character a Comma?
+22A0 : 20 0C                    jr      nz,MENU3        ;;If So
+22A2 : EB                       ex      de,hl           ;;  HL = Coords, DE = Text Pointer
+22A3 : 04                       inc     b               ;;  Increment Option Counter
+22A4 : CD FB 22                 call    ADDLC           ;;  Add Spacing to Y
+22A7 : C5                       push    bc              ;;  Stack = Options, Coords
+22A8 : E5                       push    hl              ;;  Stack = Coords, Options, Coords
+22A9 : EB                       ex      de,hl           ;;  HL = Text Pointer, DE = Coords
+22AA : D7                       rst     CHRGET          ;;  Eat Comma
+22AB : D1                       pop     de              ;;  Get Back Coordinates 
+22AC : 18 D7                    jr      MENUS           ;;  Scane Next String
+22AE    
+22AE :                  ;;BC = Options, DE = Coords, HL = Text Pointer, Stack = Coords
+22AE : FE 88            MENU3:  cp      GOTOTK          ;;If Not GOTO
+22B0 : C2 C4 03                 jp      nz,SNERR        ;;Syntax Error
+22B3 : E3                       ex      (sp),hl         ;;HL = Coords, Stack = Text Pointer
+22B4 : E5               MENUT:  push    hl              ;;Stack = Coords, Text Pointer
+22B5 : C5                       push    bc              ;;Stack = Options, Coorda, Text Pointer
+22B6 : 1E 00                    ld      e,0             ;;Option Number = 0
+22B8 : CD CE 22         MENUN:  call    MENUK           ;;Get C/R or Space from Keyboard
+22BB : 1C                       inc     e               ;;Increment Option Number
+22BC : 38 0A                    jr      c,MENUG         ;;If Space
+22BE : CD FB 22                 call    ADDLC           ;;  Y = Y + Spacing
+22C1 : 05                       dec     b               ;;  Decrement Option Count
+22C2 : 20 F4                    jr      nz,MENUN        ;;  If Not Zero, Move to Next Optionb
+22C4 : C1                       pop     bc              ;;    BC = Options, HL = Coords
+22C5 : E1                       pop     hl              ;;    Stack = Text Pointer
+22C6 : 18 EC                    jr      MENUT           ;;    Start Iver ar Top
+22C8 : E1               MENUG:  pop     hl              ;;Discard Options
+22C9 : E1                       pop     hl              ;;Discard Coords
+22CA : E1                       pop     hl              ;;Restore Text Pointer
+22CB : C3 85 07                 jp      OMGOTO          ;;Do ON [E] GOTO 
+22CE
+22CE                    ;;Wait for C/R or Space, Return Carry Set if Return
+22CE : C5               MENUK:  push    bc              ;;Save BC
+22CF : CD 4D 2D                 call    MOVEIT          ;;Move Cursor to H,L
+22D2 : CD 2F 1A         MENUL:  call    CQINCH          ;;Get Character from Keyboard
+22D5 : FE 0D                    cp      13              ;;If C/R
+22D7 : 37                       scf                     
+22D8 : 28 04                    jr      z,MENUR         ;;  Return Carry Set
+22DA : FE 20                    cp      ' '             ;;If Not Space
+22DC : 20 F4                    jr      nz,MENUL        ;;  Loop
+22DE : C1               MENUR:  pop     bc              ;;Restore BC 
+22DF : C9                       ret
+22E0
+22E0 :                  ;;Get Coordinates for MENU Statement   
+22E0 :                  ;;Syntax: Coords
+22E0 : CF               SCANX:  rst     SYNCHK          
+22E1 : 28                       byte    '('             ;{GWB} SKIP OVER OPEN PAREN
+22E2 : CD 54 0B                 call    GETBYT          ;{GWB} SCAN X INTO [A]
+22E5 : FE 26                    cp      '&'             
+22E7 : 30 09                    jr      nc,SCANX2        
+22E9 : 3C                       inc     a               ;;Bump X Past First Column
+22EA : F5                       push    af              ;{GWB} SAVE WHILE SCANNING Y
+22EB : CF                       rst     SYNCHK          
+22EC : 2C                       byte    ','             ;{GWB} SCAN COMMA
+22ED : CD 54 0B                 call    GETBYT          ;{GWB} GET Y INTO [A]
+22F0 : FE 25                    cp      '%'             
+22F2 : D2 97 06         SCANX2: jp      nc,FCERR        
+22F5 : D1                       pop     de              ;;Get X into D
+22F6 : 3C                       inc     a               ;;Bump Y Past First Line
+22F7 : 5F                       ld      e,a             ;;Put Y into E
+22F8 : CF                       rst     SYNCHK          
+22F9 : 29                       byte    ')'             ;{GWB} SKIP OVER CLOSE PAREN
+22FA : C9                       ret                     
+22FB    
+22FB : 7D               ADDLC:  ld      a,l             ;;L = L + C 
+22FC : 81                       add     a,c             
+22FD : 6F                       ld      l,a             
+22FE : FE 18                    cp      24              
+2300 : D8                       ret     c               ;;If L >= 24
+2301 : 2E 17                    ld      l,23            ;;L = 23
+2303 : C9                       ret
 2304    
 2304 : EF               FRCINX: rst     FSIGN           ;[M80] GET THE SIGN OF THE FAC IN A
 2305 : FA 0E 23                 jp      m,FRCINM        ;;If Positive
@@ -2770,7 +2785,7 @@ Value  Type Name
 0697  Code FCERR
 069C  Code SCNLIN
 06F3  Code USERR
-0785  Code L0785
+0785  Code OMGOTO
 0972  Code FRMNUM
 0975  Code CHKNUM
 0985  Code FRMEVL
@@ -2783,7 +2798,7 @@ Value  Type Name
 0BA0  Code GETSTK
 0BBE  Code SCRTCH
 0CC6  Code ISLETC
-0E59  Code L0E59
+0E59  Code STRADX
 0E9D  Code STROUT
 0EA0  Code STRPRT
 0FC6  Code FRESTR
@@ -2832,24 +2847,22 @@ Value  Type Name
 2169  Code L2169
 216C  Code L216C
 2170  Code L2170
-219C  Code L219C
-21EA  Code L21EA
+21EA  Code GETFNM
 2217  Code ATN2
 2221  Data ATNCON
 2267  Data MENU
-227F  Code L227F
-2285  Code L2285
-22AE  Code L22AE
-22B0  Code L22B0
-22B4  Code L22B4
-22B8  Code L22B8
-22C8  Code L22C8
-22CE  Code L22CE
-22D2  Code L22D2
-22DE  Code L22DE
-22E0  Code L22E0
-22F2  Code L22F2
-22FB  Code L22FB
+227F  Code MENU2
+2285  Code MENUS
+22AE  Code MENU3
+22B4  Code MENUT
+22B8  Code MENUN
+22C8  Code MENUG
+22CE  Code MENUK
+22D2  Code MENUL
+22DE  Code MENUR
+22E0  Code SCANX
+22F2  Code SCANX2
+22FB  Code ADDLC
 2304  Code FRCINX
 230E  Code FRCINM
 2320  Code MAKINT
