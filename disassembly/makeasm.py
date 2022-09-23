@@ -1,7 +1,7 @@
 # Convert Annotated Aquarius ROM Disassembly to TASM Source Code
 # Python 2 and 3 compatible
 
-# python makeasm.py
+# python makeasm.py aquarius-rom.lst s2basic.asm
 # tasm -80 -b -s s2basic.asm
 # fc /b s2basic.obj aquarius.rom
 
@@ -20,6 +20,8 @@ def makeasm(iname, oname, bname):
   ifile = open(iname, 'r')
   ofile = open(oname, 'w')
   bfile = open(bname, 'wb')
+
+  print("Creating %s, %s from %s" % (oname, bname, iname)) 
 
   llblank = True
   llmeta = False
@@ -116,4 +118,12 @@ def makeasm(iname, oname, bname):
   ifile.close()
   bfile.close()
 
-makeasm("aquarius-rom.lst", "s2basic.asm", "s2basic.bin")  
+if __name__ == "__main__":
+  import argparse
+  parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument("infile", help="Input File Name (with extension)")
+  parser.add_argument("outfile", help="Output File Name (with extension)")
+  args = parser.parse_args()
+
+
+  makeasm("aquarius-rom.lst", "s2basic.asm", "s2basic.bin")  
