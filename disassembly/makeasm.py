@@ -1,11 +1,15 @@
 # Convert Annotated Aquarius ROM Disassembly to TASM Source Code
 # Python 2 and 3 compatible
 
+# python -z makeasm.py aquarius-rom.lst s2basic.asm
+# zmac -o s2basic.cim s2basic.asm
+# fc /b s2basic.cim aquarius.rom
+
 # python makeasm.py aquarius-rom.lst s2basic.asm
 # tasm -80 -b -s s2basic.asm
 # fc /b s2basic.obj aquarius.rom
 
-def makeasm(iname, oname, bname):
+def makeasm(iname, oname, bname, zmac):
 
   #Psuedo-Op Replacement Dictionary
   PSO = {"byte": ".byte", "end": ".end", "equ": ".equ", 
@@ -30,6 +34,7 @@ def makeasm(iname, oname, bname):
   lineno = 0
   
   for line in ifile:
+
     lineno += 1
   
     line = line.rstrip()
@@ -79,8 +84,10 @@ def makeasm(iname, oname, bname):
     if line[0:1] != ';':
       arg = line[16:24].rstrip()
       if arg in ARGS:
-        line = line[:16] + ARGS[arg].ljust(8) + line[24:]
-
+        line = line[:16] + ARGS[arg].ljust(8) + line[24:]  
+      if zmac and arg[:1] == "*":
+        line = line[:16] + "$" +line[17:]  
+        
     #Get Instruction Mnemonic for Psuedo-Op and RST Conversions
     if line[0:1] != ';' and line[8:9] != ';':
       label = line[:8].rstrip()
@@ -93,7 +100,9 @@ def makeasm(iname, oname, bname):
 
     #Replace Psuedo-Ops
     if mnemonic == "=":
-      if label in eqlabels:
+      if zmac:
+        mnemonic = "defl"
+      elif label in eqlabels:
         mnemonic = "set"
       else:
         eqlabels.append(label)
@@ -114,16 +123,19 @@ def makeasm(iname, oname, bname):
 
     if line[:12] == "        .end": break
   
+  print("Complete.")    
+  
+  bfile.close()
   ofile.close()
   ifile.close()
-  bfile.close()
-
+  
 if __name__ == "__main__":
   import argparse
   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument("-z", action="store_true", help="Generate ZMAC Assembler Syntax")
   parser.add_argument("infile", help="Input File Name (with extension)")
   parser.add_argument("outfile", help="Output File Name (with extension)")
+  parser.add_argument("binfile", help="Binary File Name (with extension)")
   args = parser.parse_args()
 
-
-  makeasm("aquarius-rom.lst", "s2basic.asm", "s2basic.bin")  
+  makeasm(args.infile, args.outfile, args.binfile, args.z)

@@ -90,7 +90,7 @@
                                                 ;[M80] OR ASSIGNMENT OF STRING VALUES IN DIRECT STATEMENTS WON'T COPY INTO 
                                                 ;[M80] STRING SPACE -- WHICH IT MUST ALLOW FOR SINGLE QUOTE IN BIG LINE
                   [M80] ENDBUF  equ     $38A9   ;[M80] PLACE TO STOP BIG LINES
-                  [M80] BUFLEN  = ENDBUF-BUF-1  ;;Buffer Length
+                  [M80] BUFLEN  equ     ENDBUF-BUF-1  ;;Buffer Length
                   [M80] DIMFLG  equ     $38AA   ;[M80] IN GETTING A POINTER TO A VARIABLE IT IS IMPORTANT TO REMEMBER 
                                                 ;[M80] WHETHER IT IS BEING DONE FOR "DIM" OR NOT
                   [M80] VALTYP  equ     $38AB   ;[M80] THE TYPE INDICATOR 0=NUMERIC 1=STRING
@@ -1184,7 +1184,7 @@
 04F3 : 01 36 05                 ld      bc,NOTGOS       ;[M80] PLACE TO RETURN IF NOT FUNNY GO
 04F6 : C5                       push    bc              ;
 04F7 : 06 7F                    ld      b,$7F           ;
-04F9 : 7E       *       CRUNCX: ld      a,(hl)          ;[M80] GET CHAR FROM MEMORY
+04F9 : 7E               CRUNCX: ld      a,(hl)          ;[M80] GET CHAR FROM MEMORY
 04FA : FE 61                    cp      'a'             ;[M80] IS IT LOWER CASE RANGE
 04FC : 38 07                    jr      c,RESCON        ;[M80] LESS
 04FE : FE 7B                    cp      '{'             ;[M80] GREATER
@@ -1300,7 +1300,7 @@
 0594 : 3E 20                    ld      a,' '           ;
 0596 : E1                       pop     hl              ;
 0597 : DF         (M65) PLOOP:  rst     OUTCHR          ;[M80] PRINT A SPACE AFTER THE LINE #
-0598 : 7E       * [M80] LISPRT: ld      a,(hl)          ;
+0598 : 7E         [M80] LISPRT: ld      a,(hl)          ;
 0599 : 23                       inc     hl              ;[M80] INCR POINTER
 059A : B7                       or      a               ;[M80] SET CC
 059B : 28 DD                    jr      z,LIST4         ;[M80] IF =0 THEN END OF LINE
@@ -5456,8 +5456,8 @@
 1A51 : 08               PPRSET: ex      af,af'          ;;Save PSET/PRESET flag
 1A52 : CD 7F 1A                 call    SCAND           ;;Parse (X,Y)
 1A55 : CD 8E 1A         PPRSDO: call    SCALXY          ;;Convert X,Y
-1A58 : 28 02                    jr      z,RSET          ;;Semigraphics at screen location?
-1A5A : 36 A0                    ld      (hl),$A0        ;;No, store base semigraphic
+1A58 : 28 02                    jr      z,RSETC         ;;Semigraphics at screen location?
+1A5A : 36 A0                    ld      (hl),$A0        ;;No, store base semigraphic`1
 1A5C : 08         (~~~) RSETC:  ex      af,af'          ;;Restore PSET/PRESET flag 
 1A5D : B7                       or      a               ;;Set flags
 1A5E : 1A                       ld      a,(de)          ;;Get semigraphic offset
@@ -6400,3 +6400,4 @@
 1FF8 : F5 F5 F5 F5              byte    $F5,$F5,$F5,$F5,$F5,$F5,$F5,$F5 
 1FFC : F5 F5 F5 F5
 2000 :                          end                    ;End of Program!
+
