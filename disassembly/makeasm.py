@@ -1,15 +1,17 @@
 # Convert Annotated Aquarius ROM Disassembly to TASM Source Code
 # Python 2 and 3 compatible
 
-# python -z makeasm.py aquarius-rom.lst s2basic.asm
+# python -z makeasm.py aquarius-rom.lst s2basic.asm s2basic.bin
 # zmac -o s2basic.cim s2basic.asm
 # fc /b s2basic.cim aquarius.rom
 
-# python makeasm.py aquarius-rom.lst s2basic.asm
+# python makeasm.py aquarius-rom.lst s2basic.asm s2basic.bin
 # tasm -80 -b -s s2basic.asm
 # fc /b s2basic.obj aquarius.rom
 
 def makeasm(iname, oname, bname, zmac):
+
+  tasm = not zmac
 
   #Psuedo-Op Replacement Dictionary
   PSO = {"byte": ".byte", "end": ".end", "equ": ".equ", 
@@ -83,7 +85,7 @@ def makeasm(iname, oname, bname, zmac):
     #Replace operands that cause errors
     if line[0:1] != ';':
       arg = line[16:24].rstrip()
-      if arg in ARGS:
+      if tasm and arg in ARGS:
         line = line[:16] + ARGS[arg].ljust(8) + line[24:]  
       if zmac and arg[:1] == "*":
         line = line[:16] + "$" +line[17:]  
@@ -102,21 +104,25 @@ def makeasm(iname, oname, bname, zmac):
     if mnemonic == "=":
       if zmac:
         mnemonic = "defl"
-      elif label in eqlabels:
-        mnemonic = "set"
-      else:
-        eqlabels.append(label)
-        mnemonic = "equ"
-    if mnemonic and mnemonic in PSO:
+      elif tasm:
+        if label in eqlabels:
+          mnemonic = "set"
+        else:
+          eqlabels.append(label)
+          mnemonic = "equ"
+          mnemonic = "equ"
+    if tasm:
+      if mnemonic and mnemonic in PSO:
         line = line[:8] + PSO[mnemonic].ljust(8) + line[16:]
         
     #Replace RST operand for TASM
-    if line[0:1] != ';' and line[8:16] == "rst     ":
-      arg = line[16:24].rstrip()
-      if arg in RST:
-        line = line[:16] + RST[arg].ljust(8) + line[24:]
-      else:
-        print("Illegal RST operand s in line %d" % (arg, lineno))
+    if tasm: 
+      if line[0:1] != ';' and line[8:16] == "rst     ":
+        arg = line[16:24].rstrip()
+        if arg in RST:
+          line = line[:16] + RST[arg].ljust(8) + line[24:]
+        else:
+          print("Illegal RST operand s in line %d" % (arg, lineno))
 
     #Write Line to ASM File
     ofile.write(line + '\n')
