@@ -1,7 +1,7 @@
-# Convert Annotated Aquarius ROM Disassembly to TASM Source Code
+# Convert Annotated Aquarius ROM Disassembly to TASM or ZMAC Source Code
 # Python 2 and 3 compatible
 
-# python -z makeasm.py aquarius-rom.lst s2basic.asm s2basic.bin
+# python makeasm.py -z aquarius-rom.lst s2basic.asm s2basic.bin
 # zmac -o s2basic.cim s2basic.asm
 # fc /b s2basic.cim aquarius.rom
 
