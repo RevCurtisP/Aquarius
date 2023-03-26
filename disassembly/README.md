@@ -1,15 +1,7 @@
-# Mattel Aquarius Commented ROM Disassembly and Utilities
+# Mattel Aquarius Annotated Dissasembly
 
-| File             | Description                                      |
-| -----------      | -------------------------------------------------|
-| aquarius-rom.lst | Commented S2 BASIC disassembly                   |
-| aquarius-ext.lst | Commented Extended BASIC disassembly             |
-| makeasm.py       | Utility to convert disassembly to TASM .asm file |
-
-To convert disassembly to source file file:
-
-    python makeasm.py
-
-To assemble source file files:
-
-    tasm -80 -b -s s2basic.asm
+| File             | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| aquarius-rom.lst | Combined Annotated Dissasembly                          |
+| splitasm.py      | Splits combined dissasembly into separate dissasemblies |
+| makeasm.py       | Convert split dissasembly into assembly file            | 
