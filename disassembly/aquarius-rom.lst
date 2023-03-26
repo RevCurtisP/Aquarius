@@ -354,12 +354,12 @@
 0041 0041
 0041 0041 : 31 A0 38   [M80] INIT:   ld      sp,TMPSTK         ;[M80] SET UP TEMP STACK
 0044 0044 : 3E 0B                    ld      a,11              ;
-0046      : CD 74 1D                 call    TTYCHR            ;;Print CLS to Clear Screen
+0046      : CD 74 1D                 call    TTYCH             ;;Print CLS to Clear Screen
      0046 : CD 94 1D                 call    TTYOUT            ;;Print CLS to Clear Screen
 0049 0049 : 2A 01 38                 ld      hl,(CURRAM)       ;
 004C 004C : 36 20                    ld      (hl),' '          ;;Place Space on Screen
 004E 004E : 3E 07                    ld      a,7               ;
-0050      : CD 74 1D                 call    TTYCHR            ;;Print BEL to Sound Beep 
+0050      : CD 74 1D                 call    TTYCH             ;;Print BEL to Sound Beep 
      0050 : CD 94 1D                 call    TTYOUT            ;;Print BEL to Sound Beep 
 0053 0053 : AF                       xor     a                 ;
 0054 0054 : D3 FF                    out     ($FF),a           ;;Output 0 to I/O Port 255;
@@ -527,7 +527,7 @@
      0149 : CA E8 1F                 jp      z,XBASIC          ;;Yes, start Extended BASIC
 0157      : CA 10 20                 jp      z,XSTART          ;;Yes, start Extended BASIC
 015A 014C : BE                       cp      (hl)              ;;Does it match byte in ROM?
-015B      : C2 02 04			         	 jp	     nz,READY          ;;No, move on
+015B      : C2 02 04                 jp	     nz,READY          ;;No, move on
      014D : 20 04                    jr      nz,INITFF         ;;No, move on
 015E 014F : 2B                       dec     hl                ;;Move backward in Extended BASIC
 015F 0150 : 13                       inc     de                ;;and forward in test signature 
@@ -1521,7 +1521,7 @@
 062C 062C                  | ;[M80] LEFT ON THE STACK WHEN A STATEMENT IS EXECUTED SO
 062C 062C                  | ;[M80] IT CAN MERELY DO A RETURN WHEN IT IS DONE.
 062C 062C              [M80] NEWSTT: 
-062C      : CD 25 1A                 call  ISCNTC
+062C      : CD 25 1A                 call    ISCNTC
 062F      : 22 CE 38                 ld      (SAVTXT),hl       ;USED BY CONTINUE AND INPUT AND CLEAR AND PRINT USING
      062C : 22 CE 38                 ld      (SAVTXT),hl       ;USED BY CONTINUE AND INPUT AND CLEAR AND PRINT USING
      062F : CD C2 1F                 call    INCNTC            ;;*** might be [M65] ISCNTC
@@ -2644,8 +2644,10 @@
 0BE5 0BE5 : C1         [M80] STKINI: pop     bc              ;[M80] GET RETURN ADDRESS HERE
 0BE6 0BE6 : 2A 4B 38                 ld      hl,(TOPMEM)     ;
 0BE9 0BE9 : F9                       ld      sp,hl           ;[M80] INITIALIZE STACK
-0BEA 0BEA : CD D8 1F                 call    STKSAV          ;[M80] MAKE SURE SAVSTK OK JUST IN CASE.
-0BED 0BED : 22 AF 38   {M80} STKERR: ld      (TEMPPT),hl     ;
+0BEA      : 21 B1 38                 ld      hl,TEMPST
+0BED      : 22 AF 38                 ld      (TEMPPT),hl
+     0BEA : CD D8 1F                 call    STKSAV          ;[M80] MAKE SURE SAVSTK OK JUST IN CASE.
+     0BED : 22 AF 38   {M80} STKERR: ld      (TEMPPT),hl     ;
 0BF0 0BF0 : CD BE 19                 call    FINLPT          ;{M80] BACK TO NORMAL PRINT MODE
 0BF3 0BF3 : AF                       xor     a               ;[M80] ZERO OUT A
 0BF4 0BF4 : 6F                       ld      l,a             ;[M80] ZERO OUT H
@@ -5501,10 +5503,10 @@
 19D1 19D1 : AF                       xor     a               ;[M80] ZERO LPTPOS
 19D2 19D2 : 32 46 38                 ld      (LPTPOS),a      ;
 19D5 19D5 : C9                       ret                     ;[M80] DONE
-19D619D6
+19D6 19D6
 19D6 19D6 : F1         [M80] TTYPOP: pop     af              ;Print character on stack to screen
 19D7 19D7 : C3 72 1D                 jp      TTYCHR          ;
-19DA19DA
+19DA 19DA
 19DA 19DA                    ;[M80] INCHR, TRYIN - CHARACTER INPUT ROUTINES
 19DA 19DA = CD 2F 1A   [M80] INCHR:  call    CQINCH          ;;Get Character from Keyboard
 19DD 19DD : C9                       ret                     ;
@@ -6042,8 +6044,9 @@
 1CA5 1CA5 : CD 9D 0E                 call    STROUT          ;;"Bad"
 1CA8 1CA8 : C3 01 04                 jp      STPRDY          ;;Abort to direct mode
 1CAB 1CAB
-1CAB 1CAB : 42 61 64 0D      BADT:   byte    "Bad",13,10,0
-1CAF 1CAF : 0A 00
+1CAB      : 42 61 E4         BADT:   byte    "Ba",'d'+128
+     1CAB : 42 61 64 0D      BADT:   byte    "Bad"
+1CAE 1CAE : 0D 0A 00                 byte    13,10,0
 1CB1 1CB1                    ;;Scan a Filename for CLOAD command
 1CB1 1CB1 : AF               NAMFIN: xor     a               ;;Store 0
 1CB2 1CB2 : 32 51 38                 ld      (FILNAM),a      ;;in first character of FILNAM
@@ -6144,7 +6147,7 @@
 1D38 1D38 : CD BC 1B         CSAVEP: call    WRSYNC          ;;Write SYNC to tape
 1D3B 1D3B : EB                       ex      de,hl           ;;Save from TXTTAB
 1D3C 1D3C : 2A D6 38                 ld      hl,(VARTAB)     ;;to VARTAB
-1D3F1D3F
+1D3F 1D3F
 1D3F 1D3F                    ;;Save RAM from DE to HL on tape
 1D3F 1D3F : 1A               CSAVEB: ld      a,(de)          ;;Get byte from memory
 1D40 1D40 : 13                       inc     de              ;;Bump pointer
@@ -6190,7 +6193,7 @@
 1D72 1D72              [M80] TTYCHR: ;Print character to screen
 1D72 1D72 : F7                       rst     HOOKDO          ;;Call Extended BASIC Hook Routine
 1D73 1D73 : 13         {~~~} HOOK19: byte    19              ;
-1D74 1D74 : F5                       push    af              ;;Save character
+1D74 1D74 : F5         [~~~] TTYCH:  push    af              ;;Save character
 1D75 1D75 : FE 0A                    cp      10              ;[M80] LINE FEED?
 1D77 1D77 : 28 1A                    jr      z,ISLF          ;
 1D79 1D79 : 3A 00 38                 ld      a,(TTYPOS)      ;
@@ -6532,23 +6535,34 @@
 1FBC 1FBC : C6 9B                                                     
 1FBE 1FBE : 97 8E 89 11              byte    $97,$8E,$89,$11         ;;LIST REM RUN ^Q
 1FC2 1FC2 
-1FC2 1FC2                    ;;Check for Ctrl-C, called from NEWSTT
-1FC2 1FC2 : E5               INCNTC: push    hl                ;;Save text pointer
-1FC3 1FC3 : 21 04 00                 ld      hl,4              ;
-1FC6 1FC6 : 39                       add     hl,sp             ;
-1FC7 1FC7 : 22 F9 38                 ld      (SAVSTK),hl       ;;Save stack pointer less 2 entries
-1FCA 1FCA : E1                       pop     hl                ;;Restore text pointer
-1FCB 1FCB : C3 25 1A                 jp      ISCNTC            ;;Check for Ctrl-C
-1FCE 1FCE 
-1FCE 1FCE                    ;;Finish up Warm Start
-1FCE 1FCE : 2A F9 38         WRMFIN: ld      hl,(SAVSTK)       ;;Restore stack pointer
-1FD1 1FD1 : F9                       ld      sp,hl             ;
-1FD2 1FD2 : 2A CE 38                 ld      hl,(SAVTXT)       ;;Restore text pointer
-1FD5 1FD5 : CD 20 0C                 call    STOPC             ;;Enter direct mode
-1FD8 1FD8      
-1FD8 1FD8 : 00 00 00 00              byte    $00,$00,$00,$00,$00,$00,$00,$00,$00
-1FDC 1FDC : 00 00 00 00
-1FE0 1FE0 : 00
+1FC2      :                          ;;Revision Date?
+1FC2      : 31 34 2D 4A              byte    "14-JULY-1982 ",0 
+1FC6      : 55 4C 59 2D
+1FCA      : 31 39 38 32        
+1FCE      : 20 00         
+1FD0
+1FD0                         ;;Pad rest of ROM space
+1FD0      : 00 00 00 00              byte    $00,$00,$00,$00,$00,$00,$00,$00
+1FD4      : 00 00 00 00
+     1FC2 
+     1FC2                    ;;Check for Ctrl-C, called from NEWSTT
+     1FC2 : E5               INCNTC: push    hl                ;;Save text pointer
+     1FC3 : 21 04 00                 ld      hl,4              ;
+     1FC6 : 39                       add     hl,sp             ;
+     1FC7 : 22 F9 38                 ld      (SAVSTK),hl       ;;Save stack pointer less 2 entries
+     1FCA : E1                       pop     hl                ;;Restore text pointer
+     1FCB : C3 25 1A                 jp      ISCNTC            ;;Check for Ctrl-C
+     1FCE 
+     1FCE                    ;;Finish up Warm Start
+     1FCE : 2A F9 38         WRMFIN: ld      hl,(SAVSTK)       ;;Restore stack pointer
+     1FD1 : F9                       ld      sp,hl             ;
+     1FD2 : 2A CE 38                 ld      hl,(SAVTXT)       ;;Restore text pointer
+     1FD5 : CD 20 0C                 call    STOPC             ;;Enter direct mode
+     1FD8      
+1FD8      : 00 00 00 00              byte    $00,$00,$00,$00,$00,$00,$00,$00
+1FDC      : 00 00 00 00
+1FE0      : 00 00 00 00              byte    $00,$00,$00,$00,$00,$00,$00,$00
+1FE4      : 00 00 00 00              
      1FD8
      1FD8                  + ;;Save Stack Pointer
      1FD8                  | ;;Called from STKINI. Stores stack pointer in TEMPST
@@ -6558,17 +6572,15 @@
      1FDA : 22 F9 38                 ld      (SAVSTK),hl       ;MAKE SURE SAVSTK OK JUST IN CASE
      1FDD : 21 B1 38                 ld      hl,TEMPST         ;INCREMENT BACK FOR SPHL
      1FE0 : C9                       ret                       ;
-1FE1 
-1FE1      : 00 00 00 00              byte    $00,$00,$00,$00,$00,$00,$00
-1FE5      : 00 00 00 
      1FE1                    ;;Power Up/Reset Routine: Jumped to from RST 0 
      1FE1 : 3E FF      [M80] JMPINI: ld      a,$FF             ;;Turn off printer and Cold Start
      1FE3 : D3 FE                    out     ($FE),a           ;;Write $FF to Printer Port
      1FE5 : C3 41 00                 jp      INIT              ;[M80] INIT IS THE INTIALIZATION ROUTINE
 1FE8
-1FE8      : 00 00 00 00              byte    $00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+1FE8      : 00 00 00 00              byte    $00,$00,$00,$00,$00,$00,$00,$00
 1FEC      : 00 00 00 00
-1FF0      : 00 00                   
+1FF0      : 00 00 00 00              byte    $00,$00,$00,$00,$00,$00,$00,$00
+1FE4      : 00 00 00 00
      1FE8                    ;;Start Extended Basic
      1FE8 : 3E AA            XBASIC: ld      a,$AA             ;;
      1FEA : D3 FF                    out     ($FF),a           ;;Write Unlock Code to Port 255
@@ -6578,8 +6590,8 @@
      1FF2                    ;;Called from COLDST to print BASIC startup message
      1FF2 : 21 5F 01   [GWB] PRNTIT: ld      hl,HEDING         ;Print copyright message and return
      1FF5 : C3 9D 0E                 jp      STROUT            ;
-1FF8 1FF8
-1FF8 1FF8                    ;;Pad rest of ROM space
+     1FF8
+     1FF8                    ;;Pad rest of ROM space
 1FF8      : 00 00 00 00              byte    $00,$00,$00,$00,$00,$00,$00,$00
 1FFC      : 00 00 00 00
      1FF8 : F5 F5 F5 F5              byte    $F5,$F5,$F5,$F5,$F5,$F5,$F5,$F5 
