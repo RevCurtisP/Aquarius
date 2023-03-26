@@ -1,79 +1,86 @@
 
 
 
-                        ;;8K BASIC Subroutines
-SB                      SYNCHK  equ     $0008  
-SB                      CHRGET  equ     $0010  
-SB                      OUTCHR  equ     $0018  
-SB                      COMPAR  equ     $0020  
-SB                      FSIGN   equ     $0028  
-SB                      SNERR   equ     $03C4  
-SB                      UFERR   equ     $03D0  
-SB                      READY   equ     $0402  
-SB                      EDENT   equ     $0428  
-SB                      FNDLIN  equ     $049F  
-SB                      CRUNCX  equ     $04F9  
-SB                      LISPRT  equ     $0598  
+SB                      ;;8K BASIC Subroutines
+SB                [M80] SYNCHK  equ     $0008   ;;RST 1 - Syntax Check
+SB                [M80] CHRGET  equ     $0010   ;;RST 2 - Get Next Character
+SB                [GWB] OUTCHR  equ     $0018   ;;RST 3 - Output Character
+SB                [M80] COMPAR  equ     $0020   ;;RST 4 - Integer Compare
+SB                [M80] FSIGN   equ     $0028   ;;RST 4 - Integer Compare
+SB                [M80] SNERR   equ     $03C4   ;[M80] "SYNTAX ERROR"
+SB                [M80] UFERR   equ     $03D0   ;[M80] "UNDEFINED FUNCTION" ERROR
+SB                [M80] READY   equ     $0402   ;;Enter Immediate Mode
+SB                [M80] EDENT   equ     $0428   ;;Tokenize and Store Line of Code
+SB                [M80] FNDLIN  equ     $049F   ;;Find Basic Line
+SB                      CRUNCX  equ     $04F9   ;;Convert Keyword to Token
+SB                [M80] LISPRT  equ     $0598   ;;Detokenize and Print BASIC Line
 SB                [M80] RESSRC  equ     $05A8   ;;Search for Reserved Word
-SB                      GONE5   equ     $0665  
-SB                      CHRGTR  equ     $066B  
-SB                      CHRGT2  equ     $066C  
-SB                      FRCINT  equ     $0682  
-SB                      FCERR   equ     $0697  
-SB                      SCNLIN  equ     $069C  
-SB                      USERR   equ     $06F3  
-SB                      OMGOTO  equ     $0785  
-SB                      FRMNUM  equ     $0972  
-SB                      CHKNUM  equ     $0975  
-SB                      FRMEVL  equ     $0985  
-SB                      PARCHK  equ     $0A37  
-SB                      ISVAR   equ     $0A4E  
-SB                      FLOATD  equ     $0B23  
-SB                      ERRDIR  equ     $0B45  
-SB                      GETBYT  equ     $0B54  
-SB                      BLTUC   equ     $0B95  
-SB                      GETSTK  equ     $0BA0  
-SB                      SCRTCH  equ     $0BBE  
-SB                      ISLETC  equ     $0CC6  
-SB                      STRADX  equ     $0E59  
-SB                      STROUT  equ     $0E9D  
-SB                      STRPRT  equ     $0EA0  
-SB                      FRESTR  equ     $0FC6  
-SB                      PTRGET  equ     $10D1  
-SB                      PTRGT2  equ     $10D6  
-SB                      FSUBS   equ     $1258  
-SB                      FMULT   equ     $13CB  
-SB                      POPHRT  equ     $141A  
-SB                      FDIV    equ     $142F  
-SB                      NEG     equ     $150B  
-SB                      PUSHF   equ     $1513  
-SB                      MOVRM   equ     $1531  
-SB                      MOVMF   equ     $153A  
-SB                      FCOMP   equ     $155B  
-SB                      UMULT   equ     $15CA  
-SB                      LINPRT  equ     $1675  
-SB                      PSHNEG  equ     $1770  
-SB                      POLYX   equ     $1837  
-SB                      PI2     equ     $1953  
-SB                      OUTDO   equ     $198A  
-SB                      INCHR   equ     $19DA  
-SB                      FININL  equ     $19E5  
-SB                      CRDO    equ     $19EA  
-SB                      ISCNTC  equ     $1A25  
-SB                      CQINCH  equ     $1A2F  
-SB                      PPRSDO  equ     $1A55  
-SB                      TTYFIS  equ     $1DE7  
-SB                      INCHRC  equ     $1E80  
-SB                      KEYRES  equ     $1F28  
+SB                      GONE5   equ     $0665   ;;Add Offset to Table and Dispatch
+SB                [M80] CHRGTR  equ     $066B   ;;Skip Statement Token and Execute
+SB                [M80] CHRGT2  equ     $066C   ;;Execute Statement
+SB                [M80] FRCINT  equ     $0682   ;{M80} GET AN INTEGER IN [D,E]
+SB                [M80] FCERR   equ     $0697   ;{M65} "FUNCTION CALL" ERROR
+SB                [M80] SCNLIN  equ     $069C   ;;Back Up and Read Line Number
+SB                [M80] USERR   equ     $06F3   ;{M80} GIVE A "US" ERROR
+SB                      OMGOTO  equ     $0785   ;;Execute ON..GOTO
+SB                [M80] FRMNUM  equ     $0972   ;;Evaluate Numeric Formula
+SB                [M80] CHKNUM  equ     $0975   ;;Issue "TM" Error if Not a Number
+SB                [M80] FRMEVL  equ     $0985   ;{M80) EVALUATE A FORMULA
+SB                [M80] PARCHK  equ     $0A37   ;;Evaluate Formula in Parentheses
+SB                [M80] ISVAR   equ     $0A4E   ;;Get Variable Value or String Pointer
+SB                      FLOATD  equ     $0B23   ;;Convert [D] to a Float
+SB                      ERRDIR  equ     $0B45   ;;Error if in Direct Mode
+SB                [M80] GETBYT  equ     $0B54   ;;Evaluate 8 bit Numeric Value
+SB                [M80] BLTUC   equ     $0B95   ;{M80} BLOCK TRANSFER ROUTINE
+SB                [M80] GETSTK  equ     $0BA0   ;;Check Stack Size
+SB                [M80] SCRTCH  equ     $0BBE   ;;Execute NEW Command
+SB                [M80] ISLETC  equ     $0CC6   ;{M80} TEST FOR A LETTER
+SB                      STRADX  equ     $0E59   ;{M80} STORE [D,E]=POINTER TO FREE SPACE
+SB                [M80] STROUT  equ     $0E9D   ;{M80} PRINT STRING POINTED TO BY [H,L]
+SB                [M80] STRPRT  equ     $0EA0   ;PRINT THE STRING POINTED TO BY FACLO.
+SB                [M80] FRESTR  equ     $0FC6   ;{M80} FREE UP STRING TEMPORARY
+SB                [M80] PTRGET  equ     $10D1   ;;Get Pointer to Variable
+SB                [M80] PTRGT2  equ     $10D6   ;;Get Pointer Alternate Entry Point
+SB                [M80] FSUBS   equ     $1258   ;{M80} SUBTRACTION      FAC:=ARG-FAC
+SB                [M80] FMULT   equ     $13CB   ;{M80} MULTIPLICATION   FAC:=ARG*FAC
+SB                [M80] POPHRT  equ     $141A   ;;Pop [HL] and Return
+SB                [M80] FDIV    equ     $142F   ;{M80} DIVISION         FAC:=ARG/FAC
+SB                [M80] NEG     equ     $150B   ;[M80] NEGATE ANY TYPE VALUE IN THE FAC
+SB                [M80] PUSHF   equ     $1513   ;[M80] PUT FAC ON STACK, ALTERS D,E
+SB                [M80] MOVRM   equ     $1531   ;{M80} GET ARGUMENT INTO THE REGISTERS
+SB                [M80] MOVMF   equ     $153A   ;[M80] MOVE NUMBER FROM FAC TO MEMORY [(HL)]
+SB                [M80] FCOMP   equ     $155B   ;[M80] COMPARE TWO NUMBERS
+SB                [M80] UMULT   equ     $15CA   ;[M80] INTEGER MULTIPLY FOR ARRAYS
+SB                [M80] LINPRT  equ     $1675   ;[M80] PRINT THE 2 BYTE NUMBER IN H,L
+SB                [M80] PSHNEG  equ     $1770   ;[M80] SUBROUTINE FOR FPWR, ATN
+SB                [M80] POLYX   equ     $1837   ;[M80] EVALUATE P(X^2)*X
+SB                [M80] PI2     equ     $1953   ;[M80] PI/2
+SB                [M80] OUTDO   equ     $198A   ;;Execute OUTCHR
+SB                [M80] INCHR   equ     $19DA   ;;Get Character from Keyboard
+SB                [M80] FININL  equ     $19E5   ;;Terminate BUF and Print CR
+SB                [M80] CRDO    equ     $19EA   ;;Print CR
+SB                [M80] ISCNTC  equ     $1A25   ;;Check for ^C and ^S
+SB                [M65] CQINCH  equ     $1A2F   ;;Wait for character from keyboard
+SB                      PPRSDO  equ     $1A55   ;;Do PSET or PRESET
+SB                      TTYFIS  equ     $1DE7   ;;Save Character and Display Cursor
+SB                      INCHRC  equ     $1E80   ;;Check for keypress
+SB                      KEYRES  equ     $1F28   ;;Enter Reserved Word From Ctrl-Key Combo
+
+
+SB                      ;;8K BASIC System Variables
+SB                      SCREEN  equ     $3000   ;;Screen Character Matrix
+SB                      COLOR   equ     $3400   ;;Screen Color Matrix
+
+SB                [M65] VARNAM  equ     $38DE   ;;Variable Name
+SB                [M65] VARPNT  equ     $38E0   ;;Pointer to Variable
+SB                      FAC     equ     $38E7   ;;Floating Point Accumulator
 
                         ;;Extended BASIC Constants
-                  [GWB] ATRBYT  ;[GWB] Attribute Byte to Store
-                  [GWB] Q2  ;[GWB] ADVGRP C save area
-                  [GWB] CSAVEM  ;[GWB] ADVGRP C save area
+                        SGBASE  equ     $A0     ;;ASCII Code of First Semigraphics Character
 
                         ;;Extended BASIC System Variables
-                        DATTRS  equ     $3900   ;;Default Graphics Attributes
-                        GATTRS  equ     $3902   ;;Current Graphics Attributes
+                        FORCLR  equ     $3900   ;;Default Attribute (Default Foreground Color?)
+                        ATRBYT  equ     $3902   ;[GWB] Attribute Byte to Store
                   [GWB] GXPOS   equ     $3903   ;[GWB] X Position of Second Coordinate
                   [GWB] GYPOS   equ     $3905   ;[GWB] Y Position of Second Coordinate
                   [GWB] GRPACY  equ     $3907   ;[GWB] Previous Y Coordinate
@@ -94,8 +101,8 @@ SB                      KEYRES  equ     $1F28
                   [GWB] CRCSUM  equ     $3921   ;[GWB] CIRCLE SUM
                   [GWB] CSTCNT  equ     $3923   ;[GWB] START COUNT
                   [GWB] CSCLXY  equ     $3925   ;[GWB] FLAG WHETHER ASPECT WAS .GT. 1
-                        CURLOC  equ     $3926   ;;Current Point Address
-                        CMASK   equ     $3928   ;;Point Bit Mask
+                        CURLOC  equ     $3926   ;;Address of Semigraphics Character containing Point
+                        PINDEX  equ     $3928   ;;Index of Point in 2x3 Semigraphics Character
                   [GWB] CXOFF   equ     $3929   ;[GWB] X OFFSET FROM CENTER SAVE LOC
                   [GWB] CYOFF   equ     $392B   ;[GWB] Y OFFSET SAVE LOCATION
                         X392F   equ     $392F   ;;
@@ -117,216 +124,216 @@ SB                      KEYRES  equ     $1F28
 
 
 
-2000 : 2C 33 24  EXTBAS:  byte    ",3$$7+",0  ;;Extended BASIC Cartridge Signature
-2003 : 24 37 2B   
-2006 : 00            
-2007 : 00 00 00           byte    0,0,0,0,0,0,0,0,0
-200A : 00 00 00   
-200D : 00 00 00
-2010 : 21 5A 20  XSTART:  ld      HL,EXBAST             ;;Print "Extended BASIC"
-2013 : CD 9D 0E           call    STROUT          
-2016 : 21 63 01           ld      HL,HEDING+3           ;;Start of Copyright Message (S1 ROM?) 
-2019 : 7E                 ld      A,(HL)                
-201A : FE 79              cp      $79         
-201C : 20 03              jr      NZ,XSTAR2             ;;If first character is 'y'
-201E : 2B                 dec     HL                    ;;  Back up to 
-201F : 2B                 dec     HL                    ;;  Start of Message in S2 ROM
-2020 : 2B                 dec     HL          
-2021 : CD 9D 0E   XSTAR2: call    STROUT                ;;Print Copyright Message
-2024 : 21 6C 20           ld      HL,DOHOOK             ;;Store Hook Table Address
-2027 : 22 06 38           ld      (HOOK),HL             ;;in Hook Table
-202A : 21 00 00           ld      HL,0                  ;;
-202D : 22 31 39           ld      (X3931),HL            ;;
-2030 : 21 04 07           ld      HL,$0704              ;;
-2033 : 22 00 39           ld      (DATTRS),HL           ;;Default Graphic Attributes
-2036 : 21 48 39           ld      HL,BASTXT-1           ;;End of System RAM
-2039 : 36 00              ld      (HL),$00              ;;Store a 0 there 
-203B : 23                 inc     HL                    ;;Set Beginning of BASIC Text
-203C : 22 4F 38           ld      (TXTTAB),HL           ;;to BASTXT
-203F : CD BE 0B           call    SCRTCH                ;;Do a NEW
-2042 : 3E C3              ld      A,$C3                 ;;JP Instruction
-2044 : 32 0B 39           ld      (MAXUPD),A            ;{GWB} Major Axis Move Update
-2047 : 32 0E 39           ld      (MINUPD),A            ;{GWB} Minor Axis Move Update
-204A : 32 3E 39           ld      (OPCJMP),A            ;;Draw Operator Routine
-204D : AF                 xor     A                     ;;Store 0 in
-204E : 32 33 39           ld      (DRWSCL),A            
-2051 : 32 34 39           ld      (DRWFLG),A            
-2054 : 32 35 39           ld      (DRWANG),A            
-2057 : C3 02 04           jp      READY                 ;;Go to Immediate Mode
-    ;
-205A : 0B 45 78   EXBAST: byte " Extended BASIC",13,10,0
+2000 : 2C 33 24         EXTBAS:  byte    ",3$$7+",0  ;;Extended BASIC Cartridge Signature
+2003 : 24 37 2B          
+2006 : 00                   
+2007 : 00 00 00                  byte    0,0,0,0,0,0,0,0,0     
+200A : 00 00 00          
+200D : 00 00 00         
+2010 : 21 5A 20         XSTART:  ld      hl,EXBAST        ;;Print "Extended BASIC"
+2013 : CD 9D 0E                  call    STROUT          
+2016 : 21 63 01                  ld      hl,HEDING+3      ;;Start of Copyright Message (S1 ROM?) 
+2019 : 7E                        ld      a,(hl)           
+201A : FE 79                     cp      $79         
+201C : 20 03                     jr      nz,XSTAR2        ;;If first character is 'y'
+201E : 2B                        dec     hl               ;;  Back up to 
+201F : 2B                        dec     hl               ;;  Start of Message in S2 ROM
+2020 : 2B                        dec     hl          
+2021 : CD 9D 0E          XSTAR2: call    STROUT           ;;Print Copyright Message
+2024 : 21 6C 20                  ld      hl,DOHOOK        ;;Store Hook Table Address
+2027 : 22 06 38                  ld      (HOOK),hl        ;;in Hook Table
+202A : 21 00 00                  ld      hl,0             ;;
+202D : 22 31 39                  ld      (X3931),hl       ;;
+2030 : 21 04 07                  ld      hl,$0704         ;;Default = White, Current = Blue 
+2033 : 22 00 39                  ld      (FORCLR),hl      ;;Set Foreground Colors
+2036 : 21 48 39                  ld      hl,BASTXT-1      ;;End of System RAM
+2039 : 36 00                     ld      (hl),$00         ;;Store a 0 there 
+203B : 23                        inc     hl               ;;Set Beginning of BASIC Text
+203C : 22 4F 38                  ld      (TXTTAB),hl      ;;to BASTXT
+203F : CD BE 0B                  call    SCRTCH           ;;Do a NEW
+2042 : 3E C3                     ld      a,$C3            ;;JP Instruction
+2044 : 32 0B 39                  ld      (MAXUPD),a       ;{GWB} Major Axis Move Update
+2047 : 32 0E 39                  ld      (MINUPD),a       ;{GWB} Minor Axis Move Update
+204A : 32 3E 39                  ld      (OPCJMP),a       ;;Draw Operator Routine
+204D : AF                        xor     a                ;;Store 0 in
+204E : 32 33 39                  ld      (DRWSCL),a       
+2051 : 32 34 39                  ld      (DRWFLG),a       
+2054 : 32 35 39                  ld      (DRWANG),a       
+2057 : C3 02 04                  jp      READY            ;;Go to Immediate Mode
+205A
+205A : 0B 45 78         EXBAST: byte " Extended BASIC",13,10,0
 205D : 74 65 6E  
 2060 : 64 65 64  
 2063 : 20 42 41  
 2066 : 53 49 43  
 2069 : 0D 0A 00  
 206C                    ;;When the Hook Routine is Executed, the stack will contain
-206C                    ;;Return Address, Saved Accumulator and Flags, BASIC Pointer
-206C : E3               DOHOOK: ex      (SP),HL         ;;Swap Text Pointer with Return Address
-206D : F5                       push    AF              ;;Save Accumulator and Flags
-206E : 7E                       ld      A,(HL)          ;;Get Hook ID
-206F : 23                       inc     HL              ;;Increment Address Past Hook ID
-2070 : E5                       push    HL              ;;and Push it back on to stack
-2071 : 21 9D 20                 ld      HL,HOOKT           
-2074 : C5                       push    BC              ;;
-2075 : 01 09 00                 ld      BC,$0009        ;;
-2078 : ED B1                    cpir                    ;;Search Hook List for Hook Number
-207A : 79                       ld      A,C             ;;Index into Hook List
-207B : C1                       pop     BC              
-207C : 87                       add     A,A             ;;Multiply by 2
-207D : 21 8B 20                 ld      HL,HOOKD        ;;Add to Address of Hook Table
-2080 : 85                       add     A,L             
-2081 : 6F                       ld      L,A             
-2082 : 3E 00                    ld      A,0             
-2084 : 8C                       adc     A,H             
-2085 : 67                       ld      H,A             ;;Load Hook Routing Address
-2086 : 7E                       ld      A,(HL)          ;;into HL
-2087 : 23                       inc     HL              
-2088 : 66                       ld      H,(HL)          
-2089 : 6F                       ld      L,A             
-208A : E9                       jp      (HL)            ;;and Execute It
-208B                    
-208B                    ;;Hook Dispatch Table
-208B : AD 20            HOOKD:  word    UNHOOK          ;;Hook Not Implemented
-208D : EC 20                    word    NOTGOX          ;;(NOTGOS)
-208E : A5 20                    word    OUTDOX          ;;(OUTDO)
-2091 : F9 21                    word    ATN1            ;;ATN Routine
-2093 : 77 21                    word    DEFX            ;;DEF FN Routine
-2095 : A1 21                    word    FNDOER          ;;FN() Routine
-2097 : 37 21                    word    INCHRX          ;;INCHRH Hook
-2099 : FF 20                    word    LISTHK          ;;LIST Hook
-209B : 11 21                    word    GONE23          ;;GONE23
+206C                    ;;Return Address, Saved Accumulator, and Text Pointer
+206C : E3               DOHOOK: ex      (SP),hl           ;;[HL] = Return Address, Save HL on Stack
+206D : F5                       push    AF                ;;Stack = Argument, Text Pointer,
+206E : 7E                       ld      A,(hl)            ;;Get Hook ID
+206F : 23                       inc     hl                ;;Increment Address Past Hook ID
+2070 : E5                       push    hl                ;;Stack = Return Addr, Argument, Text Pointer
+2071 : 21 9D 20                 ld      hl,HOOKT             
+2074 : C5                       push    bc                ;;Stack = [BC], Return Addr, Arg, Text Ptr
+2075 : 01 09 00                 ld      bc,9              ;;
+2078 : ED B1                    cpir                      ;;Search Hook List for Hook Number
+207A : 79                       ld      a,c               ;;Index into Hook List
+207B : C1                       pop     bc                ;;Stack = Return Addr, Arg, Text Ptr
+207C : 87                       add     a,a               ;;Multiply by 2
+207D : 21 8B 20                 ld      hl,HOOKD          ;;Add to Address of Hook Table
+2080 : 85                       add     a,l             
+2081 : 6F                       ld      l,a             
+2082 : 3E 00                    ld      a,0             
+2084 : 8C                       adc     a,h             
+2085 : 67                       ld      h,a               ;;Load Hook Routing Address
+2086 : 7E                       ld      a,(hl)            ;;into HL
+2087 : 23                       inc     hl                
+2088 : 66                       ld      h,(hl)            
+2089 : 6F                       ld      l,a             
+208A : E9                       jp      (hl)              ;;and Execute It
+208B                      
+208B                    ;;Hook Dispatch Table 
+208B : AD 20            HOOKD:  word    UNHOOK            ;;Hook Not Implemented
+208D : EC 20                    word    NOTGOX            ;;(NOTGOS)
+208E : A5 20                    word    OUTDOX            ;;(OUTDO)
+2091 : F9 21                    word    ATN1              ;;ATN Routine
+2093 : 77 21                    word    DEFX              ;;DEF FN Routine
+2095 : A1 21                    word    FNDOER            ;;FN() Routine
+2097 : 37 21                    word    INCHRX            ;;INCHRH Hook
+2099 : FF 20                    word    LISTHK            ;;LIST Hook
+209B : 11 21                    word    GONE23            ;;GONE23
 209D                                                    
 209D :                  ;;Hook Offset Table             
-209D : 17               HOOKT:  byte    23              ;;Hook 23 (GONE23)
-209E : 16                       byte    22              ;;Hook 22 (LIST)
-209F : 12                       byte    18              ;;Hook 18 (INCHRH)
-20A0 : 10                       byte    16              ;;Hook 16 (FNDOER)
-02A1 : 0F                       byte    15              ;;Hook 15 (DEF)
-20A2 : 0E                       byte    14              ;;Hook 14 (ATN)
-20A3 : 0D                       byte    13              ;;Hook 12 (OUTDO)
-20A4 : 0A                       byte    10              ;;Hook 10 (NOTGOS)
-  
-20A5 : 2A 31 39         OUTDOX: ld      hl,(X3931)
-20A8 : 7C                       ld      a,h
-20A9 : B5                       or      l
-20AA : C2 52 23                 jp      nz,L2352
+209D : 17               HOOKT:  byte    23                ;;Hook 23 (GONE23)
+209E : 16                       byte    22                ;;Hook 22 (LIST)
+209F : 12                       byte    18                ;;Hook 18 (INCHRH)
+20A0 : 10                       byte    16                ;;Hook 16 (FNDOER)
+02A1 : 0F                       byte    15                ;;Hook 15 (DEF)
+20A2 : 0E                       byte    14                ;;Hook 14 (ATN)
+20A3 : 0D                       byte    13                ;;Hook 12 (OUTDO)
+20A4 : 0A                       byte    10                ;;Hook 10 (NOTGOS)
+20A5    
+20A5 : 2A 31 39         OUTDOX: ld      hl,(X3931)        ;;Get Line Number
+20A8 : 7C                       ld      a,h 
+20A9 : B5                       or      l                 ;;If Not Zero 
+20AA : C2 52 23                 jp      nz,L2352          ;;
 20AD                    
 20AD                    ;;Hook Not Implemented - Restore Registers and Return
-20AD : E1               UNHOOK: pop     hl              ;;Get Return Address
-20AE : F1                       pop     af              ;;Restore Accumulator and Flags
-20AF : E3                       ex      (sp),hl         ;;Swap Return Address for BASIC Pointer
+20AD : E1               UNHOOK: pop     hl                ;;Get Return Address
+20AE : F1                       pop     af                ;;Restore Accumulator and Flags
+20AF : E3                       ex      (sp),hl           ;;Swap Return Address for BASIC Pointer
 20B0 : C9                       ret
+20B1
 20B1 :                + ;;Extended BASIC Reserved Word Tokens
 20B1 :                | ;;Note: Tokens $CB - $CE are not defined    
 20B1 :                  EXTLST: ;;Extended Reserved Words List
-20B1 :                  TK      =       $CF             ;;Extended Tokens start at $CF
-20B1 :                  XORTK   equ     TK
-20B1 : D8 4F 52                 byte    'X'+$80,"OR"    ;;$CF
-20B1                    TK      =       TK+1            ;
-20B1 :                  EDITTK  equ     TK
-20B4 : C5 44 49                 byte    'E'+$80,"DIT"   ;;$D0
-20B7 : 54                                               
-20B8                    TK      =       TK+1            ;
-20B8 : CC 4F 43                 byte    'L'+%80,"OCATE" ;;$D1
-20BB : 41 54 45                                         
-20BE                    TK      =       TK+1            ;
-20BE : CD 45 4E                 byte    'M'+$80,"ENU"   ;;$D2
-20C1 : 55                                               
-20C2                    TK      =       TK+1            ;
-20C2 : C3 4C 53                 byte    'C'+$80,"LS"    ;;$D3
-20C5                    TK      =       TK+1            ;
-20C5 : CC 49 4E                 byte    'L'+$80,"INE"   ;;$D4
-20C8 : 45                                               
-20C9                    TK      =       TK+1            ;
-20C9 : C3 49 52                 byte    'C'+$80,"IRCLE" ;;$D5
+20B1 :                  TK      =       $CF               ;;Extended Tokens start at $CF
+20B1 :                  XORTK   equ     TK  
+20B1 : D8 4F 52                 byte    'X'+$80,"OR"      ;;$CF
+20B1                    TK      =       TK+1              ;
+20B1 :                  EDITTK  equ     TK  
+20B4 : C5 44 49 54              byte    'E'+$80,"DIT"     ;;$D0
+20B8                    TK      =       TK+1              ;
+20B8 : CC 4F 43                 byte    'L'+%80,"OCATE"   ;;$D1
+20BB : 41 54 45                                           
+20BE                    TK      =       TK+1              ;
+20BE : CD 45 4E                 byte    'M'+$80,"ENU"     ;;$D2
+20C1 : 55                                                 
+20C2                    TK      =       TK+1              ;
+20C2 : C3 4C 53                 byte    'C'+$80,"LS"      ;;$D3
+20C5                    TK      =       TK+1              ;
+20C5 : CC 49 4E                 byte    'L'+$80,"INE"     ;;$D4
+20C8 : 45                                                 
+20C9                    TK      =       TK+1              ;
+20C9 : C3 49 52                 byte    'C'+$80,"IRCLE"   ;;$D5
 20CC : 43 4C 45                                         
-20CF                    TK      =       TK+1            ;
-20CF : C7 45 54                 byte    'G'+$80,"ET"    ;;$D6
-20D2                    TK      =       TK+1            ;
-20D2 : D0 55                    byte    'P'+$80,"UT"    ;;$D7
-20D5                    TK      =       TK+1            ;
-20D5 : C4 52 41                 byte    'D'+$80,"RAW"   ;;$D8
-20D8                    TK      =       TK+1            ;
-20D8 : 57               TKLAST  equ     TK                    
-20D9 : 80                       byte    $80             ;End of Table
+20CF                    TK      =       TK+1              ;
+20CF : C7 45 54                 byte    'G'+$80,"ET"      ;;$D6
+20D2                    TK      =       TK+1              ;
+20D2 : D0 55                    byte    'P'+$80,"UT"      ;;$D7
+20D5                    TK      =       TK+1              ;
+20D5 : C4 52 41                 byte    'D'+$80,"RAW"     ;;$D8
+20D8                    TK      =       TK+1              ;
+20D8 : 57               TKLAST  equ     TK                      
+20D9 : 80                       byte    $80               ;End of Table
 20DA
 20DA                    ;;Extended Statement Dispatch Table       
-20DA : 7F 23            EXTDSP: word    EDIT            ;;$237F
-20DC : 4A 22                    word    LOCATE          ;;$224A
-20DE : 67 22                    word    MENU            ;;$2267
-20E0 : 46 22                    word    CLS             ;;$2246
-20E2 : E7 25                    word    GLINE           ;;$25E7
-20E4 : 00 27                    word    CIRCLE          ;;$2700
-20E6 : 6F 23                    word    GGET            ;;$236F
-20E8 : 6B 23                    word    GPUT            ;;$236B
-20EA : 9D 2A                    word    DRAW            ;;$2A9D  
-                                                        
+20DA : 7F 23            EXTDSP: word    EDIT              ;;$237F
+20DC : 4A 22                    word    LOCATE            ;;$224A
+20DE : 67 22                    word    MENU              ;;$2267
+20E0 : 46 22                    word    CLS               ;;$2246
+20E2 : E7 25                    word    GLINE             ;;$25E7
+20E4 : 00 27                    word    CIRCLE            ;;$2700
+20E6 : 6F 23                    word    GGET              ;;$236F
+20E8 : 6B 23                    word    GPUT              ;;$236B
+20EA : 9D 2A                    word    DRAW              ;;$2A9D  
+20EC                                                        
 20EC : 78               NOTGOX: ld      a,b             
 20ED : FE CB                    cp      POINTK             
 20EF : C2 AD 20                 jp      nz,UNHOOK           
 20F2 : C1                       pop     bc              
-20F3 : F1                       pop     af              ;;Restore Accumulator and Flags
-20F4 : E1                       pop     hl              ;;Restore BASIC Pointer
-20F5 : C5                       push    bc              ;;Push Return Address
-20F6 : EB                       ex      de,hl           
-20F7 : 11 B0 20                 ld      de,$20B0        
-20FA : 06 CE                    ld      b,XORTK-1           
-20FC : C3 F9 04                 jp      CRUNCX          ;;Jump into CRUNCH
-20FF :
+20F3 : F1                       pop     af                ;;Restore Accumulator and Flags
+20F4 : E1                       pop     hl                ;;Restore BASIC Pointer
+20F5 : C5                       push    bc                ;;Push Return Address
+20F6 : EB                       ex      de,hl             
+20F7 : 11 B0 20                 ld      de,$20B0          
+20FA : 06 CE                    ld      b,XORTK-1             
+20FC : C3 F9 04                 jp      CRUNCX            ;;Jump into CRUNCH
+20FF 
 20FF :                  ;;Hook 22 - Check for and Handle Extended BASIC Tokens
-20FF : D1               LISTHK: pop     de              ;;Get Return Address
-2100 : F1                       pop     af              ;;Restore Accumulator and Flags
-2101 : E1                       pop     hl              ;;Restore Basic Pointer
-2102 : FE CF                    cp      XORTK                        
-2104 : 30 02                    jr      nc,RESSRX       ;;If Token < XORTK
-2106 : D5                       push    de              ;;  Push Return Address onto Stack
-2107 : C9                       ret                     ;;  and Return
-2108 : D6 CE            RESSRX: sub     XORTK-1         
-210A : 4F                       ld      c,a             ;;Set Count to Position in EXTLSR
-210B : 11 B1 20                 ld      de,EXTLST       ;;Search in EXTLST
-210E : C3 A8 05                 jp      RESSRC          ;;Go Do It
-2111 :
+20FF : D1               LISTHK: pop     de                ;;Get Return Address
+2100 : F1                       pop     af                ;;Restore Accumulator and Flags
+2101 : E1                       pop     hl                ;;Restore Basic Pointer
+2102 : FE CF                    cp      XORTK                          
+2104 : 30 02                    jr      nc,RESSRX         ;;If Token < XORTK
+2106 : D5                       push    de                ;;  Push Return Address onto Stack
+2107 : C9                       ret                       ;;  and Return
+2108 : D6 CE            RESSRX: sub     XORTK-1           
+210A : 4F                       ld      c,a               ;;Set Count to Position in EXTLSR
+210B : 11 B1 20                 ld      de,EXTLST         ;;Search in EXTLST
+210E : C3 A8 05                 jp      RESSRC            ;;Go Do It
+2111 
 2111 :                  ;;Hook 23 - Check for and Dispatch Extended BASIC Statement Token
-2111 : C1               GONE23: pop     bc              ;;Pop Return Address
-2112 : F1                       pop     af              ;;Restore Accumulator and Flags
-2113 : E1                       pop     hl              ;;Restore BASIC Pointer
-2114 : 30 0C                    jr      nc,GONE24       ;;If Standard BASIC Token
-2116 : F5                       push    af              ;;  Save Accumulator and Flags
-2117 : FE 1C                    cp      PSETTK-$80      ;;  If PSET
-2119 : 28 4E                    jr      z,PSETX         ;;    Do Extended BASIC PSET
-211B : FE 1D                    cp      PRESTK-$80      ;;  If PRESET
-211D : 28 46                    jr      z,PRESEX        ;;    Do Extended BASIC PRESET
-211F : F1                       pop     af              ;;  Restore Accumulator and Flags
-2120 : C5                       push    bc              ;;  Push Return Address back on to Stack
-2121 : C9                       ret                     ;;  and Return
-2122 : D6 50            GONE24: sub     EDITTK-$80      ;;Get Position in Extended List
-2124 : DA C4 03                 jp      c,SNERR         ;;  If Negative, Syntax Error
-2127 : FE 09                    cp      TKLAST-EDITTK   ;;Past End of Extended Tokens?  
-2129 : D2 C4 03                 jp      nc,SNERR        ;;  Yes, Syntax Error
-212C : 07                       rlca                    ;;Dispatch Offset = Position *2
-212D : 4F                       ld      c,a             ;;[B,C] = Dispatch Offset
-212E : 06 00                    ld      b,0
-2130 : EB                       ex      de,hl           ;;Text Pointer into [D,E]
-2131 : 21 DA 20                 ld      hl,EXTDSP       ;;Use Extended Dispatch Table
-2134 : C3 65 06                 jp      GONE5           ;;Continue Statement Dispatch
-2137 :
+2111 : C1               GONE23: pop     bc                ;;Pop Return Address
+2112 : F1                       pop     af                ;;Restore Accumulator and Flags
+2113 : E1                       pop     hl                ;;Restore BASIC Pointer
+2114 : 30 0C                    jr      nc,GONE24         ;;If Standard BASIC Token
+2116 : F5                       push    af                ;;  Save Accumulator and Flags
+2117 : FE 1C                    cp      PSETTK-$80        ;;  If PSET
+2119 : 28 4E                    jr      z,PSETX           ;;    Do Extended BASIC PSET
+211B : FE 1D                    cp      PRESTK-$80        ;;  If PRESET
+211D : 28 46                    jr      z,PRESEX          ;;    Do Extended BASIC PRESET
+211F : F1                       pop     af                ;;  Restore Accumulator and Flags
+2120 : C5                       push    bc                ;;  Push Return Address back on to Stack
+2121 : C9                       ret                       ;;  and Return
+2122 : D6 50            GONE24: sub     EDITTK-$80        ;;Get Position in Extended List
+2124 : DA C4 03                 jp      c,SNERR           ;;  If Negative, Syntax Error
+2127 : FE 09                    cp      TKLAST-EDITTK     ;;Past End of Extended Tokens?  
+2129 : D2 C4 03                 jp      nc,SNERR          ;;  Yes, Syntax Error
+212C : 07                       rlca                      ;;Dispatch Offset = Position *2
+212D : 4F                       ld      c,a               ;;[B,C] = Dispatch Offset
+212E : 06 00                    ld      b,0 
+2130 : EB                       ex      de,hl             ;;Text Pointer into [D,E]
+2131 : 21 DA 20                 ld      hl,EXTDSP         ;;Use Extended Dispatch Table
+2134 : C3 65 06                 jp      GONE5             ;;Continue Statement Dispatch
+2137
 2137 :                  ;;Hook 18 - Read Keyboard (INCHRH)
-2137 : E1               INCHRX: pop   hl            ;;Hook Table Address
-2138 : F1                       pop   af            ;;Accumulatot and Flags
-2139 : E1                       pop   hl
-213A : CD 80 1E                 call INCHRC         ;;Read The Keyboard
+2137 : E1               INCHRX: pop     hl                ;;Hook Table Address
+2138 : F1                       pop     af                ;;Accumulatot and Flags
+2139 : E1                       pop     hl
+213A : CD 80 1E                 call    INCHRC            ;;Read The Keyboard
 213D : D9                       exx
-213E : 21 B1 20                 ld hl,EXTLST        ;;Use Extended Reserved Words List
-2141 : FE 0F                    cp 15               ;;Ctrl-O?
-2143 : 28 0F                    jr z,KCIRCL
-2145 : FE 19                    cp 25               ;;Ctrl-Y?
-2147 : 28 0F                    jr z,KEDIT
-2149 : FE 10                    cp 16               ;;Ctrl-P? 
-214B : 28 13                    jr z,KLINE
-214D : FE 1E                    cp 30               ;;Ctrl-^?
-214F : 28 0B                    jr z,KDRAW
-2151 : B7                       or a
+213E : 21 B1 20                 ld      hl,EXTLST         ;;Use Extended Reserved Words List
+2141 : FE 0F                    cp      15                ;;Ctrl-O?
+2143 : 28 0F                    jr      z,KCIRCL  
+2145 : FE 19                    cp      25                ;;Ctrl-Y?
+2147 : 28 0F                    jr      z,KEDIT 
+2149 : FE 10                    cp      16                ;;Ctrl-P? 
+214B : 28 13                    jr      z,KLINE 
+214D : FE 1E                    cp      30                ;;Ctrl-^?
+214F : 28 0B                    jr      z,KDRAW
+2151 : B7                       or      a
 2152 : D9                       exx
 2153 : C9                       ret
 2154    
@@ -336,11 +343,19 @@ SB                      KEYRES  equ     $1F28
 215A : 18 06                    jr      KEYREX
 215C : 0E 09            KDRAW:  ld      c,DRAWTK-XORTK  ;;DRAW
 215E : 18 02                    jr      KEYREX
-2160 : 0E 05            KLINE:  ld      c,LINETK-XORTK  //LINE
+2160 : 0E 05            KLINE:  ld      c,LINETK-`  //LINE
 2162 : C3 28 1F         KEYREX: jp      KEYRES
 2165    
-2165 :                + ;;PSET and PRESET: Save Coordinates
-2165 :                | ;;for subsequent LINE -(X,Y) or LINE -STEP(X,Y) statement
+2165 :              + ;;Semigraphics Drawing Routines
+2165 :              } ;;explanation of semigraphics and bit index
+2165 :              } ;;
+2165 :              } ;;
+2165 :              } ;;
+2165    
+2165 :                + ;;Extended PSET or PRESET
+2165 :                | ;;Reads Coordinates and saves them for subsequent
+2165 :                | ;;  LINE -(X,Y) or LINE -STEP(X,Y) statement
+2165 :                | ;;then executes standard basic PSET/PRESET code
 2165 : F1               PRESEX: pop     af              ;;Discard Hook Table Address
 2166 : AF                       xor     a               ;;[EUB] PRESET FLAG
 2167 : 18 03                    jr      PPRSEX           
@@ -354,7 +369,7 @@ SB                      KEYRES  equ     $1F28
 2171 : CD 47 25                 call SCAN1              ;;Scan Coordinates as (X,Y)
 2174 : C3 55 1A                 jp PPRSDO               ;;Go Do PSET/PRESET
 2177
-2177 :                + ;[M80]	SIMPLE-USER-DEFINED-FUNCTION CODE
+2177 :                + ;[M80]SIMPLE-USER-DEFINED-FUNCTION CODE
 2177 :                | ;[M80]
 2177 :                | ;[M80] IN THE 8K VERSION (SEE LATER COMMENT FOR EXTENDED)
 2177 :                | ;[M80] NOTE ONLY SINGLE ARGUMENTS ARE ALLOWED TO FUNCTIONS
@@ -379,7 +394,7 @@ SB                      KEYRES  equ     $1F28
 217D : CD 45 0B                 call    ERRDIR          ;[M80] DEF IS "ILLEGAL DIRECT"
 2180 :                                                  ;[M80] MEMORY, RESTORE THE TXTPTRAND GO TO "DATA" 
 2180 :                                                  ;[M80] SKIPPING THE REST OF THE FORMULA
-2180 : 01 1C 07                 ld      bc,0071CH       
+2180 : 01 1C 07                 ld      bc,$071C      
 2183 : C5                       push    bc              
 2184 : D5                       push    de              
 2185 : CF                       rst     SYNCHK          
@@ -427,14 +442,14 @@ SB                      KEYRES  equ     $1F28
 21BA : 66                       ld      h,(hl)          
 21BB : 6F                       ld      l,a             
 21BC : E5                       push    hl              ;SAVE THE NEW VALUE FOR PRMSTK
-21BD : 2A DE 38                 ld      hl,(X38DE)      
+21BD : 2A DE 38                 ld      hl,(VARNAM)      
 21C0 : E3                       ex      (sp),hl         
-21C1 : 22 DE 38                 ld      (X38DE),hl      
+21C1 : 22 DE 38                 ld      (VARNAM),hl      
 21C4 : 2A E2 38                 ld      hl,(X38E2)      
 21C7 : E5                       push    hl              
-21C8 : 2A E0 38                 ld      hl,(X38E0)      
+21C8 : 2A E0 38                 ld      hl,(VARPNT)      
 21CB : E5                       push    hl              
-21CC : 21 E0 38                 ld      hl,X38E0        
+21CC : 21 E0 38                 ld      hl,VARPNT        
 21CF : D5                       push    de              
 21D0 : CD 3A 15                 call    MOVMF           
 21D3 : E1                       pop     hl              
@@ -445,16 +460,16 @@ SB                      KEYRES  equ     $1F28
 21DC :                                                  ;NUMBER OF THE ERROR WILL BE THE CALLERS
 21DC :                                                  ;LINE # INSTEAD OF THE DEFINITIONS LINE #
 21DC : E1                       pop     hl              
-21DD : 22 E0 38                 ld      (X38E0),hl      
+21DD : 22 E0 38                 ld      (VARPNT),hl      
 21E0 : E1                       pop     hl              
 21E1 : 22 E2 38                 ld      (X38E2),hl      
 21E4 : E1                       pop     hl              
-21E5 : 22 DE 38                 ld      (X38DE),hl      
+21E5 : 22 DE 38                 ld      (VARNAM),hl      
 21E8 : E1                       pop     hl              ;GET BACK THE TEXT POINTER
 21E9 : C9                       ret                     
 21EA    
-21EA                  + ; [M80] SUBROUTINE TO GET A POINTER TO A FUNCTION NAME
-21EA                  | ; [M80] 
+21EA                  + ;[M80] SUBROUTINE TO GET A POINTER TO A FUNCTION NAME
+21EA                  | ;[M80] 
 21EA : CF         [M80] GETFNM: rst     SYNCHK          
 21EB : A2                       byte    FNTK            ; [M80] MUST START WITH "FN"
 21EC : 3E 80                    ld      a,128           ; [M80] DONT ALLOW AN ARRAY
@@ -616,9 +631,9 @@ SB                      KEYRES  equ     $1F28
 22CE : C5               MENUK:  push    bc              ;;Save BC
 22CF : CD 4D 2D                 call    MOVEIT          ;;Move Cursor to H,L
 22D2 : CD 2F 1A         MENUL:  call    CQINCH          ;;Get Character from Keyboard
-22D5 : FE 0D                    cp      13              ;;If C/R
-22D7 : 37                       scf                     
-22D8 : 28 04                    jr      z,MENUR         ;;  Return Carry Set
+22D5 : FE 0D                    cp      13              ;;If Carriage Return
+22D7 : 37                       scf                     ;;  Return Carry Set
+22D8 : 28 04                    jr      z,MENUR         
 22DA : FE 20                    cp      ' '             ;;If Not Space
 22DC : 20 F4                    jr      nz,MENUL        ;;  Loop
 22DE : C1               MENUR:  pop     bc              ;;Restore BC 
@@ -679,14 +694,16 @@ SB                      KEYRES  equ     $1F28
 2329 : D1                       pop     de
 232A : E1                       pop     hl
 232B : C9                       ret
-    ;
-232C              ;;Print Null Terminated String
-232C : 7E         LISPRX: ld a,(hl)
-232D : B7                 or a
-232E : C8                 ret z
-232F : DF                 rst OUTCHR
-2330 : 23                 inc hl
-2331 : C3 2C 23           jp LISPRX
+232C    
+232C :                          ;;Print Null Terminated String 
+232C :                          ;;pointed to by [HL]
+232C :                          ;;On return [HL] points to 0 terminator
+232C : 7E                       LISPRX: ld a,(hl)         ;;Get Nyte
+232D : B7                               or a              ;;If it's Zero
+232E : C8                               ret z             ;;  Return
+232F : DF                               rst OUTCHR        ;;Output Byte
+2330 : 23                               inc hl            ;;Point to Next Byte
+2331 : C3 2C 23                         jp LISPRX         ;;and Do it Again
 2334 :
 2334 :                  ;;Convert Character to Uppercase   
 2334 : FE 61      [GWB] MAKUPS: cp      'a'             
@@ -695,38 +712,38 @@ SB                      KEYRES  equ     $1F28
 2339 : D0                       ret     nc              ;;and less than <'['
 233A : E6 5F                    and     $5F             ;;Clear Bit 5
 233C : C9                       ret                     
-    ;
-233D    
-233D : E5         [M80] BUFLIN: push    hl              
+233D :
+233D :                  ;{M80} UNPACK LINE INTO BUF
+233D : E5         [M80] BUFLIN: push    hl              ;{GWB} SAVE THE TEXT POINTER
 233E : 21 02 00                 ld      hl,2            
-2341 : 39                       add     hl,sp           
-2342 : 22 2F 39                 ld      (X392F),hl      
-2348 : 22 31 39                 ld      (X3931),hl      
-234B : 2A 4F 38                 ld      hl,(TXTTAB)     
-2345 : 21 60 38                 ld      hl,BUF          
-234E : E3                       ex      (sp),hl         
-234F : C3 98 05                 jp      LISPRT          
-    ;
-2352    
-2352 : F1               L2352:  pop     af              
-2353 : F1                       pop     af              
-2354 : FE 0D                    cp      13              ;;C/R?
-2356 : 28 07                    jr      z,L235F         
-2358 : 77                       ld      (hl),a          
+2341 : 39                       add     hl,sp             ;;Point [HL] Line Number on Stack
+2342 : 22 2F 39                 ld      (X392F),hl        ;;Save Line Number
+2348 : 22 31 39                 ld      (X3931),hl        ;;
+234B : 2A 4F 38                 ld      hl,(TXTTAB)       ;;[HL] = Start of BASIC Program
+2345 : 21 60 38                 ld      hl,BUF            ;;[HL] = Input Buffer Address
+234E : E3                       ex      (sp),hl           ;;{HL] = Text Pointer, Stack = BUF Address
+234F : C3 98 05                 jp      LISPRT            ;;Detokenize Line into BUF
+2352 :  
+2352 :  
+2352 : F1               L2352:  pop     af                ;;Discard Return Address
+2353 : F1                       pop     af                ;;Restore Argument 
+2354 : FE 0D                    cp      13                ;;Is it a Carriage Return
+2356 : 28 07                    jr      z,L235F           ;;No
+2358 : 77                       ld      (hl),a             
 2359 : 23                       inc     hl              
 235A : 22 31 39                 ld      (X3931),hl      
-235D : E1                       pop     hl              
+235D : E1                       pop     hl                ;;Restore Text Pointer
 235E : C9                       ret                     
     ;
-235F    
-235F : AF               L235F:  xor a
-2360 : 77                       ld (hl),a
-2361 : 67                       ld h,a
-2362 : 6F                       ld l,a
-2363 : 22 31 39                 ld (X3931),hl
-2366 : 2A 2F 39                 ld hl,(X392F)
-2369 : F9                       ld sp,hl
-236A : C9                       ret
+235F                                                      ;;Yes
+235F : AF               L235F:  xor     a                 ;;[A] = 0
+2360 : 77                       ld      (hl),a          
+2361 : 67                       ld      h,a             
+2362 : 6F                       ld      l,a             
+2363 : 22 31 39                 ld      (X3931),hl      
+2366 : 2A 2F 39                 ld      hl,(X392F)      
+2369 : F9                       ld      sp,hl           
+236A : C9                       ret                     
 236B
 236B : 3E 01            GPUT:   ld      a,1             ;;Mode = GET
 236D : 18 01                    jr      GGPUTG
@@ -748,7 +765,7 @@ SB                      KEYRES  equ     $1F28
 237F                  | ;[M80] [H,L] POINT TO CURRENT CHARACTER
 237F : CD 9C 06   [M80] EDIT:   call    SCNLIN          ;[M80[ GET THE ARGUMENT LINE NUMBER
 2382 : C0                       ret     nz              ;[M80] ERROR IF NOT END OF LINE
-2383 : E1         {M80} EREDIT  pop     hl              ;[M80] GET RID OF NEWSTT ADDRESS
+2383 : E1         {M80} EREDIT  pop     hl              ;[M80] GET RID OF NEWSTT Address
 2384 : CD 9F 04   [M80] EEDITS: call    FNDLIN          ;[M80] FIND THE LINE IN QUESTION
 2387 : D2 F3 06                 jp      nc,USERR        ;[M80] IF NOT FOUND, UNDEFINED STATEMENT ERROR.
 238A : 60                       ld      h,b             ;[M80] PONTER TO LINE IS IN [B,C]
@@ -801,7 +818,7 @@ SB                      KEYRES  equ     $1F28
 23CF : 18 E5                    jr      DISPI           ;[M80]  GET NEXT CHAR
 23D1    
 23D1 : E5         [M80] NOTDGI: push    hl              ;[M80] SAVE TEXT POINTER
-23D2 : 21 B4 23                 ld      hl,023B4H       ;[M80] PUT RETURN ADDRESS TO DISPED
+23D2 : 21 B4 23                 ld      hl,023B4H       ;[M80] PUT RETURN Address TO DISPED
 23D5 : E3                       ex      (sp),hl         ;[M80] ON THE STACK
 23D6 : 15                       dec     d               ;[M80] SEE IF D=0 (REP FACTOR)
 23D7 : 14                       inc     d               ;[M80] SET CONDITION CODES
@@ -841,7 +858,7 @@ SB                      KEYRES  equ     $1F28
 241C : FE 11                    cp      'A'-'0'         ;[M80] AGAIN??
 241E : 3E 07                    ld      a,7             ;[M80] GET READY TO TYPE BEL.
 2420 : C2 8A 19                 jp      nz,OUTDO        ;[M80] NO MATCH, SEND BEL AND RETURN TO DISPATCHER
-2423 : C1                       pop     bc              ;[M80] DISPI RETURN ADDRESS
+2423 : C1                       pop     bc              ;[M80] DISPI RETURN Address
 2424 : D1                       pop     de              ;[M80] LINE NUMBER INTO [D,E]
 2425 : CD EA 19                 call    CRDO            ;[M80] TYPE A CARRIAGE RETURN LINE-FEED
 2428 : C3 84 23                 jp      EEDITS          ;[M80] RESTART EDITING
@@ -962,7 +979,7 @@ SB                      KEYRES  equ     $1F28
 24DD : CD 8A 19                 call    OUTDO           ;[M80] TYPE THE BACK ARROW
 24E0 : 2B                       dec     hl              ;[M80] BACK UP THE POINTER
 24E1 : 05                       dec     b               ;[M80] MOVE BACK POSIT IN LINE
-24E2 : 11 B1 24                 ld      de,IED          ;[M80] SET UP RETURN ADDRESS
+24E2 : 11 B1 24                 ld      de,IED          ;[M80] SET UP RETURN Address
 24E5 : D5                       push    de              ;[M80] SAVE IT  ON STACK & FALL THROUGH
 24E6                    ;[M80] SUBROUTINE TO DELETE CHAR POINTED TO BY [H,L]. CORRECTS C.
 24E6 : E5         [M80] DELCHR: push    hl              ;[M80] SAVE CURRENT POSIT POINTER
@@ -1019,8 +1036,8 @@ SB                      KEYRES  equ     $1F28
 2526    
 2526 : CD 2C 23   [M80] CRED:   call    LISPRX          ;[M80] TYPE REST OF LINE
 2529 : CD EA 19   [M80] EED:    call    CRDO            ;[M80] TYPE CARRIAGE RETURN
-252C : C1                       pop     bc              ;[M80]  GET RID OF DISPED ADDRESS
-252D : D1               L252D:  pop     de              ;[M80] GET LINE # OFF STACK
+252C : C1                       pop     bc              ;[M80]  GET RID OF DISPED Address
+252D : D1                       pop     de              ;[M80] GET LINE # OFF STACK
 252E : 7A                       ld      a,d             ;[M80] DOUBLE BYTE ZERO.
 252F : A3                       and     e               
 2530 : 3C                       inc     a               ;[M80] SET ZERO IF [D,E] = ALL ONES.
@@ -1032,7 +1049,7 @@ SB                      KEYRES  equ     $1F28
 2538 : 23                       inc     hl              ;[M80] NOW POINT AT BUF.
 2539 : C3 28 04                 jp      EDENT           ;[M80] GO TO ENTRY POINT IN MAIN CODE
 253C    
-253C : C1         [M80] QED:    pop bc                  ;[M80] GET RID OF DISPED ADDRESS
+253C : C1         [M80] QED:    pop bc                  ;[M80] GET RID OF DISPED Address
 253D : D1                       pop de                  ;[M80] GET LINE # OFF STACK
 253E : 7A                       ld a,d                  ;[M80] DOUBLE BYTE ZERO.
 253F : A3                       and e                   
@@ -1094,10 +1111,13 @@ SB                      KEYRES  equ     $1F28
 2590                  | ;[GWB] LOOK AT THE CURRENT POSITION AND IF THERE IS AN ARGUMENT READ IT AS
 2590                  | ;[GWB] THE 8-BIT ATTRIBUTE VALUE TO SEND TO SETATR. IF STATEMENT HAS ENDED
 2590                  | ;[GWB] OR THERE IS A NULL ARGUMENT, SEND FORCLR  TO SETATR
-2590 : 3A 00 39   [GWB] ATRSCN: ld      a,(DATTRS)       ;[GWB] Get forground/background colors {See GETFBC}
+2590                  | ;;
+2590                  | ;;Entry point ATRENT will leave [A] unchanged if there is a null agrument
+2590                  | ;;
+2590 : 3A 00 39   [GWB] ATRSCN: ld      a,(FORCLR)      ;;Get Default foreground color
 2593 : C5         {GWB} ATRENT: push    bc              ;[GWB] SAVE THE CURRENT POINT
 2594 : D5                       push    de              
-2595 : 5F                       ld      e,a
+2595 : 5F                       ld      e,a             ;;Preload Attribute with Default Value
 2596 : 2B                       dec     hl              ;[GWB] SEE IF STATEMENT ENDED
 2597 : D7                       rst     CHRGET
 2598 : 28 09                    jr      z,ATRFIN        ;[GWB] USE DEFAULT
@@ -1119,14 +1139,14 @@ SB                      KEYRES  equ     $1F28
 25B1                 | ;[GWB] ALL REGISTERS EXCEPT [H,L] AND [A,PSW] ARE PRESERVED
 25B1                 | ;[GWB] NOTE: [H,L] WILL BE A DELTA BETWEEN GXPOS AND [B,C] - ADD 1 FOR AN X "COUNT"
 25B1                 | ;[GWB]
-25B1 : 2A 03 39  [GWB] XDELT:   ld      hl,(GXPOS)      ;[GWB] GET ACCUMULATOR POSITION
+25B1 : 2A 03 39   [GWB] XDELT:  ld      hl,(GXPOS)      ;[GWB] GET ACCUMULATOR POSITION
 25B4 : 7D                       ld      a,l             
 25B5 : 91                       sub     c               ;[GWB] DO SUBTRACT INTO [H,L]
 25B6 : 6F                       ld      l,a             
 25B7 : 7C                       ld      a,h             
 25B8 : 98                       sbc     a,b             
 25B9 : 67                       ld      h,a             
-25BA : D0         [GWB] CNEGHL:  ret     nc              
+25BA : D0         [GWB] CNEGHL: ret     nc              
 25BB    
 25BB : AF         [GWB] NEGHL:  xor       a             ;[GWB] STANDARD [H,L] NEGATE
 25BC : 95                       sub       l
@@ -1149,7 +1169,8 @@ SB                      KEYRES  equ     $1F28
 25CB : 67                       ld      h,a
 25CC : 18 EC                    jr      CNEGHL
 25CE
-25CE :               + ;[GWB] XCHGX EXCHANGES [B,C] WITH GXPOS
+25CE :               + ;;Register Exchange Routines
+25CE :               | ;[GWB] XCHGX EXCHANGES [B,C] WITH GXPOS
 25CE :               | ;[GWB] XCHGY EXCHANGES [D,E] WITH GYPOS
 25CE :               | ;[GWB] XCHGAC PERFORMS BOTH OF THE ABOVE
 25CE :               | ;[GWB] NONE OF THE OTHER REGISTERS IS AFFECTED
@@ -1179,6 +1200,7 @@ SB                      KEYRES  equ     $1F28
 25E7                  | ;[GWB] 2. ,B=BOXLINE -- RECTANGLE TREATING (X1,Y1) AND (X2,Y2) AS OPPOSITE CORNERS
 25E7                  | ;[GWB] 3. ,BF= BOXFILL --  FILLED RECTANGLE WITH (X1,Y1) AND (X2,Y2) AS OPPOSITE CORNERS
 25E7                  | ;[GWB]
+25E7                  | ;;ATTRIBUTE is the Foreground Color
 25E7 : CD 47 25   [GWB] GLINE:  call    SCAN1           ;[GWB] SCAN THE FIRST COORDINATE
 25EA : C5                       push    bc              ;[GWB] SAVE THE POINT
 25EB : D5                       push    de              
@@ -1197,9 +1219,9 @@ SB                      KEYRES  equ     $1F28
 25FE : CF                       rst     SYNCHK          
 25FF : 46                       byte    'F'             ;[GWB] MUST BE FILLED BOX
 2600 : E5         {GWB} DOBOXF: push    hl              ;[GWB] SAVE THE TEXT POINTER
-2601 : CD 2B 2E                 call    SCALXYX         ;[GWB] SCALE FIRST POINT
+2601 : CD 2B 2E                 call    SCLXYX          ;[GWB] SCALE FIRST POINT
 2604 : CD D8 25                 call    XCHGAC          ;[GWB] SWITCH POINTS
-2607 : CD 2B 2E                 call    SCALXYX         ;[GWB] SCALE SECOND POINT
+2607 : CD 2B 2E                 call    SCLXYX          ;[GWB] SCALE SECOND POINT
 260A : CD C3 25                 call    YDELT           ;[GWB] SEE HOW MANY LINES AND SET CARRY
 260D : DC CE 25                 call    c,XCHGY         ;[GWB] MAKE [D,E] THE SMALLEST Y
 2610 : 23                       inc     hl              ;[GWB] MAKE [H,L] INTO A COUNT
@@ -1208,18 +1230,18 @@ SB                      KEYRES  equ     $1F28
 2615 : DC DB 25                 call    c,XCHGX         ;[GWB] MAKE [B,C] THE SMALLEST X
 2618 : 23                       inc     hl              ;[GWB] MAKE [H,L] INTO A WIDTH COUNT
 2619 : E5                       push    hl              ;[GWB] SAVE WIDTH COUNT
-261A : CD FD 2D                 call    MAPXYC          ;[GWB] MAP INTO A "C"
+261A : CD FD 2D                 call    MAPXYP          ;[GWB] MAP INTO A "C"
 261D : D1                       pop     de              ;[GWB] GET WIDTH COUNT
 261E : C1                       pop     bc              ;[GWB] GET LINE COUNT
 261F : D5         [GWB] BOXLOP: push    de              ;[GWB] SAVE WIDTH
 2620 : C5                       push    bc              ;[GWB] SAVE NUMBER OF LINES
 2621 : CD 7D 2D                 call    FETCHC          ;[GWB] LOOK AT CURRENT C
 2624 : F5                       push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C"
-2625 : E5                       push    hl              ;[GWB] SAVE ADDRESS
+2625 : E5                       push    hl              ;[GWB] SAVE Address
 2626 : EB                       ex      de,hl           ;[GWB] SET UP FOR NSETCX WITH COUNT
 2627 : CD C0 2D                 call    NSETCX          ;[GWB] IN [H,L] OF POINTS TO SETC
 262A : E1                       pop     hl              ;[GWB] GET BACK STARTING C
-262B : F1                       pop     af              ;[GWB] ADDRESS AND BIT MASK
+262B : F1                       pop     af              ;[GWB] Address AND BIT MASK
 262C : CD 76 2D                 call    STOREC          ;[GWB] SET UP AS CURRENT "C"
 262F : CD BD 2E                 call    DOWNC           ;[GWB] MOVE TO NEXT LINE DOWN IN Y
 2632 : C1                       pop     bc              ;[GWB] GET BACK NUMBER OF LINES
@@ -1269,9 +1291,9 @@ SB                      KEYRES  equ     $1F28
 2679 : E1                       pop     hl              ;[GWB] RESTORE THE TEXT POINTER
 267A : C9                       ret                     
 267B    
-267B : CD 2B 2E   [GWB] DOGRPH: call    SCALXYX         ;[GWB] CHEATY SCALING - JUST TRUNCATE FOR NOW
+267B : CD 2B 2E   [GWB] DOGRPH: call    SCLXYX          ;[GWB] CHEATY SCALING - JUST TRUNCATE FOR NOW
 267E : CD D8 25                 call    XCHGAC          
-2681 : CD 2B 2E                 call    SCALXYX         
+2681 : CD 2B 2E                 call    SCLXYX          
 2684 : CD C3 25   {GWB} DOGRP2  call    YDELT           ;[GWB] GET COUNT DIFFERENCE IN [H,L]
 2687 : DC D8 25                 call    c,XCHGAC        ;[GWB] IF CURRENT Y IS SMALLER NO EXCHANGE
 268A : D5                       push    de              ;[GWB] SAVE Y1 COORDINATE
@@ -1286,7 +1308,7 @@ SB                      KEYRES  equ     $1F28
 269A : 30 10                    jr      nc,YDLTBG       ;[GWB] YDELTA IS BIGGER OR EQUAL 
 269C : 22 13 39                 ld      (MINDEL),hl     ;[GWB] SAVE MINOR AXIS DELTA (Y)
 269F : E1                       pop     hl              ;[GWB] GET X ACTION ROUTINE
-26A0 : 22 0C 39                 ld      (MAXUPD+1),hl   ;[GWB] SAVE IN MAJOR ACTION ADDRESS
+26A0 : 22 0C 39                 ld      (MAXUPD+1),hl   ;[GWB] SAVE IN MAJOR ACTION Address
 26A3 : 21 BD 2E                 ld      hl,DOWNC       	;[GWB] ALWAYS INCREMENT 
 26A6 : 22 0F 39                 ld      (MINUPD+1),hl   ;[GWB] WHICH IS THE MINOR AXIS
 26A9 : EB                       ex      de,hl           ;[GWB] [H,L]=DELTA X=MAJOR DELTA
@@ -1294,7 +1316,7 @@ SB                      KEYRES  equ     $1F28
 26AC    
 26AC : E3         [GWB] YDLTBG: ex      (sp),hl         ;[GWB] XTHL
 26B0 : 21 BD 2E                 ld      hl,DOWNC        ;[GWB] Y IS ALWAYS INCREMENT MODE
-26AD : 22 0F 39                 ld      (MINUPD+1),hl   ;[GWB] SAVE ADDRESS OF MINOR AXIS UPDATE
+26AD : 22 0F 39                 ld      (MINUPD+1),hl   ;[GWB] SAVE Address OF MINOR AXIS UPDATE
 26B3 : 22 0C 39                 ld      (MAXUPD+1),hl   ;[GWB] SAVE AS MAJOR AXIS UPDATE
 26B6 : EB                       ex      de,hl           ;[GWB] [H,L]=DELTA X
 26B7 : 22 13 39                 ld      (MINDEL),hl     ;[GWB] SAVE MINOR DELTA
@@ -1305,8 +1327,8 @@ SB                      KEYRES  equ     $1F28
 26BC                  | ;[GWB] MAJOR AXIS IS ONE WITH THE LARGEST DELTA
 26BC                  | ;[GWB] MINOR IS THE OTHER
 26BC                  | ;[GWB] READY TO DRAW NOW
-26BC                  | ;[GWB] MINUPD+1=ADDRESS TO GO TO UPDATE MINOR AXIS COORDINATE
-26BC                  | ;[GWB] MAXUPD+1=ADDRESS TO GO TO UPDATE MAJOR AXIS COORDINATE
+26BC                  | ;[GWB] MINUPD+1=Address TO GO TO UPDATE MINOR AXIS COORDINATE
+26BC                  | ;[GWB] MAXUPD+1=Address TO GO TO UPDATE MAJOR AXIS COORDINATE
 26BC                  | ;[GWB] [H,L]=MAJOR AXIS DELTA=# OF POINTS-1
 26BC                  | ;[GWB] MINDEL=DELTA ON MINOR AXIS
 26BC                  | ;[GWB]
@@ -1324,7 +1346,7 @@ SB                      KEYRES  equ     $1F28
 26BC : E5                       push    hl             ;[GWB] SAVE FOR SETTING UP COUNT
 26BD : CD BB 25                 call    NEGHL          
 26C0 : 22 11 39                 ld      (MAXDEL),hl    ;[GWB] SAVE MAJOR DELTA FOR SUMMING
-26C3 : CD FD 2D                 call    MAPXYC         ;[GWB] GET POSITION INTO BITMSK AND [H,L]  
+26C3 : CD FD 2D                 call    MAPXYP         ;[GWB] GET POSITION INTO BITMSK AND [H,L]  
 26C6 : D1                       pop     de             
 26C7 : D5                       push    de             ;[GWB] START SUM AT MAXDEL/2 
 26C8 : CD F0 26                 call    HLFDE          
@@ -1637,9 +1659,9 @@ SB                      KEYRES  equ     $1F28
 28A3 : D1         [GWB] CPLTIT: pop     de              ;[GWB] GET X & Y OFFSETS
 28A4 : E1                       pop     hl              
 28A5 : CD E7 28                 call    GTABSC          ;[GWB] CALC TRUE COORDINATE OF POINT
-28A8 : CD 2B 2E                 call    SCALXYX         ;[GWB] SEE IF POINT OFF SCREEN
+28A8 : CD 2B 2E                 call    SCLXYX          ;[GWB] SEE IF POINT OFF SCREEN
 28AB : D2 B4 28                 jp      nc,CPLFIN       ;[GWB] NC IF POINT OFF SCREEN - NO PLOT
-28AE : CD FD 2D                 call    MAPXYC          
+28AE : CD FD 2D                 call    MAPXYP          
 28B1 : CD 99 2D                 call    SETC            ;[GWB] PLOT THE POINT
 28B4    
 28B4 : D1         [GWB] CPLFIN: pop     de              ;[GWB] GET BACK OFFSETS
@@ -1813,7 +1835,7 @@ SB                      KEYRES  equ     $1F28
 29AF : DC DB 25                 call    c,XCHGX         ;[GWB] BC = MIN(GXPOS,DE)
 29B2 : 23                       inc     hl              ;[GWB] MAKE DELTA A COUNT
 29B3 : 22 11 39                 ld      (MAXDEL),hl     ;[GWB] SAVE DX IN MAXDEL
-29B6 : CD ED 2D                 call    MAPXYP           
+29B6 : CD ED 2D                 call    MAPXYC           
 29B9 : E1                       pop     hl              
 29BA : CD 77 2A                 call    GTARRY           
 29BD : E5                       push    hl              
@@ -1868,7 +1890,7 @@ SB                      KEYRES  equ     $1F28
 2A00 : C9                       ret                     
 2A01    
 2A01 : E5         [GWB] PUT1:   push    hl              ;[GWB] SAVE TXTPTR
-2A02 : CD ED 2D                 call    MAPXYP          ;[GWB] MAP THE POINT
+2A02 : CD ED 2D                 call    MAPXYC          ;[GWB] MAP THE POINT
 2A05 : E1                       pop     hl              
 2A06 : CD 77 2A                 call    GTARRY          ;[GWB] SCAN ARRAY NAME & GET PTR TO IT
 2A09 : D5                       push    de              ;[GWB] SAVE PTR TO DELTAS IN ARRAY
@@ -1906,7 +1928,7 @@ SB                      KEYRES  equ     $1F28
 2A30 : EB                       ex      de,hl           
 2A31 : 19                       add     hl,de           
 2A32 : 38 0E                    jr      c,PRNGER        ;[GWB] ERROR IF CARRY
-2A34 : 44                       ld      b,h             ;[GWB] TO [BC] FOR SCALXYX
+2A34 : 44                       ld      b,h             ;[GWB] TO [BC] FOR SCLXYX
 2A35 : 4D                       ld      c,l             
 2A36 : E1                       pop     hl              ;[GWB] GET BACK ARRAY POINTER
 2A37 : 5E                       ld      e,(hl)          ;[GWB] [DE] = DELTA Y ([HL] POINTS TO DATA)
@@ -1927,53 +1949,53 @@ SB                      KEYRES  equ     $1F28
 2A4C : F1                       pop af                  ;[GWB] GET BACK ACTION MODE
 2A4D : 37                       scf                     ;[GWB] SET CARRY TO FLAG PUT INIT
 2A4E    
-2A4E : D5         [GWB] GOPGIN: push    de              ;RESAVE DY
+2A4E : D5         [GWB] GOPGIN: push    de              ;[GWB] RESAVE DY
 2A4F : CD 00 2F                 call    PGINIT          ;;Set Operation Routine Address
-2A52 : D1                       pop     de              ;GET Y COUNT
-2A53 : D5         [GWB] PGLOOP: push    de              ;SAVE LINE COUNT
+2A52 : D1                       pop     de              ;[GWB] GET Y COUNT
+2A53 : D5         [GWB] PGLOOP: push    de              ;[GWB] SAVE LINE COUNT
 2A54 : CD 7D 2D                 call    FETCHC          
 2A57 : E5                       push    hl              
 2A58 : F5                       push    af              
-2A59 : 3A 3B 39                 ld      a,(PUTFLG)      ;SEE IF PUTTING OR GETTING
+2A59 : 3A 3B 39                 ld      a,(PUTFLG)      ;[GWB] SEE IF PUTTING OR GETTING
 2A5C : B7                       or      a               
 2A5D : 20 05                    jr      nz,PGLOO2       
 2A5F : CD 22 2F                 call    NREAD           
 2A62 : 18 03                    jr      PGLOO3          
 2A64 : CD 39 2F   [GWB] PGLOO2: call    NWRITE          
-2A67 : F1         [GWB] PGLOO3: pop     af              
-2A68 : E1                       pop     hl              
-2A69 : CD 76 2D                 call    STOREC          
-2A6C : CD B1 2E                 call    DOWNL           
+2A67 : F1         [GWB] PGLOO3: pop     af              ;{GWB} GET BACK STARTING C          
+2A68 : E1                       pop     hl              ;{GWB} Address AND BIT MASK
+2A69 : CD 76 2D                 call    STOREC          ;{GWB} SET UP AS CURRENT "C"          
+2A6C : CD B1 2E                 call    DOWNL           ;[GWB] NOW MOVE DOWN A LINE
 2A6F : D1                       pop     de              
 2A70 : 1B                       dec     de              
 2A71 : 7A                       ld      a,d             
 2A72 : B3                       or      e               
-2A73 : 20 DE                    jr      nz,PGLOOP       ;CONTINUE IF NOT ZERO
-2A75 : E1                       pop     hl              ;GET BACK TXTPTR
-2A76 : C9                       ret                     ;AND RETURN
+2A73 : 20 DE                    jr      nz,PGLOOP       ;[GWB] CONTINUE IF NOT ZERO
+2A75 : E1                       pop     hl              ;[GWB] GET BACK TXTPTR
+2A76 : C9                       ret                     ;[GWB] AND RETURN
 2A77    
 2A77 : CF               GTARRY: rst     SYNCHK          
-2A78 : 2C                       byte    ','             ;EAT COMMA
-2A79 : 3E 01                    ld      a,1             ;SEARCH ARRAYS ONLY
+2A78 : 2C                       byte    ','             ;[GWB] EAT COMMA
+2A79 : 3E 01                    ld      a,1             ;[GWB] SEARCH ARRAYS ONLY
 2A7B : 32 CB 38                 ld      (SUBFLG),a       
-2A7E : CD D1 10                 call    PTRGET          ;GET PTR TO ARRAY
-2A81 : C2 97 06                 jp      nz,FCERR        ;NOT THERE - ERROR
-2A84 : 32 CB 38                 ld      (SUBFLG),a      ;CLEAR THIS
-2A87 : E5                       push    hl              ;SAVE TXTPTR
-2A88 : 60                       ld      h,b             ;HL = PTR TO ARRAY
+2A7E : CD D1 10                 call    PTRGET          ;[GWB] GET PTR TO ARRAY
+2A81 : C2 97 06                 jp      nz,FCERR        ;[GWB] NOT THERE - ERROR
+2A84 : 32 CB 38                 ld      (SUBFLG),a      ;[GWB] CLEAR THIS
+2A87 : E5                       push    hl              ;[GWB] SAVE TXTPTR
+2A88 : 60                       ld      h,b             ;[GWB] HL = PTR TO ARRAY
 2A89 : 69                       ld      l,c             
-2A8A : EB                       ex      de,hl           ;HL = LENGTH
-2A8B : 19                       add     hl,de           ;HL = LAST BYTE OF ARRAY
-2A8C : E5                       push    hl              ;SAVE
-2A8D : 0A                       ld      a,(bc)          ;GET NO. OF DIMS 
-2A8E : 87                       add     a,a             ;DOUBLE SINCE 2 BYTE ENTRIES
+2A8A : EB                       ex      de,hl           ;[GWB] HL = LENGTH
+2A8B : 19                       add     hl,de           ;[GWB] HL = LAST BYTE OF ARRAY
+2A8C : E5                       push    hl              ;[GWB] SAVE
+2A8D : 0A                       ld      a,(bc)          ;[GWB] GET NO. OF DIMS 
+2A8E : 87                       add     a,a             ;[GWB] DOUBLE SINCE 2 BYTE ENTRIES
 2A8F : 6F                       ld      l,a             
 2A90 : 26 00                    ld      h,0             
-2A92 : 03                       inc     bc              ;SKIP NO. OF DIMS
+2A92 : 03                       inc     bc              ;[GWB] SKIP NO. OF DIMS
 2A93 : 09                       add     hl,bc           
-2A94 : EB                       ex      de,hl           ;DE = PTR TO FIRST BYTE OF DATA
-2A95 : C1                       pop     bc              ;BC = PTR TO LAST BYTE OF DATA
-2A96 : E1                       pop     hl              ;GET TXTPTR
+2A94 : EB                       ex      de,hl           ;[GWB] DE = PTR TO FIRST BYTE OF DATA
+2A95 : C1                       pop     bc              ;[GWB] BC = PTR TO LAST BYTE OF DATA
+2A96 : E1                       pop     hl              ;[GWB] GET TXTPTR
 2A97 : C9                       ret                     
 2A98
 2A98 : AE AD            GFUNTB: byte ORTK, ANDTK        ;;PUT Action Tokens Table
@@ -2125,7 +2147,7 @@ SB                      KEYRES  equ     $1F28
 2B8E : F5                       push    af              ;[GWB] SAVE THIS FLAG
 2B8F : C5                       push    bc              ;[GWB] SAVE X,Y COORDS
 2B90 : D5                       push    de              ;[GWB] BEFORE SCALE SO REFLECT DISTANCE OFF
-2B91 : CD 2B 2E                 call    SCALXYX         ;[GWB] SCALE IN CASE COORDS OFF SCREEN
+2B91 : CD 2B 2E                 call    SCLXYX          ;[GWB] SCALE IN CASE COORDS OFF SCREEN
 2B94 : CD D8 28                 call    GLINE2          
 2B97 : D1                       pop     de              
 2B98 : C1                       pop     bc              ;[GWB] GET THEM BACK
@@ -2205,17 +2227,22 @@ SB                      KEYRES  equ     $1F28
 2C0E : DA 97 06                 jp      c,FCERR         ;[GWB] ERROR IF ILLEGAL ATTRIBUTE
 2C11 : C9                       ret                      
 2C12    
+2C12 :                  ;;Issue FC Error if Point is Not on Screen
 2C12 : E5         [GWB] CHKRNG: push    hl              ;[GWB] SAVE TXTPTR
 2C13 : CD 1F 2E                 call    CHKRXY           
 2C16 : D2 97 06                 jp      nc,FCERR        ;[GWB] OUT OF BOUNDS - ERROR
-2C19 : E1         [GWB} CHKPHR: pop     hl              
+2C19 : E1         {GWB} CHKPHR: pop     hl              
 2C1A : C9                       ret                     
 2C1B
-2C1B : E5                       push    hl              ;;;Unused?
-2C1C : CD 2B 2E                 call    SCALXYX
-2C1F : D2 97 06                 jp      nc,FCERR
-2C22 : E1                       pop     hl
-2C23 : C9                       ret
+2C1B :                  ;;Deprecated: Issue FC Error if Point is Not on Screen
+2C1B :                  ;;This is the same code as CHKRNG in GW-BASIC
+2C1B :                  ;;The above code is uses instead, and this is never called
+2C1B :                  ;;
+2C1B : E5                       push    hl              ;;Save [HL]
+2C1C : CD 2B 2E                 call    SCLXYX          ;;Check if Point is Off Screen
+2C1F : D2 97 06                 jp      nc,FCERR        ;;If it is, generate FC Error
+2C22 : E1                       pop     hl              ;;Otherwise, Restorw [HL]
+2C23 : C9                       ret                     ;;and Return
 2C24    
 2C24 : EB         [GWB] MACLNG: ex      de,hl           
 2C25 : 22 39 39                 ld      (MCLTAB),hl     ;[GWB] SAVE POINTER TO COMMAND TABLE
@@ -2286,7 +2313,7 @@ SB                      KEYRES  equ     $1F28
 2C8A : E1         {GWB} ISCMD3: pop hl                  
 2C8B : C1                       pop bc                  ;[GWB] GET BACK COMMAND CHAR
 2C8C : 23         [GWB] MNOARG: inc hl                  ;[GWB] POINT TO DISPATCH ADDR
-2C8D : 7E                       ld a,(hl)               ;[GWB] GET ADDRESS INTO HL
+2C8D : 7E                       ld a,(hl)               ;[GWB] GET Address INTO HL
 2C8E : 23                       inc hl                  
 2C8F : 66                       ld h,(hl)               
 2C90 : 6F                       ld l,a                  
@@ -2325,25 +2352,24 @@ SB                      KEYRES  equ     $1F28
     ;
 2CC3    
 2CC3 : CD 92 2C   [GWB] VALSCN: call    FETCHZ          ;[GWB] GET FIRST CHAR OF ARGUMENT
-2CC6                    ISLET2: ;;;Maybe?               
-2CC6 : FE 3D      [GWB] VALSC3: cp      '='             ;NUMERIC?
-2CC8 : 28 61                    jr      z,VARGET        
-2CCA : FE 2B                    cp      '+'             ;PLUS SIGN?
-2CCC : 28 F5                    jr      z,VALSCN        ;THEN SKIP IT
-2CCE : FE 2D                    cp      '-'             ;NEGATIVE VALUE?
+2CC6 : FE 3D      [GWB] ISLET2: cp      '='             ;[GWB] NUMERIC?
+2CC8 : 28 61                    jr      z,VARGET        ;;No, Evaluate Variable
+2CCA : FE 2B                    cp      '+'             ;[GWB] PLUS SIGN?
+2CCC : 28 F5                    jr      z,VALSCN        ;[GWB] THEN SKIP IT
+2CCE : FE 2D                    cp      '-'             ;[GWB] NEGATIVE VALUE?
 2CD0 : 20 06                    jr      nz,VALSC2       
-2CD2 : 11 46 2D  "              ld      de,NEGD         ;IF SO, NEGATE BEFORE RETURNING
+2CD2 : 11 46 2D  "              ld      de,NEGD         ;[GWB] IF SO, NEGATE BEFORE RETURNING
 2CD5 : D5                       push    de              
-2CD6 : 18 EB                    jr      VALSCN          ;EAT THE "-"
-2CD8 : 11 00 00   [GWB] VALSC2: ld de,00000H
+2CD6 : 18 EB                    jr      VALSCN          ;[GWB] EAT THE "-"
+2CD8 : 11 00 00   [GWB] VALSC2: ld de,0
 2CDB : 06 04                    ld b,4
 2CDD    
-2CDD : FE 2C      [GWB] NUMLOP: cp      ','             ;COMMA
-2CDF : 28 D4                    jr      z,DECFET        ;YES, BACK UP AND RETURN
-2CE1 : FE 3B                    cp      ';'             ;SEMICOLON?
-2CE3 : C8                       ret     z               ;YES, JUST RETURN
-2CE4 : FE 3A                    cp      '9'+1           ;NOW SEE IF ITS A DIGIT 
-2CE6 : 30 CD                    jr      nc,DECFET       ;IF NOT, BACK UP AND RETURN
+2CDD : FE 2C      [GWB] NUMLOP: cp      ','             ;[GWB] COMMA
+2CDF : 28 D4                    jr      z,DECFET        ;[GWB] YES, BACK UP AND RETURN
+2CE1 : FE 3B                    cp      ';'             ;[GWB] SEMICOLON?
+2CE3 : C8                       ret     z               ;[GWB] YES, JUST RETURN
+2CE4 : FE 3A                    cp      '9'+1           ;[GWB] NOW SEE IF ITS A DIGIT 
+2CE6 : 30 CD                    jr      nc,DECFET       ;[GWB] IF NOT, BACK UP AND RETURN
 2CE8 : FE 30                    cp      '0'                  
 2CEA : 38 C9                    jr      c,DECFET             
 2CEC : 6B                       ld      l,e                  
@@ -2352,11 +2378,11 @@ SB                      KEYRES  equ     $1F28
 2CEF : 29                       add     hl,hl               
 2CF0 : 19                       add     hl,de               
 2CF1 : 29                       add     hl,hl               
-2CF2 : D6 30                    sub     '0'             ;ADD IN THE DIGIT
+2CF2 : D6 30                    sub     '0'             ;[GWB] ADD IN THE DIGIT
 2CF4 : 5F                       ld      e,a                  
-2CF5 : 16 00                    ld      d,000H               
-2CF7 : 19                       add     hl,de               
-2CF8 : EB                       ex      de,hl                
+2CF5 : 16 00                    ld      d,0               
+2CF7 : 19                       add     hl,de           ;[GWB] VALUE SHOULD BE IN [DE]
+2CF8 : EB                       ex      de,hl           ;[GWB] GET NEXT CHAR     
 2CF9 : CD 98 2C                 call    FETCHR             
 2CFC : C8                       ret     z                   
 2CFD : 05                       dec     b                   
@@ -2439,151 +2465,162 @@ SB                      KEYRES  equ     $1F28
 2D72 : 21 3E 01                 ld      hl,$013E        
 2D75 : C9                       ret                     
 2D76                                                    
-2D76 : 32 28 39   [GWB] STOREC: ld      (CMASK),a       ;;Store Bit Mask
-2D79 : 22 26 39                 ld      (CURLOC),hl     ;;Store Current Point Address
+2D76 : 32 28 39   [GWB] STOREC: ld      (PINDEX),a      ;;Store Point Position
+2D79 : 22 26 39                 ld      (CURLOC),hl     ;;and Semigraphics Character Address
 2D7C : C9                       ret                     
 2D7D                                                    
-2D7D : 3A 28 39   [GWB] FETCHC: ld      a,(CMASK)       ;;Load Bit Mask 
+2D7D : 3A 28 39   [GWB] FETCHC: ld      a,(PINDEX)      ;;Load Bit Index 
 2D80 : 2A 26 39                 ld      hl,(CURLOC)     ;;Load Current Point Address
 2D83 : C9                       ret                     
 2D84                                                    
-2D84 : FE 10      [GWB] SETATR: cp      16              ;;Is Attribute > 16
-2D86 : 3F                       ccf                     ;;Yes
-2D87 : D8                       ret     c               ;;Return Error
-2D88 : 32 02 39                 ld      (GATTRS),a      ;;Store Attribute
+2D84 :                  ;;Set Graphics Attribute (Foreground Color)                                                   
+2D84 : FE 10      [GWB] SETATR: cp      16              ;;Is Color > 16
+2D86 : 3F                       ccf                     ;;If Yes
+2D87 : D8                       ret     c               ;;  Return Error
+2D88 : 32 02 39                 ld      (ATRBYT),a      ;;Store Color
 2D8B : C9                       ret                     
 2D8C    
-2D8C : 11 CA 1A         L2D8C:  ld      de,BITTAB
-2D8F : 3A 28 39                 ld      a,(CMASK)
+2D8C :                 ;;Get Bit Mask for Bit Position PINDEX
+2D8C : 11 CA 1A        GETMSK:  ld      de,BITTAB       
+2D8F : 3A 28 39                 ld      a,(PINDEX)
 2D92 : 83                       add     a,e
 2D93 : 5F                       ld      e,a
-2D94 : 30 01                    jr      nc,L2D97
+2D94 : 30 01                    jr      nc,GETMSS
 2D96 : 14                       inc     d
-2D97 : 1A               L2D97:  ld      a,(de)
+2D97 : 1A              GETMSS:  ld      a,(de)
 2D98 : C9                       ret
 2D99
-2D99                    ;;; MACHINE DEPENDENT GRAPHICS ROUTINES:
-2D99 : E5         [GWB] SETC:   push    hl              
-2D9A : D5                       push    de              
-2D9B : 2A 26 39                 ld      hl,(CURLOC)     ;;Current Screen Address
-2D9E : 7E                       ld      a,(hl)          ;;Character at Address
-2D9F : F6 A0                    or      $A0             
-2DA1 : AE                       xor     (hl)            
-2DA2 : 28 02                    jr      z,SETC2         ;Semigraphics at screen location?
-2DA4 : 36 A0                    ld      (hl),$A0        ;;No, store base semigraphic
-2DA6 : CD 8C 2D         SETC2:  call    L2D8C           
-2DA9 : B6                       or      (hl)            
-2DAA : 77                       ld      (hl),a          
-2DAB : 11 00 04                 ld      de,$0400        
-2DAE : 19                       add     hl,de           
-2DAF : 3A 02 39                 ld      a,(GATTRS)      
-2DB2 : 87                       add     a,a             
-2DB3 : 87                       add     a,a             
-2DB4 : 87                       add     a,a             
+2D99 :                + ;{GWB} SET CURRENT POINT
+2D99 :                | ;;Sets Current Point to Foreground Color ATRBYT
+2D99 :                | ;;Background Color is not changed
+2D99 :                | ;;Current point is at Current Point Index PINDEX in 
+2D99 :                | ;;Semigraphics Character at Current Address CURLOC
+2D99 :                
+2D99 : E5         [GWB] SETC:   push    hl              ;;Save [HL]
+2D9A : D5                       push    de              ;;and [DE]
+2D9B : 2A 26 39                 ld      hl,(CURLOC)     ;;Get Current Screen Address
+2D9E : 7E                       ld      a,(hl)          ;;Get Character at Address
+2D9F : F6 A0                    or      SGBASE          ;;Verify it's in the range of              
+2DA1 : AE                       xor     (hl)            ;;Semigraphics Characters
+2DA2 : 28 02                    jr      z,SETC2         ;;If Not
+2DA4 : 36 A0                    ld      (hl),SGBASE     ;;  Store Base Semigraphic Character
+2DA6 : CD 8C 2D         SETC2:  call    GETMSK          ;;Get Bit Mask for Pixel to set
+2DA9 : B6                       or      (hl)            ;;Set it
+2DAA : 77                       ld      (hl),a          ;;Write Character back to Screen Matrix
+2DAB : 11 00 04                 ld      de,COLOR-SCREEN ;;Add Offset into Color Matrix to
+2DAE : 19                       add     hl,de           ;;Screen Address to Get Color Address
+2DAF : 3A 02 39                 ld      a,(ATRBYT)      ;;Get Color Byte
+2DB2 : 87                       add     a,a             ;;Now multiply by 16,
+2DB3 : 87                       add     a,a             ;;moving it to the high nybble (Foreground Color)
+2DB4 : 87                       add     a,a             ;;leaving 0 (Black) in thr low nybblr (Background Color)
 2DB5 : 87                       add     a,a             
-2DB6 : 57                       ld      d,a             
-2DB7 : 5E                       ld      e,(hl)          
-2DB8 : 3E 0F                    ld      a,00FH          
-2DBA : A3                       and     e               
-2DBB : B2                       or      d               
-2DBC : 77                       ld      (hl),a          
+2DB6 : 57                       ld      d,a             ;;Save New Color Byte
+2DB7 : 5E                       ld      e,(hl)          ;;Get Old Color Byte
+2DB8 : 3E 0F                    ld      a,0             ;;Override Old Background Color ($0F would keep it)
+2DBA : A3                       and     e               ;;Clear Old Foreground Color
+2DBB : B2                       or      d               ;;Put in the New Foreground Color
+2DBC : 77                       ld      (hl),a          ;;Writeback Attribute back to Color Matrix
 2DBD : D1                       pop     de              
 2DBE : E1                       pop     hl              
 2DBF : C9                       ret                     
-    ;
-2DC0    NSETCX: ;;; MACHINE DEPENDENT GRAPHICS ROUTINES:
-2DC0 : 7D  "}"  ld a,l
-2DC1 : B4  " "  or h
-2DC2 : C8  " "  ret z
-2DC3 : CD 99 2D  "  -"  call SETC
-2DC6 : CD DB 2E  "  ."  call RIGHTC
-2DC9 : 2B  "+"  dec hl
-2DCA : 18 F4  "  "  jr NSETCX
-    ;
-2DCC : E5  " "  push hl
-2DCD : D5  " "  push de
-2DCE : 2A 26 39  "*&9"  ld hl,(CURLOC)
-2DD1 : 7E  "~"  ld a,(hl)
-2DD2 : F6 A0  "  "  or 0A0H
-2DD4 : AE  " "  xor (hl)
-2DD5 : 28 10  "( "  jr z,L2DE7
-2DD7    L2DD7:
-2DD7 : 11 00 04  "   "  ld de,00400H
-2DDA : 19  " "  add hl,de
-2DDB : 7E  "~"  ld a,(hl)
-2DDC : 28 04  "( "  jr z,L2DE2
-2DDE : 0F  " "  rrca
-2DDF : 0F  " "  rrca
-2DE0 : 0F  " "  rrca
-2DE1 : 0F  " "  rrca
-2DE2    L2DE2:
-2DE2 : E6 0F  "  "  and 00FH
-2DE4 : D1  " "  pop de
-2DE5 : E1  " "  pop hl
-2DE6 : C9  " "  ret
-    ;
-2DE7    L2DE7:
-2DE7 : CD 8C 2D  "  -"  call L2D8C
-2DEA : A6  " "  and (hl)
-2DEB : 18 EA  "  "  jr L2DD7
+2DC0 
+2DC0 :                  ;;Draw Horizontal Line [HL] Pixels Long 
+2DC0 : 7D               NSETCX: ld      a,l             ;;Looping HL Times
+2DC1 : B4                       or      h               ;;If HL is 0
+2DC2 : C8                       ret     z               ;;  Return
+2DC3 : CD 99 2D                 call    SETC            ;;Set Pixel at Current Location
+2DC6 : CD DB 2E                 call    RIGHTC          ;;Move 1 Pixel Right
+2DC9 : 2B                       dec     hl              ;;Count Down
+2DCA : 18 F4                    jr      NSETCX          ;;and Loop
+2DCC 
+2DCC :                + ;;Get Foreground Color at Current Location
+2DCC :                | ;;This routine was intended to return both the Pixel State and Color
+2DCC :                | ;;It first sets [A] to the pixel value, which is always 0 due to a bug,
+2DCC :                | ;;  then sets [A] to the Foreground Color, so it
+2DCC :                | ;;Returns Only the Foreground Color.
+2DCC : E5         {~~~} GETC:   push    hl              ;;Save [HL]
+2DCD : D5                       push    de              ;;and [DE]
+2DCE : 2A 26 39                 ld      hl,(CURLOC)     ;;Get Current Screen Address
+2DD1 : 7E                       ld      a,(hl)          ;;Get Character at Address
+2DD2 : F6 A0                    or      SGBASE          ;;Verify it's in the range of  
+2DD4 : AE                       xor     (hl)            ;;Semigraphics Characters
+2DD5 : 28 10                    jr      z,GETC2         ;;If it is, Check Pixel BUG: Should be JR NZ
+2DD7 : 11 00 04         GETC3:  ld      de,COLOR-SCREEN ;;Add Offset into Color Matrix to
+2DDA : 19                       add     hl,de           ;;Screen Address to Get Color Address
+2DDB : 7E                       ld      a,(hl)          ;;Get Color Byte
+2DDC : 28 04                    jr      z,GETC4         ;;If Not Zero
+2DDE : 0F                       rrca                    ;;  Rotate 4 Bits Right
+2DDF : 0F                       rrca                    ;;  Moving High Nybble (Foreground Color)
+2DE0 : 0F                       rrca                    ;;  to Low Nybbme
+2DE1 : 0F                       rrca
+2DE2 : E6 0F            GETC4:  and     $0F             ;;Set High Nybble to 0, leaving only Foreground color
+2DE4 : D1                       pop     de              ;;Restore [DE]
+2DE5 : E1                       pop     hl              ;;and [HL]
+2DE6 : C9                       ret
+2DE7 : CD 8C 2D         GETC2:  call    GETMSK          ;;Get Bit Mask for Pixel to set
+2DEA : A6                       and     (hl)            ;;and Remove all other Bits of Character
+2DEB : 18 EA                    jr      GETC3           ;;Then continue on to Get the Foreground Color
 2DED
 2DED                    ;{GWB} MACHINE DEPENDENT GRAPHICS ROUTINES: 
 2DED                    ;
-2DED                  + ;{GWB} GET POSITION INTO BITMSK AND [H,L]
+2DED                  + ;;Get Screen Address and and Pixel Index from Character X, Character Y
+2DED                  | ;{GWB} GET POSITION INTO BITMSK AND [H,L]
 2DED                  | ;;Uses: [B,C] = Character X Position 
 2DED                  | ;;      [D,E] = Character Y Position 
-2DED                  | ;;Sets: CMASK = [A] = 0
-2DED                  | ;;      CURLOC = [H,L] = Screen Addres
+2DED                  | ;;Sets: PINDEX = [A] = 0
+2DED                  | ;;      CURLOC = [H,L] = Screen Address
 2DED                  | ;;
-2DED : E5               MAPXYP: push    hl              ;;Save [H,L] 
+2DED : E5         [GWB] MAPXYC: push    hl              ;;Save [H,L] 
 2DEE : D5                       push    de              ;;Save [D,E] (YPOS)
-2DEF : 21 28 30                 ld      hl,,SCREEN+40   ;;Address = Column 0, Line 1
+2DEF : 21 28 30                 ld      hl,SCREEN+40    ;;Address = Column 0, Line 1
 2DF2 : 7B                       ld      a,e             ;;
 2DF3 : 11 28 00                 ld      de,40           ;;Screen Width
 2DF6 : 3C                       inc     a               ;;Mask = YPOS +1 
-2DF7 : 3D               MAPPLP: dec     a               ;;Mask = Mask - 1
+2DF7 : 3D         (~~~) MAPCLP: dec     a               ;;Mask = Mask - 1
 2DF8 : 28 1B                    jr      z,MAPXYA        ;;iF Zero, Add XPOS and FInish Up 
 2DFA : 19                       add     hl,de           ;;Else Add Screen Width to Address
-2DFB : 18 FA                    jr      MAPPLP          ;;and Loop
-2DFD
-2DED                    ;;Uses: [B,C] = Character X Position 
-2DED                    ;;      [D,E] = Pixel Y Position 
-2DFD                    ;;Sets: CMASK = [A] = 0, 1, or 2
-2DFD                    ;;      CURLOC = [H,L] = Screen Addres
-2DFD : E5         [GWB] MAPXYC: push    hl              ;;Save [H,L] 
+2DFB : 18 FA                    jr      MAPCLP          ;;and Loop
+2DFD 
+2DED :                + ;;Get Screen Address and and Pixel Index from Character X, Character Y
+2DED :                | ;;Uses: [B,C] = Character X Position 
+2DED :                | ;;      [D,E] = Pixel Y Position 
+2DFD :                | ;;Sets: PINDEX = [A] = 0, 1, or 2
+2DFD :                | ;;      CURLOC = [H,L] = Screen Address
+2DFD : E5         [GWB] MAPXYP: push    hl              ;;Save [H,L] 
 2DFE : D5                       push    de              ;;Save [D,E] (YPOS)
 2DFF : 21 28 30                 ld      hl,SCREEN+40    ;;Address = Column 0, Line 1
 2E02 : 7B                       ld      a,e             ;;Mask = YPOS
 2E03 : 11 28 00                 ld      de,40           ;;Screen Width
-2E06 : D6 03            MAPCLP: sub     3               ;;Mask = Mask - 3
-2E08 : 38 03                    jr      c,MAPCAD        ;;If Positive
+2E06 : D6 03      (~~~) MAPPLP: sub     3               ;;Mask = Mask - 3
+2E08 : 38 03                    jr      c,MAPPAD        ;;If Positive
 2E0A : 19                       add     hl,de           ;;  Add Screen Width to Screen Address
-2E0B : 18 F9                    jr      MAPCLP          ;;  and Loop
-2E0D : C6 03            MAPCAD: add     a,3             ;;Mask = Mask + 3
+2E0B : 18 F9                    jr      MAPPLP          ;;  and Loop
+2E0D : C6 03      (~~~) MAPPAD: add     a,3             ;;Mask = Mask + 3
 2E0F : 87                       add     a,a             ;;
 2E10 : CB 29                    sra     c               ;;
-2E12 : 30 01                    jr      nc,MAPXYA        ;;If Mask is Even
+2E12 : 30 01                    jr      nc,MAPXYA       ;;If Mask is Even
 2E14 : 3C                       inc     a               ;;  Mask = Mask + 1
-2E15 : 09               MAPXYA: add     hl,bc           ;;Add XPOS to Screen Address
-2E16 : 32 28 39                 ld      (CMASK),a       ;;Store Mask
+2E15 : 09         (~~~) MAPXYA: add     hl,bc           ;;Add XPOS to Screen Address
+2E16 : 32 28 39                 ld      (PINDEX),a      ;;Store Mask
 2E19 : 22 26 39                 ld      (CURLOC),hl     ;;Store Address
 2E1C : D1                       pop     de              ;;Get YPOS back into DE
 2E1D : E1                       pop     hl              ;;Restore HL
-2E1E : C9                       ret                     ;;
+2E1E : C9                       ret                     
 2E1F
 2E1F                    ;{GWB} SEE IF LOCATION OFF SCREEN
-2E1F : 3E 17            CHKRXY: ld       a,23            
+2E1F : 3E 17      [~~~] CHKRXY: ld       a,23            
 2E21 : 32 41 39                 ld       (GYMAX),a       ;;Mex Y = 23 Rows
 2E24 : 3E 27                    ld       a,39            
 2E26 : 32 42 39  "              ld       (GXMAX),a       ;;Mac X = 39 Coumns
 2E29 : 18 0A                    jr       CMPGMY           
 2E2B    
-2E2B                    ;{GWB} SEE IF POINT OFF SCREEN
-2E2B : 3E 47      [GWB] SCALXYX:ld      a,71            
+2E2B :                  ;{GWB} SEE IF POINT OFF SCREEN
+2E2B :                  ;;; Labeled SCALXY in GW-BASIC, but Standard BASIC also has a SCALXY Routine
+2E2B : 3E 47      [GWB] SCLXYX: ld      a,71            
 2E2D : 32 41 39                 ld      (GYMAX),a       ;;Max Y = 71 Pixels
 2E30 : 3E 4F                    ld      a,79            
 2E32 : 32 42 39                 ld      (GXMAX),a       ;;Max X = 79 Pixels
-2E35 : E5               CMPGMY: push    hl              ;Save Registers
+2E35 : E5         (~~~) CMPGMY: push    hl              ;Save Registers
 2E36 : C5                       push    bc              
 2E37 : D5                       push    de              
 2E38 : 3A 41 39                 ld      a,(GYMAX)       
@@ -2592,22 +2629,23 @@ SB                      KEYRES  equ     $1F28
 2E3E : CB 7A                    bit     7,d             ;;If [D,E] is Negative
 2E40 : 20 1F                    jr      nz,SETGYZ       ;;  [H,L] = 0 and Set Carry
 2E42 : E7                       rst     COMPAR          ;;Else Compare [D,E] and [H,L]
-2E43 : 50               L2E43:  ld      d,b             ;;[D,E] = [B,C]
+2E43 : 50         (~~~) SCLXY2: ld      d,b             ;;[D,E] = [B,C]
 2E44 : 59                       ld      e,c             
 2E45 : 06 00                    ld      b,0             
 2E47 : 30 02                    jr      nc,CMPGMX       
 2E49 : E3                       ex      (sp),hl         
 2E4A : 04                       inc     b               
-2E4B : 3A 42 39         CMPGMX: ld      a,(GXMAX)       
-2E4E : 26 00                    ld      h,0             ;[H,L] = GXMAX
+2E4B : 3A 42 39   (~~~) CMPGMX: ld      a,(GXMAX)       
+2E4E : 26 00                    ld      h,0             ;;[H,L] = GXMAX
 2E50 : 6F  "                    ld      l,a             
-2E51 : CB 7A                    bit     7,d             ;If [D,E] is Negative
-2E53 : 20 11                    jr      nz,SETGXZ       ;  [H,L] = 0 and Set Carry
-2E55 : E7                       rst     COMPAR          ;Else Compare [D,E] and [H,L]
-2E56 : D1               L2E56:  pop     de              
-2E57 : 38 03                    jr      c,L2E5C         
+2E51 : CB 7A                    bit     7,d             ;;If [D,E] is Negative
+2E53 : 20 11                    jr      nz,SETGXZ       ;;  [H,L] = 0 and Set Carry
+2E55 : E7                       rst     COMPAR          ;;Else Compare [D,E] and [H,L]
+2E56 : D1         (~~~) SCLXY3: pop     de              
+2E57 : 38 03                    jr      c,SCLXY4         
 2E59 : CB 18                    rr      b               
-2E5B : 06 E3                    ld      b,227           
+2E5B : 06                       byte    $06             ;;LD B, over EX
+2E5C : E3         (~~~) SCLXY4: ex      (sp),hl            
 2E5D : C1                       pop     bc              
 2E5E : 3F                       ccf                     
 2E5F : E1                       pop     hl              
@@ -2615,11 +2653,11 @@ SB                      KEYRES  equ     $1F28
 2E61    
 2E61 : 2E 00            SETGYZ: ld      l,0             ;;[L] = 0
 2E63 : 37                       scf                     ;;Set Carry Flag
-2E64 : 18 DD                    jr      L2E43           
+2E64 : 18 DD                    jr      SCLXY2          ;;and Continue
 2E66    
-2E66 : 2E 00            SETGXZ: ld l,000H
-2E68 : 37                       scf
-2E69 : 18 EB                    jr L2E56
+2E66 : 2E 00            SETGXZ: ld l,0                  ;;[L] = 0
+2E68 : 37                       scf                     ;;Set Carry Flag
+2E69 : 18 EB                    jr SCLXY3               ;;and Continue
 2E6B :
 2E6B :                  ;;; Orphan Code???
 2E6B : FE 02      {~~~} CHKMSK: cp      2               
@@ -2629,7 +2667,7 @@ SB                      KEYRES  equ     $1F28
 2E73 : E7                       rst     COMPAR          
 2E74 : D1                       pop     de              
 2E75 : D8                       ret     c               
-2E76 : 3D               CHKMS2: dec     a               
+2E76 : 3D         {~~~} CHKMS2: dec     a               
 2E77 : 3D                       dec     a               
 2E78 : D0                       ret     nc              
 2E79 : C6 06                    add     a,6             
@@ -2639,10 +2677,11 @@ SB                      KEYRES  equ     $1F28
 2E80 : D1                       pop     de              
 2E81 : B7                       or      a               
 2E82 : C9                       ret                     
-2E83 :
+2E83 : 
 2E83 :                  ;;; Orphan Code???
+2E83 :                  ;;Call with [A] = Pixel Index, [HL] = Screen Address
 2E83 : FE 04      {~~~} DOWN4:  cp      4                
-2E85 : 38 08                    jr      c,DOWNP         ;;If Bit Mask > 3 
+2E85 : 38 08                    jr      c,DOWNP         ;;If Pixel Index > 3, Move Down 1 Pixel
 2E87 : D5                       push    de              
 2E88 : 11 C0 33                 ld      de,SCREEN+960   
 2E8B : E7                       rst     COMPAR          
@@ -2650,9 +2689,9 @@ SB                      KEYRES  equ     $1F28
 2E8D : 3F                       ccf                     
 2E8E : D8                       ret     c               
 2E8F    
-2E8F :                  ;Down 1 Pixel: Calculate New Screen Address and Bit Mask
+2E8F :                  ;Down 1 Pixel: Calculate New Screen Address and Bit Index
 2E8F : 3C               DOWNP:  inc     a               
-2E90 : 3C                       inc     a               ;;[A] = Bit Mask * 2
+2E90 : 3C                       inc     a               ;;[A] = Bit Index * 2
 2E91 : FE 06                    cp      6               
 2E93 : 3F                       ccf                     
 2E94 : D0                       ret     nc              
@@ -2664,56 +2703,57 @@ SB                      KEYRES  equ     $1F28
 2E9D : B7                       or      a               ;;Set Flags
 2E9E : C9                       ret                     
 2E9F :   
-2E9F :                  ;;Left 1 Pixel: Calculate New Screen Address and Bit Mask
-2E9F : 3D               LEFTP:  dec     a               ;;Decrement Bit Mask
+2E9F :                  ;;Left 1 Pixel: Calculate New Screen Address and Bit Index
+2E9F : 3D               LEFTP:  dec     a               ;;Decrement Bit Index
 2EA0 : CB 47                    bit     0,a             
-2EA2 : C8                       ret     z               ;;If Bit Mask is Even
+2EA2 : C8                       ret     z               ;;If Bit Index is Even
 2EA3 : 3C                       inc     a               ;;  Add 2
 2EA4 : 3C                       inc     a               
 2EA5 : 2B                       dec     hl              ;;  Decremement Address
-2EA6 : B7                       or      a               ;;  Set Flags from Bit Mask
+2EA6 : B7                       or      a               ;;  Set Flags from Bit Index
 2EA7 : C9                       ret                     
 2EA8 :
-2EA8 :                  ;;Right 1 Pixel: Calculate New Screen Address and Bit Mask
-2EA8 : 3C         [GWB] RIGHT:  inc     a               ;;Increment Bit Mask
+2EA8 :                  ;;Right 1 Pixel: Calculate New Screen Address and Bit Index
+2EA8 : 3C         [GWB] RIGHT:  inc     a               ;;Increment Bit Index
 2EA9 : CB 47                    bit     0,a             
-2EAB : C0                       ret     nz              ;;If Bit Mask is Odd
+2EAB : C0                       ret     nz              ;;If Bit Index is Odd
 2EAC : 3D                       dec     a               ;;  Add 2
 2EAD : 3D                       dec     a               
 2EAE : 23                       inc     hl              ;;  Incremement Address
-2EAF : B7                       or      a               ;;  Set Flags from Bit Mask
+2EAF : B7                       or      a               ;;  Set Flags from Bit Index
 2EB0 : C9                       ret                     
 2EB1    
 2EB1 :                  ;;Move Text Cursor Down One Line   
-2EB1 : F5               DOWNL:  push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" ADDRESS
-2EB2 : E5                       push    hl              ;[GWB] SAVE ADDRESS    
+2EB1 : F5         [~~~] DOWNL:  push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" Address
+2EB2 : E5                       push    hl              ;[GWB] SAVE Address    
 2EB3 : CD 7D 2D                 call    FETCHC          ;[GWB] GET CURRENT LOCATION
 2EB6 : 11 28 00                 ld      de,40           ;;Line Width = 40 characters
 2EB9 : 19                       add     hl,de           ;;Move Down One Line
 2EBA : C3 F7 2E                 jp      POPSTC          ;;Store Current, Restore Saved and Return
 2EBD                                                    
-2EBD : F5         [GWB] DOWNC:  push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" ADDRESS
-2EBE : E5                       push    hl              ;[GWB] SAVE ADDRESS    
+2EB1 :                  ;;Move Pixel Cursor Down One Line   
+2EBD : F5         [GWB] DOWNC:  push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" Address
+2EBE : E5                       push    hl              ;[GWB] SAVE Address    
 2EBF : CD 7D 2D  "              call    FETCHC          ;[GWB] ;GET CURRENT LOCATION
-2EC2 : CD 8F 2E  "              call    DOWNP           ;;Calulate New Screen Address, Bit Mask
+2EC2 : CD 8F 2E  "              call    DOWNP           ;;Calculate New Screen Address, Bit Index
 2EC5 : 18 30                    jr      POPSTC          ;;Store Current, Restore Saved and Return
 2EC7
 2EC7                    ;;Orphan Code???
-2EC7 : F5                       push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" ADDRESS
-2EC8 : E5                       push    hl              ;[GWB] SAVE ADDRESS    
+2EC7 : F5                       push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" Address
+2EC8 : E5                       push    hl              ;[GWB] SAVE Address    
 2EC9 : CD 7D 2D                 call    FETCHC          ;[GWB] ;GET CURRENT LOCATION
 2ECC : CD 76 2E                 call    CHKMS2           
 2ECF : 18 26  " &"              jr      POPSTC          ;;Store Current, Restore Saved and Return
     ;                                                   
-2ED1 : F5         [GWB] LEFTC:  push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" ADDRESS
-2ED2 : E5                       push    hl              ;[GWB] SAVE ADDRESS    
+2ED1 : F5         [GWB] LEFTC:  push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" Address
+2ED2 : E5                       push    hl              ;[GWB] SAVE Address    
 2ED3 : CD 7D 2D                 call    FETCHC          ;[GWB] GET CURRENT LOCATION
-2ED6 : CD 9F 2E                 call    LEFTP           ;;Calulate New Screen Address, Bit Mask
+2ED6 : CD 9F 2E                 call    LEFTP           ;;Calculate New Screen Address, Bit Index
 2ED9 : 18 1C                    jr      POPSTC          ;;Store Current, Restore Saved and Return
 2EDB                                                    
-2EDB : F5         [GWB] RIGHTC: push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" ADDRESS
-2EDC : E5                       push    hl              ;[GWB] SAVE ADDRESS    
-2EDD : CD 7D 2D                 call    FETCHC          ;[GWB] ;GET CURRENT LOCATION
+2EDB : F5         [GWB] RIGHTC: push    af              ;[GWB] SAVE BIT MASK OF CURRENT "C" Address
+2EDC : E5                       push    hl              ;[GWB] SAVE Address    
+2EDD : CD 7D 2D                 call    FETCHC          ;[GWB] GET CURRENT LOCATION
 2EE0 : CD A8 2E                 call    RIGHT           
 2EE3 : 18 12                    jr      POPSTC          ;;Store Current, Restore Saved and Return
 2EE5
@@ -2730,10 +2770,10 @@ SB                      KEYRES  equ     $1F28
 2EF1 : CD 7D 2D                 call   FETCHC
 2EF4 : CD 83 2E                 call   DOWN4
 2EF7    
-2EF7 : 32 28 39         POPSTC: ld      (CMASK),a       ;;Store Bit Mask 
+2EF7 : 32 28 39         POPSTC: ld      (PINDEX),a      ;;Store Bit Position 
 2EFA : 22 26 39                 ld      (CURLOC),hl     ;;Store Current Point Address
 2EFD : E1                       pop     hl              ;;Restore Saved Address
-2EFE : F1                       pop     af              ;;Restore Saved Bit Mask
+2EFE : F1                       pop     af              ;;Restore Saved Bit Index
 2EFF : C9                       ret                     ;;Return from Subroutine
     ;
 2F00    
@@ -2762,7 +2802,7 @@ SB                      KEYRES  equ     $1F28
 2F22 :                  ;;Read One Line of Characters from Colors to Screen
 2F22 : CD 5F 2F   [GWB] NREAD:  call    NSETUP          ;;[H,L] = Screen Address, [A] = Counter
 2F25 : 46               NREADL: ld      b,(hl)          ;;[B] = Character at Address
-2F26 : 11 00 04                 ld      de,COLOR-SCREEN ;;[D,E] = Offset into Colow Matrix
+2F26 : 11 00 04                 ld      de,COLOR-SCREEN ;;[D,E] = Offset into Color Matrix
 2F29 : EB                       ex      de,hl           ;;[D,E] = Screen Address, [H,L] = Offset
 2F2A : 19                       add     hl,de           ;;[H,L] = Color Address
 2F2B : 4E                       ld      c,(hl)          ;;[C] = Color Attribute
@@ -2781,7 +2821,7 @@ SB                      KEYRES  equ     $1F28
 2F39 :                  ;;Write One Line of Characters and Colors to Screen
 2F39 : CD 5F 2F   [GWB] NWRITE: call    NSETUP          ;;[H,L] = Screen Address, [A] = Counter
 2F3C : EB               NWRITL: ex      de,hl           ;;[D,E] = Screen Address
-2F3D : 21 00 04                 ld      hl,COLOR-SCREEN ;;[H,L] = Offset into Colow Matrix
+2F3D : 21 00 04                 ld      hl,COLOR-SCREEN ;;[H,L] = Offset into Color Matrix
 2F40 : 19                       add     hl,de           ;;[H,L] = Color Address
 2F41 : 4E                       ld      c,(hl)          ;;[C] = Color Attribute
 2F42 : E1                       pop     hl              ;;Pop Array Pointer into [H,L]
@@ -2794,7 +2834,7 @@ SB                      KEYRES  equ     $1F28
 2F4B : E5                       push    hl              ;;Push Array Pointer onto Stack
 2F4C : EB                       ex      de,hl           ;;[H,L} = Screen Address, Discard Offset
 2F4D : 70                       ld      (hl),b          ;;Write Character to Character
-2F4E : 11 00 04                 ld      de,COLOR-SCREEN ;;[H,L] = Offset into Colow Matrix
+2F4E : 11 00 04                 ld      de,COLOR-SCREEN ;;[H,L] = Offset into Color Matrix
 2F51 : EB                       ex      de,hl           ;;[D,E] = Screen Address, [H,L] = Offse
 2F52 : 19                       add     hl,de           ;;[H,L] = Color Address
 2F53 : 77                       ld      (hl),a          ;;Write Attribute to Color Matrix
@@ -2903,233 +2943,27 @@ Symbol table
 
 Value  Type Name
 -----  ---- ----
-014D  Data X014D
-2021  Code XSTAR2
-2035  Code L2035
 207A  Code L207A
 20A7  Code L20A7
 20AD  Code L20AD
 20B1  Code L20B1
 20B4  Code L20B4
-2108  Code RESSRX
-2122  Code GONE24
-2154  Code KCIRCL
 2155  Code L2155
-2158  Code KEDIT
-215C  Code KDRAW
-2160  Code KLINE
-2162  Code KEYREX
-2165  Code PRESEX
-2169  Code PSETX
-216C  Code PPRSEX
 2170  Code L2170
-21EA  Code GETFNM
-2217  Code ATN2
-2221  Data ATNCON
-2267  Data MENU
-227F  Code MENU2
-2285  Code MENUS
-22AE  Code MENU3
-22B4  Code MENUT
-22B8  Code MENUN
-22C8  Code MENUG
-22CE  Code MENUK
-22D2  Code MENUL
-22DE  Code MENUR
-22E0  Code SCANX
-22F2  Code SCANX2
-22FB  Code ADDLC
-2304  Code FRCINX
-230E  Code FRCINM
-2320  Code MAKINT
-232C  Code LISPRX
-2334  Code MAKUPS
-233D  Code BUFLIN
 2352  Code L2352
 235F  Code L235F
-2370  Code GGPUTG
-2373  Code GETIN2
-2384  Code EEDITS
-2396  Code LLED
-23AC  Code LENLP
-23B6  Code DISPI
-23D1  Code NOTDGI
-23DB  Code NTZERD
-23EF  Code NOTLW4
-242B  Code SPED
-2437  Code KED
-243D  Code SED
-2447  Code SRCALP
-2457  Code NOTSRC
-245E  Code POPART
-2460  Code LED
-246A  Code DED
-2472  Code DELLP
-247F  Code TYPSLH
-2483  Code CED
-2486  Code CED2
-249F  Code NOTCCC
-24A9  Code HED
-24AC  Code XED
-24B1  Code IED
-24D7  Code TYPARW
-24D9  Code TYPAR1
-24E6  Code DELCHR
-24E8  Code CMPRSS
-24F5  Code NTARRW
-24FC  Code DINGI
-24FF  Code IEDG
-2501  Code OKINS
-2519  Code BAKED
-2526  Code CRED
-2529  Code EED
-252D  Code L252D
-253C  Code QED
-2547  Code SCAN1
-2556  Code SCAND
-256C  Code SCANN
-2575  Code SCXREL
-2586  Code SCYREL
-2590  Code ATRSCN
-25A3  Code ATRFIN
-25B1  Code XDELT
-25BA  Code CNEGHL
-25BB  Code NEGHL
-25C3  Code YDELT
-25CE  Code XCHGY
-25D8  Code XCHGAC
-25DB  Code XCHGX
-25E7  Data X25E7
-263B  Code DOLINE
-2651  Code BOXLIN
-267B  Code DOGRPH
-2698  Code LINCN2
-26AC  Code YDLTBG
-26BB  Code LINCN3
-26CF  Code LINLPR
-26D3  Code LINLOP
-26D6  Code LINLP3
-26F0  Code HLFDE
-26F8  Code POPTRT
-26FA  Code NEGDE
-275B  Code CSTPLT
-277E  Code CIRC1
-2794  Code CIRC11
-279E  Code CIRC2
-27AD  Code CIRCLP
-27CB  Code CRCLP2
-27E7  Code CNODEX
-27F0  Code CPLSCX
-27FC  Code CPLOT8
-2844  Code CPLOT4
-2846  Code CPLOT
-2871  Code CNBTWN
-287B  Code GLINEC
-2885  Code CLINSC
-288C  Code CLINE
-2897  Code CBTWEN
-289E  Code GCPLFN
-28A3  Code CPLTIT
-28B4  Code CPLFIN
-28D8  Code GLINE2
-28E7  Code GTABSC
-28F7  Code SCALEY
-28FB  Code SCALE
-2903  Code SCAL2
 2917  Code L2917
 291C  Code L291C
 2922  Code L2922
-2927  Code CGTCNT
-2950  Code CGTC2
-2979  Code CMPONE
-2984  Code GPUTG
 29B6  Code L29B6
 29FB  Code L29FB
-2A01  Code PUT1
-2A16  Code PFUNLP
-2A20  Code PUT20
-2A22  Code PUT2
-2A42  Code PRNGER
-2A4E  Code GOPGIN
-2A53  Code PGLOOP
-2A64  Code PGLOO2
-2A67  Code PGLOO3
-2A77  Code GTARRY
-2AF3  Code DRWHHC
-2B11  Code MOVREL
-2B2B  Code DOMOVR
-2B4F  Code ASPLS0
-2B59  Code ASPLS1
-2B65  Code DMULP
-2B76  Code ASLSS1
-2B7A  Code ANGEVN
-2B84  Code ANGPOS
-2B87  Code DRWABS
-2B9A  Code DSTPOS
-2BA8  Code DNSTOR
-2BB4  Code DSTFLG
-2BC7  Code DSCALE
-2BD4  Code DSCLDE
-2BDC  Code DSCLP
-2BE9  Code DSCPOS
-2BF7  Code GOSCAL
-2C03  Code GOSC2
-2C07  Code DCOLR
-2C12  Code CHKRNG
-2C24  Code MACLNG
-2C32  Code MCLNEW
-2C42  Code MCLOOP
-2C58  Code MSCNLP
-2C5A  Code GOFCER
-2C65  Code MISCMD
-2C86  Code VSNARG
-2C89  Code VSNAR0
-2C8A  Code VSNARG
-2C8C  Code MNOARG
-2C92  Code FETCHZ
-2C98  Code FETCHR
-2C99  Code FETCH2
-2CB3  Code POPHRT
-2CB5  Code DECFET
-2CC3  Code VALSCN
-2CC6  Code ISLET2
-2CD8  Code VALSC2
-2CDD  Code NUMLOP
-2D0A  Code SCNVAR
-2D18  Code SCNVLP
-2D24  Code SCNFC
-2D27  Code SCNV2
-2D2B  Code VARGET
-2D4D  Code MOVEIT
-2D6F  Code GTASPC
-2D76  Code STOREC
-2D7D  Code FETCHC
-2D84  Code SETATR
-2D8C  Code L2D8C
-2D97  Code L2D97
-2D99  Code SETC
-2DA6  Code SETC2
-2DC0  Code NSETCX
-2DD7  Code L2DD7
-2DE2  Code L2DE2
-2DE7  Code L2DE7
-2DF7  Code MAPPLP
-2E06  Code MAPCLP
-2E0D  Code MAPCAD
-2E15  Code MAPXYA
-2E1F  Code CHKRXY
-2E2B  Code SCALXYX
-2E35  Code CMPGMY
-2E43  Code L2E43
-2E4B  Code CMPGMX
-2E56  Code L2E56
+2D8C  Code GETMSK
+2D97  Code GETMSS
+2E43  Code SCLXY2
+2E56  Code SCLXY3
 2E5C  Code L2E5C
-38DE  Data X38DE
-38E0  Data X38E0
+38E0  Data VARPNT
 38E2  Data X38E2
-38E7  Data FAC
-
-393E  Code OPCJMP
 
 
 4152  Code L4152
