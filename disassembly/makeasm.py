@@ -1,13 +1,30 @@
-# Convert Annotated Aquarius ROM Disassembly to TASM or ZMAC Source Code
+# Convert Aquarius ROM Disassembly to TASM or ZMAC Source Code
 # Python 2 and 3 compatible
 
-# python makeasm.py -z aquarius-rom.lst s2basic.asm s2basic.bin
+# python makeasm.py -z aquarius-s1.lst s1basic.asm s1basic.bin
+#
+# zmac -o s1basic.cim s1basic.asm
+# fc /b s1basic.cim aquariusS1.rom
+#
+# tasm -80 -b -s s1basic.asm
+# fc /b s11basic.obj aquariusS1.rom
+
+# python makeasm.py -z aquarius-s2.lst s2basic.asm s2basic.bin
+#
 # zmac -o s2basic.cim s2basic.asm
 # fc /b s2basic.cim aquarius.rom
-
-# python makeasm.py aquarius-rom.lst s2basic.asm s2basic.bin
+#
 # tasm -80 -b -s s2basic.asm
 # fc /b s2basic.obj aquarius.rom
+
+
+# python makeasm.py -z aquarius-ex.lst exbasic.asm exbasic.bin
+#
+# zmac -o exbasic.cim exbasic.asm
+# fc /b exbasic.cim aquarius.rom
+#
+# tasm -80 -b -s exbasic.asm
+# fc /b exbasic.obj ????????.rom
 
 def makeasm(iname, oname, bname, zmac):
 
