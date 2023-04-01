@@ -7,7 +7,7 @@
 ;  *ZMAC support to be added
 ;
 ;To assign to USR()
-;POKE 14340,0:POKE 14341,128
+;POKE 14340,0:POKE 14341,64
 ;
 ;USR(0) returns key press as a string (like INKEY$)
 ;
@@ -48,7 +48,7 @@ REDDY   .equ    $036E           ;"Ok" Message, Preceded by 0 Byte
 STRIN1  .equ    $0E4E           ;Create One Character Temporary String
 SETSTR  .equ    $1019           ;Convert E to String, Return from calling Routine
 
-        .org    $8000           ;Start of top 32k - The maximum value for CLEAR
+        .org    $4000           ;Start at 16k, just above unexpanded memory
  
 ;;BASIC INKEY$ function
 GETKEY: jr      RTNNUL          ;Test - Try Returning a NUL String
