@@ -53,7 +53,7 @@ def makeasm(iname, oname, bname, zmac):
   
   RST = {"START": "00H", "SYNCHK": "08H", "CHRGET": "10H", "OUTCHR": "18H",
          "COMPAR": "20H", "FSIGN": "28H", "HOOKDO": "30H", "USRFN": "38H"}
-  ARGS = {"'\\'": "$5A", "a,'\\'": "a,$5C"}
+  ARGS = {"'\\'": "$5A", "a,'\\'": "a,$5C", "';'": "59"}
   
   eqlabels = []
   

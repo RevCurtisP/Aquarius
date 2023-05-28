@@ -33,7 +33,7 @@ def splitasm(in_name, s1_name, s2_name, ex_name, ec_name):
 
     ex_char = line[10:11]
     ex_also = ex_char == "x"
-    ex_only = ex_char == "X"
+    ex_only = ex_char in "TX"
     ex_equl = ex_char == "="
     ex_dash = ex_char == "-"
     ex_flag = ex_also or ex_only or ex_equl or ex_dash

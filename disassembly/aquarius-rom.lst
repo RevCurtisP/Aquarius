@@ -759,10 +759,10 @@
 02B3 02B3 : C3 53 41 56              byte    'C'+$80,"SAVE"    ;;$9B
 02B7 02B7 : 45 
 02B8 02B8                    TK      =            TK+1              
-02B8 02B8 X                  PSETTK  equ     $9C               ;;The PSET Token
+02B8 02B8 T                  PSETTK  equ     $9C               ;;The PSET Token
 02B8 02B8 : D0 53 45 54              byte    'P'+$80,"SET"     ;;$9C
 02BC 02BC                    TK      =            TK+1              
-02B8 02B8 X                  PRESTK  equ     $9D               ;;The PRESET Token
+02B8 02B8 T                  PRESTK  equ     $9D               ;;The PRESET Token
 02BC 02BC : D0 52 45 53              byte    'P'+$80,"RESET"   ;;$9D
 02C0 02C0 : 45 54                                              ;
 02C2 02C2                    TK      =            TK+1              
@@ -780,7 +780,7 @@
 02CE 02CE : D4 4F                    byte    'T'+$80,"O"       ;;$A1
 02D0 02D0                    TK      =            TK+1              
 02CA 02CA :            [M80] FNTK    equ     TK                ;
-02D0 02D0 :                  FNTK    equ     $A2               ;;The FN Token
+02D0 02D0 T                  FNTK    equ     $A2               ;;The FN Token
 02D0 02D0 : C6 4E                    byte    'F'+$80,"N"       ;;$A2
 02D2 02D2                    TK      =            TK+1              
 02D2 02D2 :                  SPCTK   equ     TK                ;
@@ -797,7 +797,7 @@
 02E0 02E0 : CE 4F 54                 byte    'N'+$80,"OT"      ;;$A6
 02E3 02E3                    TK      =            TK+1              
 02E3 02E3 :            [M65] STEPTK  equ     TK                ;
-02E3 02E3 X                  STEPTK  equ     $A7               ;;The STEP Token
+02E3 02E3 T                  STEPTK  equ     $A7               ;;The STEP Token
 02E3 02E3 : D3 54 45 50              byte    'S'+$80,"TEP"     ;;$A7
 02E7 02E7                    TK      =            TK+1              
 02E7 02E7  
@@ -806,7 +806,7 @@
 02E7 02E7 : AB                       byte    '+'+$80           ;;$A8 plus
 02E8 02E8                    TK      =            TK+1              
 02E8 02E8 :            [M80] MINUTK  equ     TK                ;
-02E8 02E8 X                  MINUTK  equ     $A9               ;The - Token
+02E8 02E8 T                  MINUTK  equ     $A9               ;The - Token
 02E8 02E8 : AD                       byte    '-'+$80           ;;$A9 minus
 02E9 02E9                    TK      =            TK+1              
 02E9 02E9 :            [M80] MULTK   equ     TK                ;
@@ -819,18 +819,18 @@
 02EB 02EB : DE                       byte    '^'+$80           ;;$AC
 02EC 02EC                    TK      =            TK+1              
 02EC 02EC :                  ANDTK   equ     TK                
-02EC 02EC x                  ANDTK   equ     $AD               ;;The AND Token
+02EC 02EC T                  ANDTK   equ     $AD               ;;The AND Token
 02EC 02EC : C1 4E 44                 byte    'A'+$80,"ND"      ;;$AD
 02EF 02EF                    TK      =            TK+1              
 02EF 02EF :                  ORTK    equ     TK                
-02EF 02EF x                  ORTK    equ     $AE               ;;The OR Token
+02EF 02EF T                  ORTK    equ     $AE               ;;The OR Token
 02EF 02EF : CF 52                    byte    'O'+$80,"R"       ;;$AE
 02F1 02F1                    TK      =            TK+1              
 02F1 02F1 :            [M80] GREATK  equ     TK                ;
 02F1 02F1 : BE                       byte    '>'+$80           ;;$AF greater than
 02F2 02F2                    TK      =            TK+1              
 02F2 02F2              [M80] EQUATK  equ     TK                
-02F2 02F2 X                  EQUATK  equ     $B0               ;;The Equals Token
+02F2 02F2 T                  EQUATK  equ     $B0               ;;The Equals Token
 02F2 02F2 : BD                       byte    '='+$80           ;;$B0 equals
 02F3 02F3                    TK      =            TK+1              
 02F3 02F3 :            [M80] LESSTK  equ     TK                ;
@@ -901,7 +901,7 @@
 0346 0346 X                  POINTK  equ     $CA               ;;The POINT Token
 0346 0346 : D0 4F 49 4E              byte    'P'+$80,"OINT"    ;;$CA
 034A 034A : 54
-034B 034B 034B
+034B 034B 
 ;;The token crunching routine stops here, but the token expansion routine does not
 ;;so any 'tokens' above $CA will produce strange results when LISTed
 034B 034B : 80                       byte    $80               ;;End of List Marker
