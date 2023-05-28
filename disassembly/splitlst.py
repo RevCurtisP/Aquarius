@@ -1,9 +1,9 @@
 # Split Annotated Aquarius ROM Disassembly into S1, S2, and Extended Disassemblies
 # Python 2 and 3 compatible
 
-# python splitasm.py
+# python splitlst.py
 
-def splitasm(in_name, s1_name, s2_name, ex_name):
+def splitasm(in_name, s1_name, s2_name, ex_name, ec_name):
   
   eqlabels = []
   
@@ -11,8 +11,9 @@ def splitasm(in_name, s1_name, s2_name, ex_name):
   s1_file = open(s1_name, 'w')
   s2_file = open(s2_name, 'w')
   ex_file = open(ex_name, 'w')
+  ec_file = open(ec_name, 'w')
 
-  print("Creating %s, %s, %s from %s" % (s1_name, s2_name, ex_name, in_name)) 
+  print("Creating %s, %s, %s, %s from %s" % (s1_name, s2_name, ex_name, ec_name, in_name)) 
   
   for line in in_file:
 
@@ -46,7 +47,10 @@ def splitasm(in_name, s1_name, s2_name, ex_name):
      
     #Get Machine Language Code Bytes
     code = line[12:23].rstrip()
-    #print(code)
+
+    #Copy Assembly Code from Previous Line
+    if line[37:] == "..": line = line[:23] + prev[23:]
+    prev = line
 
     #Do Extended BASIC Stuff
     if ex_flag:
@@ -60,7 +64,8 @@ def splitasm(in_name, s1_name, s2_name, ex_name):
         ex_flag = False
       elif ex_equl: 
         if ex_cmnt == None and len(line) > 62: ex_cmnt = line[63:]
-        ex_line = " " * 21 + line[23:37] + "equ     $" + line [5:9] + "   " + ex_cmnt
+        lbl = line[23:37].replace(":"," ")
+        ex_line = " " * 23 + lbl + "equ     $" + line [5:9] + "   " + ex_cmnt
         ex_cmnt = None
       else: 
         ex_line = line
@@ -69,7 +74,9 @@ def splitasm(in_name, s1_name, s2_name, ex_name):
     if line[27:28] == "|": continue
  
     #Write Line to Destination File(s)
-    if ex_flag: ex_file.write(line[:4] + line[9:] + "\n")
+    if ex_flag: 
+      if s1_flag: ex_file.write(ex_line[:4] + ex_line[9:] + "\n")
+      if s2_flag: ec_file.write(ex_line[5:] + "\n")
     if ex_only: continue
     if s1_flag: s1_file.write(line[:4] + line[9:] + "\n")
     if s2_flag: s2_file.write(line[5:] + "\n")
@@ -86,5 +93,6 @@ if __name__ == "__main__":
   s1_spec = "aquarius-s1.lst"
   s2_spec = "aquarius-s2.lst"
   ex_spec = "aquarius-ex.lst"
+  ec_spec = "aquarius-ec.lst"
 
-  splitasm(in_spec, s1_spec, s2_spec, ex_spec)
+  splitasm(in_spec, s1_spec, s2_spec, ex_spec, ec_spec)

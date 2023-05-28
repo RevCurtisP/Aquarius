@@ -4,27 +4,44 @@
 # python makeasm.py -z aquarius-s1.lst s1basic.asm s1basic.bin
 #
 # zmac -o s1basic.cim s1basic.asm
-# fc /b s1basic.cim aquariusS1.rom
+# fc /b s1basic.cim aquarius-s1.rom
+#
+# python makeasm.py aquarius-s1.lst s1basic.asm s1basic.bin
 #
 # tasm -80 -b -s s1basic.asm
-# fc /b s11basic.obj aquariusS1.rom
+# fc /b s1basic.obj aquarius-s1.rom
 
 # python makeasm.py -z aquarius-s2.lst s2basic.asm s2basic.bin
 #
 # zmac -o s2basic.cim s2basic.asm
-# fc /b s2basic.cim aquarius.rom
+# fc /b s2basic.cim aquarius-s2.rom
+#
+# python makeasm.py aquarius-s2.lst s2basic.asm s2basic.bin
 #
 # tasm -80 -b -s s2basic.asm
-# fc /b s2basic.obj aquarius.rom
+# fc /b s2basic.obj aquarius-s2.rom
 
+# python makeasm.py -z aquarius-ec.lst ecbasic.asm ecbasic.bin
+#
+# zmac -o exbasic.cim exbasic.asm
+# fc /b ecbasic.cim aquarius-ec.rom
+#
+# python makeasm.py aquarius-ec.lst ecbasic.asm ecbasic.bin
+#
+# tasm -80 -b -s ecbasic.asm
+# fc /b ecbasic.obj aquarius-ec.rom
 
 # python makeasm.py -z aquarius-ex.lst exbasic.asm exbasic.bin
 #
 # zmac -o exbasic.cim exbasic.asm
-# fc /b exbasic.cim aquarius.rom
+# fc /b exbasic.cim aquarius-ex.rom
+#
+# python makeasm.py aquarius-ex.lst exbasic.asm exbasic.bin
 #
 # tasm -80 -b -s exbasic.asm
-# fc /b exbasic.obj ????????.rom
+# fc /b exbasic.obj aquarius-ex.rom
+
+import re
 
 def makeasm(iname, oname, bname, zmac):
 
@@ -106,7 +123,9 @@ def makeasm(iname, oname, bname, zmac):
         line = line[:16] + ARGS[arg].ljust(8) + line[24:]  
       if zmac and arg[:1] == "*":
         line = line[:16] + "$" +line[17:]  
-        
+      if zmac and "%" in arg:
+        line = line[:16] + re.sub("\%([0-1]+)","\g<1>b",line[16:])
+ 
     #Get Instruction Mnemonic for Psuedo-Op and RST Conversions
     if line[0:1] != ';' and line[8:9] != ';':
       label = line[:8].rstrip()
