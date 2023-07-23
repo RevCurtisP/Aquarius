@@ -6,7 +6,7 @@
 ; the same addresses as in S2 BASIC.
 ;
 ; To compile:
-;   zmac -o s3basic.cim s3basic.asm
+;   zmac -o s3basic.cim -o s3basic.lst s3basic.asm
 ;
 ;BASIC Constants
 CLMWID  equ     14      ;[M80] MAKE COMMA COLUMNS FOURTEEN CHARACTERS
@@ -324,7 +324,7 @@ DEFALT: jp      USRDO             ;;3803 USRPOK
         byte    0                 ;;381E
         byte    0                 ;;381F RNDCNT
         byte    0                 ;;3820
-        byte    $35,$4A,$CA,$99   ;;3821 RNDTAB
+RNDTBL: byte    $35,$4A,$CA,$99   ;;3821 RNDTAB
         byte    $39,$1C,$76,$98   ;;3825
         byte    $22,$95,$B3,$98   ;;3829
         byte    $0A,$DD,$47,$98   ;;383D
@@ -1983,7 +1983,7 @@ BLTUDO: inc     bc                ;;6    Byte Count                  PROMEM: pus
 ;[M80] ON EXIT [H,L]=[D,E]=LOW [B,C]=LOCATION LOW WAS MOVED INTO
 ;;; Code Change: Replace Loop with LDDR
 ;;; Original Code: 46 + byte count * 54 cycles
-;;; Updated Code: 129 + byte count * 21 cycles
+;;; Updated Code: 115 + byte count * 21 cycles
 BLTU:   call    REASON            ;[M80] CHECK DESTINATION TO MAKE SURE STACK WON'T BE OVERRUN
 ;;Execute Block Transfer
 ;;REASON returned with Carry Set which will be used in the cause sbc hl,de to 
@@ -1997,7 +1997,7 @@ BLTUC:  push    bc                ; +11 [M80] EXCHANGE [B,C] AND [H,L]       Ori
         ld      b,a               ;;+4  HL = Source                          dec     bc         +6  
         pop     de                ;;+10 DE = Destination                     dec     hl         +6  
         jr      BLTUDO            ;;+12 Do the LDIR                          jr      BLTLOP     +12  
-                                  ;;Setup: 8 cycles 
+                                  ;;Setup: 82 cycles 
 ;;Check Stack Size
 GETSTK: push    hl                ;[M80] SAVE [H,L]
         ld      hl,(STREND)       ;
@@ -2225,14 +2225,14 @@ CLEARS: ld      a,l               ;[M80] SUBTRACT [H,L]-[D,E] INTO [D,E]
         ld      (MEMSIZ),hl       ;[M80] SET IT UP, MUST BE OK
         pop     hl                ;[M80] REGAIN THE TEXT POINTER
         jp      CLEARC            ;[M80] GO CLEAR
-;;DE = HL - DE  *** Orphan Code - 7 bytes
-        ld      a,l
-        sub     e
-        ld      e,a
-        ld      a,h
-        sbc     a,d
-        ld      d,a
-        ret
+;;;Code Change: Patch to make room in RND routine                   Original Code
+RNDSTL: ld      hl,RNDCNT+1       ;;Load HL for RNDSTR              ld      a,l
+                                  ;;                                sub     e
+                                  ;;                                ld      e,a
+        jp      RNDSTR            ;;and go do it                    ld      a,h
+                                  ;;                                sbc     a,d
+                                  ;;                                ld      d,a
+        nop                       ;;                                ret
 ;;The NEXT STATEMENT
 ;;See FOR for description of the stack entry
 NEXT:   ld      de,0              ;{M80} FOR "NEXT" WITHOUT ARGS CALL FNDFOR WITH [D,E]=0
@@ -4195,30 +4195,29 @@ POLY1:  pop     af                ;[M80] GET DEGREE
 ;[M80] THIS IS THEN NORMALIZED AND SAVED FOR THE NEXT TIME.
 ;[M80] THE HO AND LO BYTES WERE SWITCHED SO WE HAVE A RANDOM CHANCE OF
 ;[M80] GETTING A NUMBER LESS THAN OR GREATER THAN .5
-;
-;;; ToDo: Can I make this read from the RNDTAB in ROM instead of the one that
-;;; was copied into RAM. This would free up 32 bytes of SYSTEM variable space
-;;; for use by extended BASIC.
-;;; NOTE: Pseudo-Random sequence must be the same for all seed values as 
-;;; unmodified routine!
-RND:    rst     FSIGN             ;[M80] GET SIGN OF ARG
-        ld      hl,RNDCNT+1       ;
-        jp      m,RNDSTR          ;[M80] START NEW SEQUENCE IF NEGATIVE
+;;;Code Change: Uses the Random Constants Table in ROM at $01A5 instead
+;;;of the copy at $3821 in RAM. This frees up the 32 bytes of System RAM 
+;;;at $3821 through $3840. The table still gets copied to RAM by COLDST,
+;;;but that can be overwritten with no adverse effects.
+RND:    rst     FSIGN             ;[M80] GET SIGN OF ARG                    Original Code
+                                  ; moved to RNDSTL to make room below      ld      hl,RNDCNT+1     
+        jp      m,RNDSTL          ;[M80] START NEW SEQUENCE IF NEGATIVE     jp      m,RNDSTR          
         ld      hl,RNDX           ;[M80] GET LAST NUMBER GENERATED
         call    MOVFM             ;
         ld      hl,RNDCNT+1       ;
         ret     z                 ;[M80] RETURN LAST NUMBER GENERATED IF ZERO
         add     a,(hl)            ;[M80] GET COUNTER INTO CONSTANTS AND ADD ONE
-        and     7                 ;
-        ld      b,0               ;
-        ld      (hl),a            ;
-        inc     hl                ;
-        add     a,a               ;
-        add     a,a               ;
-        ld      c,a               ;
-        add     hl,bc             ;
-        call    MOVRM             ;
-        call    FMULT             ;
+        and     7                 ;;Modulo 8 Counter
+        ld      b,0               ;;
+        ld      (hl),a            ;;Store it back in RNDCNT+1 
+        nop                       ;;keep code aligned                       inc     hl
+        ld      hl,RNDTBL         ;;Now HL points to Table in ROM 
+        add     a,a               ;;
+        add     a,a               ;;A = A * 4
+        ld      c,a               ;;BC = Counter * 4 + Counter
+        add     hl,bc             ;;HL = RNDTAB + BC
+        call    MOVRM             ;;Copy RNDTAB entry into RAM
+        call    FMULT             ;;and Multiply it by the Last Random Number
         ld      a,(RNDCNT)        ;
         inc     a                 ;
         and     3                 ;
@@ -5263,7 +5262,7 @@ XBASIC: ld      a,$AA             ;;
         ld      (SCRMBL),a        ;;Save It
         jp      XSTART            ;;Jump to Extended BASIC Startup
 ;;Called from COLDST to print BASIC startup message
-PRNTIT: ld      hl,HEDING         ;Print copyright message and return
+PRNTIT: ld      hl,HEDING         ;;Print copyright message and return
         jp      STROUT            ;
 ;;Pad rest of ROM space
         byte    $F5,$F5,$F5,$F5,$F5,$F5,$F5,$F5
