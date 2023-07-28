@@ -65,7 +65,7 @@ TEMPPT  equ     $38AF   ;[M80] POINTER AT FIRST FREE TEMP DESCRIPTOR. INITIALIZE
 TEMPST  equ     $38B1   ;[M80] STORAGE FOR NUMTMP TEMP DESCRIPTORS
 DSCTMP  equ     $38BD   ;[M80] STRING FUNCTIONS BUILD ANSWER DESCRIPTOR HERE
 FRETOP  equ     $38C1   ;{M80} TOP OF FREE STRING SPACE
-TENP3   equ     $38C3   ;[M80] USED MOMENTARILY BY FRMEVL. USED IN EXTENDED BY FOUT AND
+TEMP3   equ     $38C3   ;[M80] USED MOMENTARILY BY FRMEVL. USED IN EXTENDED BY FOUT AND
                         ;[M80] USER DEFINED FUNCTIONS ARRAY VARIABLE HANDLING TEMPORARY
 TEMP8   equ     $38C5   ;[M80] USED TO STORE THE ADDRESS OF THE END OF STRING ARRAYS IN GARBAGE COLLECTION
 ENDFOR  equ     $38C7   ;[M80] SAVED TEXT POINTER AT END OF "FOR" STATEMENT
@@ -76,7 +76,7 @@ SUBFLG  equ     $38CB   ;[M80] FLAG WHETHER SUBSCRIPTED VARIABLE ALLOWED "FOR" A
 USFLG   equ     $38CC   ;;Direct Mode Flag
 FLGINP  equ     $38CD   ;[M80] FLAGS WHETHER WE ARE DOING "INPUT" OR A READ
 SAVTXT  equ     $38CE   ;[M80] PLACE WHERE NEWSTT SAVES TEXT POINTER
-TENP2   equ     $38D0   ;[M80] FORMULA EVALUATOR TEMP MUST BE PRESERVED BY OPERATORS
+TEMP2   equ     $38D0   ;[M80] FORMULA EVALUATOR TEMP MUST BE PRESERVED BY OPERATORS
                         ;[M80] USED IN EXTENDED BY FOUT AND USER-DEFINED FUNCTIONS
 OLDLIN  equ     $38D2   ;[M80] OLD LINE NUMBER (SETUP BY ^C,"STOP" OR "END" IN A PROGRAM)
 OLDTXT  equ     $38D4   ;[M80] OLD TEXT POINTER
@@ -1615,24 +1615,26 @@ FRMEQL: rst     SYNCHK            ;
 FRMPRN: rst     SYNCHK            ;[M80] GET PAREN BEFORE FORMULA
         byte    '('               ;
 ;;Evaluate Formula
+;;; Code Change: Add Hook for Operator Evaluation
 FRMEVL: dec     hl                ;[M80] BACK UP CHARACTER POINTER
 FRMCHK: ld      d,0               ;[M80] INITIAL DUMMY PRECEDENCE IS 0
 LPOPER: push    de                ;[M80] SAVE PRECEDENCE
         ld      c,1               ;[M80] EXTRA SPACE NEEDED FOR RETURN ADDRESS
         call    GETSTK            ;[M80] MAKE SURE THERE IS ROOM FOR RECURSIVE CALLS
         call    EVAL              ;[M80] EVALUATE SOMETHING
-TSTOP:  ld      (TENP2),hl        ;[M80] SAVE TEXT POINTER
-RETAOP: ld      hl,(TENP2)        ;[M80] RESTORE TEXT PTR
+TSTOP:  ld      (TEMP2),hl        ;[M80] SAVE TEXT POINTER
+RETAOP: ld      hl,(TEMP2)        ;[M80] RESTORE TEXT PTR
         pop     bc                ;[M80] POP OFF THE PRECEDENCE OF OLDOP
         ld      a,b               ;
         cp      $78               ;
         call    nc,CHKNUM         ;
         ld      a,(hl)            ;[M80] GET NEXT CHARACTER
-        ld      (TENP3),hl        ;[M80] SAVE UPDATED CHARACTER POINTER
-        cp      PLUSTK            ;[M80] IS IT AN OPERATOR?
-        ret     c                 ;
-        cp      LESSTK+1          ;
-        ret     nc                ;[M80] NO, ALL DONE
+        ld      (TEMP3),hl        ;[M80] SAVE UPDATED CHARACTER POINTER
+        rst     HOOKDO            ;;                                      cp      PLUSTK     
+        byte    29                ;;    
+        call    CHKOP             ;;If it's not an Operator?              ret     c                 
+                                  ;;                                      cp      LESSTK+1          
+        ret     c                 ;;  Return                              ret     nc                
         cp      GREATK            ;[M80] SOME KIND OF RELATIONAL?
         jp      nc,DORELS         ;[M80] YES, DO IT
         sub     PLUSTK            ;[M80] SUBTRACT OFFSET FOR FIRST ARITHMETIC
@@ -1667,7 +1669,7 @@ FINTMP: push    bc                ;[M80] SAVE THESE THINGS FOR RETAOP
         ld      b,(hl)            ;
         inc     hl                ;;Now HL contains FINRE2 address
         push    bc                ;;Push FINRE2 address
-        ld      hl,(TENP3)        ;REGET THE TEXT POINTER
+        ld      hl,(TEMP3)        ;REGET THE TEXT POINTER
         jp      LPOPER            ;PUSH ON THE PRECEDENCE AND READ MORE FORMULA
 ;;Evaluate Logical Operators
 DORELS: ld      d,0               ;{M80} ASSUME NO RELATION OPS, SETUP HIGH ORDER OF INDEX INTO OPTAB
@@ -1681,7 +1683,7 @@ LOPREL: sub     GREATK            ;[M80] IS THIS ONE RELATION?
         cp      d                 ;[M80] MAKE SURE RESULT IS BIGGER
         ld      d,a               ;[M80] SAVE THE MASK
         jp      c,SNERR           ;[M80] DON'T ALLOW TWO OF THE SAME
-        ld      (TENP3),hl        ;[M80] SAVE CHARACTER POINTER
+        ld      (TEMP3),hl        ;[M80] SAVE CHARACTER POINTER
         rst     CHRGET            ;[M80] GET THE NEXT CANDIDATE
         jr      LOPREL            ;
 ;[M80] EVALUATE VARIABLE, CONSTANT, FUNCTION CALL
@@ -1718,7 +1720,7 @@ PARCHK: call    FRMPRN            ;[M80] RECURSIVELY EVALUATE THE FORMULA
         ret                       ;
 DOMIN:  ld      d,125             ;[M80] A PRECEDENCE BELOW ^ BUT ABOVE ALL ELSE
         call    LPOPER            ;[M80] SO ^ GREATER THAN UNARY MINUS
-        ld      hl,(TENP2)        ;[M80] GET TEXT POINTER
+        ld      hl,(TEMP2)        ;[M80] GET TEXT POINTER
         push    hl                ;
         call    NEG               ;
 LABBCK: call    CHKNUM            ;[M80] FUNCTIONS THAT DON'T RETURN
@@ -1804,7 +1806,7 @@ MINPLS: dec     d                 ;[M80] SET SIGN OF EXPONENT FLAG
         dec     hl                ;[M80] CHECK IF LAST CHARACTER WAS A DIGIT
         ret                       ;[M80] RETURN WITH NON-ZERO SET
 ;;AND and OR Operators
-OROP:   byte    $F6               ;[M80] OR $AF" TO SET THE PRECEDENCE "OR"=70
+OROP:   byte    $F6               ;[M80] OR $AF TO SET THE PRECEDENCE "OR"=70
 ANDOP:  xor     a                 ;;leave 0 in A for AND
 DANDOR: push    af                ;[M80] SAVE THE PRECEDENCE or Operator...
         call    CHKNUM            ;[M65] MUST BE NUMBER
@@ -2993,7 +2995,7 @@ INDLOP: push    de                ;[M80] SAVE NUMBER OF DIMENSIONS
         jp      z,INDLOP          ;[M80] IF SO, READ MORE
         rst     SYNCHK            ;
         byte    ')'               ;{M80} MAKE SURE THERE IS A BRACKET
-        ld      (TENP2),hl        ;[M80 ]SAVE THE TEXT POINTER
+        ld      (TEMP2),hl        ;[M80 ]SAVE THE TEXT POINTER
         pop     hl                ;[M80 ][H,L]= VALTYP & DIMFLG
         ld      (DIMFLG),hl       ;[M80 ]SAVE VALTYP AND DIMFLG
         ld      e,0               ;{M80 }WHEN [D,E] IS POPPED INTO PSW, ZERO FLAG WON'T BE SET
@@ -3048,7 +3050,7 @@ NOTFDD: ld      de,4              ;[M80] [D,E]=SIZE OF ONE VALUE (VALTYP)
         call    GETSTK            ;[M80] GET SPACE FOR DIMENSION ENTRIES
         inc     hl                ;[M80] SKIP OVER THE SIZE LOCATIONS
         inc     hl
-        ld      (TENP3),hl        ;[M80] SAVE THE LOCATION TO PUT THE SIZE IN
+        ld      (TEMP3),hl        ;[M80] SAVE THE LOCATION TO PUT THE SIZE IN
         ld      (hl),c            ;[M80] STORE THE NUMBER OF DIMENSIONS
         inc     hl
         ld      a,(DIMFLG)        ;{M80} CALLED BY DIMENSION?
@@ -3084,7 +3086,7 @@ ZERITA: dec     hl                ;[M80] ZERO THE NEW ARRAY
         jr      nz,ZERITA         ;[M80] NO, ZERO MORE
         inc     bc                ;(M80) ADD ONE TO INCLUDE BYTE FOR NUMBER OF DIMENSIONS
         ld      d,a               ;[M80[ [D]=ZERO
-        ld      hl,(TENP3)        ;[M80[ GET A POINTER AT THE NUMBER OF DIMENSIONS
+        ld      hl,(TEMP3)        ;[M80[ GET A POINTER AT THE NUMBER OF DIMENSIONS
         ld      e,(hl)            ;[M80[ [E]=NUMBER OF DIMENSIONS
         ex      de,hl             ;[M80[ [H,L]=NUMBER OF DIMENSIONS
         add     hl,hl             ;[M80[ [H,L]=NUMBER OF DIMENSIONS TIMES TWO
@@ -3139,7 +3141,7 @@ INLPNM: pop     hl                ;[M80] [H,L]= POINTER INTO VARIABLE ENTRY
         pop     bc                ;[M80] POP OFF THE ADDRESS OF WHERE THE VALUES BEGIN
         add     hl,bc             ;[M80] ADD IT ONTO CURTOL TO GET PLACE VALUE IS STORED
         ex      de,hl             ;[M80] RETURN THE POINTER IN [D,E]
-FINNOW: ld      hl,(TENP2)        ;[M80] REGET THE TEXT POINTER
+FINNOW: ld      hl,(TEMP2)        ;[M80] REGET THE TEXT POINTER
         ret
 ;[M80] MATHPK FOR BASIC MCS 8080  GATES/ALLEN/DAVIDOFF
 ;[M80] FLOATING POINT ADDITION AND SUBTRACTION
@@ -5014,12 +5016,15 @@ TTYFIN: ld      hl,(CURRAM)       ;
 TTYXPR: exx                       ;Restore [BC], [DE] and [HL]
         pop     af                ;Restore [AF]
         ret
-;;Restore Character Under Cursor
-;;*** Orphan Code?
-TTYRES: ld      hl,(CURRAM)       ;;Get position
-        ld      a,(CURCHR)        ;;Get character
-        ld      (hl),a            ;;Put character at position
-        ret                       ;
+;;; Code Change: Code to check for Operator moved to make room for new UDF Hook
+;;; Replaes TTYRES - Restore Character Under Cursor
+CHKOP:  cp      PLUSTK            ;If < Plus Token                 ;ld      hl,(CURRAM)       ;;Get position
+        ret     c                 ;  Return with Carry Set                              
+        cp      LESSTK+1          ;If > Less Than Token            ;ld      a,(CURCHR)        ;;Get character
+        ccf                       ;  Set Carry Flag              
+        ret                                                        ;ld      (hl),a            ;;Put character at position
+        nop                                                        ;ret                  
+
 ;;Scroll Screen Up one Line
 SCROLL: ld      bc,920            ;;Move 23 * 40 bytes
         ld      de,SCREEN+40      ;;To Row 1 Column 0
@@ -5228,7 +5233,7 @@ SHFTAB: byte    '+',$5C,'*',$0D,'@','>' ;;Backslash, Return
 ;;Control Key Lookup Table
 CTLTAB: byte    $82,$1C,$C1,$0D,$94,$C4 ;;NEXT ^\ PEEK Return POKE VAL
         byte    $81,$1E,$30,$10,$CA,$C3 ;;FOR ^^ 0 ^P POINT STR$
-        byte    $92,$0F,$9D,$0D,$C8,$9C ;;COPY ^O PRESET ^M RIGHT$, SET
+        byte    $92,$0F,$9D,$0D,$C8,$9C ;;COPY ^O PRESET ^M RIGHT$ PSET
         byte    $8D,$09,$8C,$15,$08,$C9 ;;RETURN ^I GOSUB ^U ^H MID$
         byte    $90,$19,$07,$C7,$03,$83 ;;ON ^Y ^G LEFT$ ^C DATA
         byte    $88,$84,$A5,$12,$86,$18 ;;GOTO INPUT THEN ^R READ ^X
