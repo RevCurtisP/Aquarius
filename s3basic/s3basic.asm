@@ -9,7 +9,6 @@
 ;   zmac -o s3basic.cim -o s3basic.lst s3basic.asm
 ;
 ;BASIC Constants
-CLMWID  equ     14      ;[M80] MAKE COMMA COLUMNS FOURTEEN CHARACTERS
 LPTSIZ  equ     132     ;{M80} WIDTH OF PRINTER
 SCREEN  equ     $3000   ;;Screen Character Matrix
 COLOR   equ     $3400   ;;Screen Color Matrix
@@ -32,6 +31,7 @@ FDIVG   equ     $381B   ;
 RNDCNT  equ     $381F   ;
 RNDTAB  equ     $3821   ;;Random Number TABLE
 RNDX    equ     $3841   ;[M80] LAST RANDOM NUMBER GENERATED, BETWEEN 0 AND 1
+CLMWID  equ     $3845   ;;Comma Column Width
 LPTPOS  equ     $3846   ;[M80] POSITION OF LPT PRINT HEAD
 PRTFLG  equ     $3847   ;[M80] WHETHER OUTPUT GOES TO LPT
 LINLEN  equ     $3848   ;;Length of a Screen Line
@@ -333,7 +333,7 @@ RNDTBL: byte    $35,$4A,$CA,$99   ;;3821 RNDTAB
         byte    $65,$BC,$CD,$98   ;;3839
         byte    $D6,$77,$3E,$98   ;;383D
         byte    $52,$C7,$4F,$80   ;;3841 RNDX
-        byte    $00               ;;3845
+        byte    $0E               ;;3845 CLMWID
         byte    $00               ;;3846 LPTPOS
         byte    $00               ;;3847 PRTFLG
         byte    $28               ;;3848 LINLEN
@@ -1366,6 +1366,9 @@ LPRINT: ld      a,1               ;SAY NON ZERO
         ld      (PRTFLG),a        ;SAVE AWAY
 NEWCHR: dec     hl                ;
         rst     CHRGET            ;[M80] GET ANOTHER CHARACTER
+;;; Code Change: PRINT and LPRINT Comma column width is now stored in System variable CLMWID
+;;; To change the column width, POKE the width into 14405 and the last comma position into 14409
+;;; The latter affects PRINT only. LPRINT has a hard coded last comma position of 112.
 PRINT:  rst     HOOKDO            ;
         byte    6                 ;
         call    z,CRDO            ;[M80] PRINT CRLF IF END WITHOUT PUNCTUATION
@@ -1376,7 +1379,7 @@ PRINTC: jp      z,FINPRT          ;{M80} FINISH BY RESETTING FLAGS, TERMINATOR S
         jp      z,TABER           ;[M80] THE SPC FUNCTION?
         push    hl                ;{M80} SAVE THE TEXT POINTER
         cp      ','               ;
-        jr      z,COMPRT          ;[M80] IS IT A COMMA?
+        jp      z,COMWID          ;[M80] IS IT A COMMA?
         cp      $3B               ;{M80} IS IT A ";"
         jp      z,NOTABR          ;
         pop     bc                ;[M80] GET RID OF OLD TEXT POINTER
@@ -1422,7 +1425,7 @@ ISCTTY: ld      a,(CLMLST)        ;[M80] POSITION OF LAST COMMA COLUMN
         cp      b                 ;
 CHKCOM: call    nc,CRDO           ;[M80] TYPE CRLF
         jp      nc,NOTABR         ;[M80] AND QUIT IF BEYOND THE LAST COMMA FIELD
-MORCOM: sub     CLMWID            ;[M80] GET [A] MODULUS CLMWID
+MORCOM: sub     c                 ;[M80] GET [A] MODULUS CLMWID
         jr      nc,MORCOM         ;
         cpl                       ;[M80] FILL OUT TO AN EVEN CLMWID: CLMWID-[A] MOD CLMWID SPACES
         jr      ASPA2             ;[M80] GO PRINT [A]+1 SPACES
@@ -5269,6 +5272,10 @@ XBASIC: ld      a,$AA             ;;
 ;;Called from COLDST to print BASIC startup message
 PRNTIT: ld      hl,HEDING         ;;Print copyright message and return
         jp      STROUT            ;
+;;; Code Change: Patch to Get Comma Column Width from System Variable
+COMWID: ld      a,(CLMWID)        ;;Get Column Width
+        ld      c,a               ;;Put it in C for MORCOM
+        jp      COMPRT            ;;Do PRINT Comma Code
 ;;Pad rest of ROM space
-        byte    $F5,$F5,$F5,$F5,$F5,$F5,$F5,$F5
+        byte    $F5               
         end                       ;;End of Standard BASIC
