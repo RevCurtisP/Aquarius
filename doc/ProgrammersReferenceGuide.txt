@@ -1,6 +1,5 @@
 # Aquarius Home Computer Reference Guide
 
-
 ## The Screen
 
 The Aquarius uses a 40 column by 25 row character mapped screen. The screen
@@ -537,7 +536,7 @@ EXAMPLES of EXP Function:
   20 X = Y*EXP (Z*Q)
 
 
-### FOR ... TO ... [STEP ...
+### FOR ... TO ... [STEP] ...
 
 TYPE: Statement - Flow Control
 FORMAT: FOR <variable> = <start> TO <limit> [ STEP <increment> ]
@@ -1381,6 +1380,291 @@ EXAMPLES of RESTORE Statement:
   30 PRINT A$
   40 DATA FIRST
   50 DATA LAST
+
+### RETURN   
+
+TYPE: Statement
+FORMAT: RETURN
+
+Action: The RETURN statement is used to exit from a subroutine called
+for by a GOSUB statement. RETURN restarts the rest of your program at
+the next executable statement following the GOSUB. If you are nesting
+subroutines, each GOSUB must be paired with at least one RETURN
+statement. A subroutine can contain any number of RETURN statements,
+but the first one encountered will exit the subroutine.
+
+EXAMPLE of RETURN Statement:
+
+  10 PRINT"THIS IS THE PROGRAM"
+  20 GOSUB 1000
+  30 PRINT"PROGRAM CONTINUES"
+  40 GOSUB 1000
+  50 PRINT"MORE PROGRAM"
+  60 END
+  1000 PRINT"THIS IS THE GOSUB":RETURN
+
+### RIGHT$    
+
+TYPE: String Function
+FORMAT: RIGHT$ (<string>,<numeric>)
+
+Action: The RIGHT$ function returns a sub-string taken from the right-
+most end of the <string> argument. The length of the sub-string is
+defined by the <numeric> argument which can be any integer in the range
+of 0 to 255. If the value of the numeric expression is zero, then a null
+string ("") is returned. If the value you give in the <numeric> argument
+is greater than the length of the <string> then the entire string is
+returned.
+
+EXAMPLE of RIGHT$ Function:
+
+  10 MSG$="Aquarius Computer"
+  20 PRINT RIGHT$(MSG$,8)
+  RUN
+
+  Computer
+
+### RND       
+
+TYPE: Floating-Point Function
+FORMAT: RND (<numeric>)
+
+Action: RND creates a floating-point random from 0.0 to 1.0. The
+computer generates a sequence of random numbers by performing cal-
+culations on a starting number, which in computer jargon is called a
+seed. The RND function is seeded on system power-up. The <numeric>
+argument is a dummy, except for its sign (positive, zero, or negative).
+
+If the <numeric> argument is positive, the same "pseudorandom"
+sequence of numbers is returned, starting from a given seed value. Dif-
+ferent number sequences will result from different seeds, but any se-
+quence is repeatable by starting from the same seed number. Having a
+known sequence of "random" numbers is useful in testing programs.
+
+If you choose a <numeric> argument of zero, then RND returns the 
+previously generated pseudorandom number. Negative arguments cause the RND 
+function to be re-seeded with each function call.
+
+
+EXAMPLES of RND Function:
+
+  220 PRINT INT(RND(1)*50)               (Return random integers 0-49)
+
+  100 X=INT(RND(1)*6)+INT(RND(1)*6)+2    (Simulates 2 dice)
+
+  100 X=INT(RND(1)*1000)+1               (Random integers from 1-1000)
+
+  100 X=INT(RND(1)*150)+100              (Random numbers from 100-249)
+
+  100 X=RND(1)*(U-L)+L                   (Random numbers between 
+                                          upper (U) and lower (L) limits)
+
+### RUN      
+
+TYPE: Command
+FORMAT: RUN [<line-number>]
+
+Action: The system command RUN is used to start the program currently
+in memory. The RUN command causes an implied CLR operation to be
+performed before starting the program. You can avoid the CLeaRing
+operation by using CONT or GOTO to restart a program instead of RUN. If
+a <line-number> is specified, your program will start on that line.
+Otherwise, the RUN command starts at first line of the program. The RUN
+command can also be used within a program. If the <line-number> you
+specify doesn't exist, the BASIC error message UNDEF'D STATEMENT occurs.
+
+A RUNning program stops and BASIC returns to direct mode when an END or
+STOP statement is reached, when the last line of the program is finished,
+or when a BASIC error occurs during execution.
+
+EXAMPLES of RUN Command:
+
+  RUN           (Starts at first line of program)
+
+  RUN 500       (Starts at line-number 500)
+
+### SGN       
+
+TYPE: Integer Function
+FORMAT: SGN (<numeric>)
+
+Action: SGN gives you an integer value depending upon the sign of the
+<numeric> argument. If the argument is positive the result is 1, if zero
+the result is also 0, if negative the result is -1.
+
+EXAMPLE of SGN Function:
+
+  90 ON SGN(DV)+2 GOTO 100, 200, 300
+  (jump to 100 if DV=negative, 200 if DV=0, 300 if DV=positive)
+
+### SIN       
+
+TYPE: Floating-Point Function
+FORMAT: SIN (<numeric>)
+
+Action: SIN gives you the sine of the <numeric> argument, in radians.
+The value of COS(X) is equal to SIN(x+3.14159265/2).
+
+EXAMPLE of SIN Function:
+
+  235 AA=SIN(1.5):PRINT AA
+   .997494987
+
+### SPC(     
+
+TYPE: String Function
+FORMAT: SPC (<numeric>)
+
+  Action: The SPC function is used to control the formatting of data, as
+either an output to the screen or into a logical file. The number of
+SPaCes given by the <numeric> argument are printed, starting at the first
+available position. 
+
+EXAMPLE of SPC Function:
+
+  10 PRINT"RIGHT "; "HERE &";
+  20 PRINT SPC(5)"OVER" SPC(14)"THERE"
+  RUN
+
+  RIGHT HERE &     OVER              THERE
+
+### SQR       
+
+TYPE: Floating-Point Function
+FORMAT: SQR (<numeric>)
+
+Action: SQR gives you the value of the SQuare Root of the <numeric>
+argument. The value of the argument must not be negative, or the BASIC
+error message ?ILLEGAL QUANTITY will happen.
+
+EXAMPLE of SQR Function:
+
+  FOR J = 2 TO 5: PRINT J*S, SQR(J*5): NEXT
+
+  10   3.16227766
+  15   3.87298335
+  20   4.47213595
+  25   5
+
+  READY
+
+### STEP     
+
+TYPE: Statement
+FORMAT: [STEP <expression>]
+
+Action: The optional STEP keyword follows the <end-value> expression in
+a FOR statement. It defines an increment value for the loop counter
+variable. Any value can be used as the STEP increment. Of course, a STEP
+value of zero will loop forever. If the STEP keyword is left out, the
+increment value will be + 1. When the NEXT statement in a FOR loop is
+reached, the STEP increment happens. Then the counter is tested against
+the end-value to see if the loop is finished. (See FOR statement for more
+information.)
+
+NOTE: The STEP value can NOT be changed once it's in the loop.
+
+EXAMPLES of STEP Statement:
+
+  25 FOR XX=2 TO 20 STEP 2             (Loop repeats 10 times)
+  35 FOR ZZ=0 TO -20 STEP -2           (Loop repeats 11 times)
+
+### STOP              
+
+TYPE: Statement
+FORMAT: STOP
+
+Action: The STOP statement is used to halt execution of the current
+program and return to direct mode. Typing the <RUN/STOP> key on the
+keyboard has the same effect as a STOP statement. The BASIC error message
+?BREAK IN LINE nnnnn is displayed on the screen, followed by READY. The
+"nnnnn" is the line-number where the STOP occurs. Any open files remain
+open and all variables are preserved and can be examined. The program can
+be restarted by using CONT or GOTO statements.
+
+EXAMPLES of STOP Statement:
+
+  10 INPUT#1,AA,BB,CC
+  20 IF AA=BB AND BB=CC THEN STOP
+  30 STOP
+                  
+BREAK IN LINE 20    (If the variable AA is -1 and BB is equal to CC then:)
+BREAK IN LINE 30    (For any other data values)
+
+### STR$      
+
+TYPE: String Function
+FORMAT: STR$ (<numeric>)
+
+Action: STR$ gives you the STRing representation of the numeric value
+of the argument. When the STR$ value is converted to each variable
+represented in the <numeric> argument, any number shown is followed by
+a space and, if it's positive, it is also preceded by a space.
+
+EXAMPLE of STR$ Function:
+
+  100 FLT = 1.5E4: ALPHA$ = STR$(FLT)
+  110 PRINT FLT, ALPHA$
+
+  15000     15000
+
+### TAB(     
+
+TYPE: String Function
+FORMAT: TAB (<numeric>)
+
+Action: The TAB function moves the cursor to a relative SPC move
+position on the screen given by the <numeric> argument, starting with
+the left-most position of the current line. The value of the argument can
+range from 0 to 255. The TAB function should only be used with the PRINT
+statement, since it has no effect if used with PRINT# to a logical
+file.
+
+EXAMPLE of TAB Function:
+
+  100 PRINT"NAME" TAB(25) "AMOUNT": PRINT
+  110 INPUT#1, NAM$, AMT$
+  120 PRINT NAM$ TAB(25) AMT$
+
+  NAME                         AMOUNT
+
+  G.T. JONES                   25.
+  
+### TAN       
+
+TYPE: Floating-Point Function
+FORMAT: TAN (<numeric>)
+
+Action: Returns the tangent of the value of the <numeric> expression
+in radians. If the TAN function overflows, the BASIC error message
+?DIVISION BY ZERO is displayed.
+
+EXAMPLE of TAN Function:
+
+  10 XX=.785398163: YY=TAN(XX):PRINT YY
+
+### USR       
+
+TYPE: Floating-Point Function
+FORMAT: USR (<numeric>)
+
+Action: The USR function jumps to a User callable machine language
+SubRoutine which has its starting address pointed to by the contents of
+memory locations 14340-14341. The starting address is established before
+calling the USR function by using POKE statements to set up locations
+14340-14341. Unless POKE statements are used, locations 14340-14341 will 
+give you an ?FC error message.
+
+The value of the <numeric> argument is stored in the floating-point
+accumulator starting at location 14564, for access by the Assembler code,
+and the result of the USR function is the value which ends up there when
+the subroutine returns to BASIC.
+
+EXAMPLES of USR Function:
+
+  10 B=T*SIN(Y)
+  20 C=USR(B/2)
+  30 D=USR(B/3)
 
 ### VAL
 
