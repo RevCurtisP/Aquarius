@@ -1,3 +1,6 @@
+# Aquarius Home Computer Reference Guide
+
+
 ## The Screen
 
 The Aquarius uses a 40 column by 25 row character mapped screen. The screen
@@ -23,6 +26,13 @@ unused bytes are not generally suitable for storing data.
 
 ### The Character Matrix
 
+
+The following progrsm displays all 256 characters on the screen:
+
+    10 X=12408:PRINT CHR$(11);" ";
+    20 FOR I=0 TO 15:FOR J=0 TO 15
+    30 POKE X+I*40+43+J*2,I*16+J
+    40 NEXT:NEXT
 
 ### The Color Matrix
 
@@ -69,7 +79,1337 @@ Then, to move the cursot to a new position, use
     POKE 14438,INT(A/40)
     POKE 14436,row
 
+# BASIC Programming
+
+# Basic Language Vocabulary
+
+The type of argument needed is generally decided by the data type in
+the result. Functions which return a string value as their result are
+identified by having a dollar sign ($) as the last character of the
+keyword. In some cases string functions contain one or more numeric
+arguments. Numeric functions will convert between integer and floating-
+point format as needed. In the descriptions that follow, the data type of
+the value returned is shown with each function name. The types of argu-
+ments are also given with the statement format.
+
+## Argument Types
+
+Each keyword description below specifies that keyword's valid argument 
+types.
+
+  <numeric>     An expression that evaluates to a number
+  <integer>     A <numeric>. Any fractional part is ignored.
+  <string>      An expression that evaluates to a string
+  <expression>  Either a <numeric> or a <string>.
+  <line number> A numeric literal between 0 and 65535, inclusive.
+  <location>    A numeric literal between -32768 and 32767, inclusive.
+
+## Aquarius BASIC Keywords
+
+  Keyword  Shortcut  BASIC     Type                                            
+  ABS                Standard  Numeric Function 
+  AND                Standard  Logical Operator                          
+  ASC                Standard  Numeric Function 
+  ATN                Extended  Numeric Function 
+  CHR$               Standard  String Function  
+  CLEAR              Standard  Statement
+  CLOAD    CTRL Z    Standard  I/O COmmand
+  CONT               Standard  Command
+  COPY     CTRL 9    Standard  I/O Statment
+  COS                Standard  Numeric Function 
+  CSAVE    CTRL A    Standard  I/O Command
+  DATA     CTRL F    Standard  Statement
+  DIM      CTRL E    Standard  Statement
+  END                Standard  Statement
+  EXP                Standard  Numeric Function 
+  FOR      CTRL -    Standard  Statement
+  FRE                Standard  Numeric Function 
+  GOSUB    CTRL 7    Standard  Flow Statement
+  GOTO     CTRL 5    Standard  Flow Statement
+  INKEY$             Standard  String Function
+  IF       CTRL 3    Standard  Flow Statement
+  INPUT    CTRL T    Standard  I/O Statment
+  INT                Standard  Numeric Function 
+  LEFT$    CTRL V    Standard  String Function  
+  LEN                Standard  Numeric Function 
+  LET                Standard  Statement             
+  LIST     CTRL 2    Standard  Command
+  LPRINT             Standard  I/O Statment
+  LOG                Standard  Numeric Function 
+  MID$     CTRL B    Standard  String Function  
+  NEW                Standard  Command
+  NEXT     CTRL =    Standard  Flow Statement
+  NOT                Standard  Logical Operator
+  ON       CTRL 6    Standard  Flow Statement
+  OR                 Standard  Logical Operator               
+  PEEK     CTRL ;    Standard  System Function
+  POINT    CTRL L    Standard  Graphics Function
+  POKE     CTRL '    Standard  System`Statement
+  POS                Standard  Numeric Function 
+  PRESET   CTRL K    Standard  Graphics Statement
+  PRINT    ?         Standard  I/O Statment
+  PSET     CTRL J    Standard  Graphics Statement
+  READ     CTRL D    Standard  I/O Statment
+  REM      CTRL W    Standard  Statement
+  RESTORE            Standard  I/O Statment
+  RETURN   CTRL 8    Standard  Flow Statement
+  RIGHT$   CTRL N    Standard  String Function  
+  RND                Standard  Numeric Function 
+  RUN      CTRL 1    Standard  Command
+  SGN                Standard  Numeric Function 
+  SIN                Standard  Numeric Function 
+  SPC(               Standard  I/O Function
+  SQR                Standard  Numeric Function 
+  STEP               Standard  Flow Conjunction
+  STOP               Standard  Flow Statement           
+  STR$     CTRL ,    Standard  String Function  
+  TAB(               Standard  I/O Function
+  TAN                Standard  Numeric Function 
+  THEN     CTRL 4    Standard  Flow Statement
+  TO                 Standard  Flow Conjunction           
+  USR                Standard  Numeric Function 
+  VAL      CTRL .    Standard  Numeric Function 
+
+
+### ABS
+
+TYPE: Function-Numeric
+FORMAT: ABS(<numeric>)
+
+Action: Returns the absolute value of the number, which is its value 
+without any signs. The absolute value of a negative number is that
+number multiplied by -1.
+
+EXAMPLES of ABS Function:
+
+  10 X = ABS (Y)
+  10 PRINT ABS (X*J)
+  10 IF X = ABS (X) THEN PRINT"POSITIVE"
+
+
+### AND
+
+TYPE: Operator-Logical
+FORMAT: <numeric> AND <numeric>
+
+Action: AND is used in Boolean operations to test bits. it is also used
+in operations to check the truth of both operands.
+
+In Boolean algebra, the result of an AND operation is 1 only if both
+numbers being ANDed are 1. The result is 0 if either or both is 0
+(false).
+
+  EXAMPLES of 1-Bit AND operation:
+
+            0         1         0         1
+        AND 0     AND 0     AND 1     AND 1
+       ------     -----     -----     -----
+            0         0         0         1
+
+The Aquarius performs the AND operation on numbers in the range
+from -32768 to +32767. Any fractional values are not used, and numbers
+beyond the range will cause an ?ILLEGAL QUANTITY error message. When
+converted to binary format, the range allowed yields 16 bits for each
+number. Corresponding bits are ANDed together, forming a 16-bit result
+in the same range.
+
+  EXAMPLES of 16-Bit AND Operation:
+
+
+                                17
+                           AND 194
+                          --------
+                  0000000000010001
+              AND 0000000011000010
+        --------------------------
+         (BINARY) 0000000000000000
+        --------------------------
+        (DECIMAL)                0
+
+
+                             32007
+                         AND 28761
+                        ----------
+                  0111110100000111
+              AND 0111000001011001
+        --------------------------
+         (BINARY) 0111000000000001
+        --------------------------
+        (DECIMAL)            28673
+
+
+                              -241
+                         AND 15359
+                        ----------
+                  1111111100001111
+              AND 0011101111111111
+        --------------------------
+         (BINARY) 0011101100001111
+        --------------------------
+        (DECIMAL)            15119
+
+When evaluating a number for truth or falsehood, the computer assumes
+the number is true as long as its value isn't 0. When evaluating a
+comparison, it assigns a value of -I if the result is true, while false
+has a value of 0. In binary format, -1 is all 1's and 0 is all 0's.
+Therefore, when ANDing true/false evaluations, the result will be true if
+any bits in the result are true.
+
+EXAMPLES of Using AND with True/False Evaluations:
+
+  50 IF X=7 AND W=3 THEN GOTO 10: REM ONLY TRUE IF BOTH X=7
+    AND W=3 ARE TRUE
+  60 IF A AND Q=7 THEN GOTO 10: REM TRUE IF A IS NON-ZERO
+    AND Q=7 IS TRUE
+
+### ASC
+
+TYPE: Function - Numeric
+FORMAT: ASC(<string>)
+
+Action: ASC will return a number from 0 to 255 which corresponds to
+the ASCII value of the first character in the string. The table
+of ASCII values is shown in Appendix C.
+
+EXAMPLES OF ASC Function:
+
+  10 PRINT ASC("Z")
+  20 X = ASC("ZEBRA")
+  30 J = ASC(J$)
+
+If there are no characters in the string, an ?ILLEGAL QUANTITY error
+results. In the third example above, if J$="", the ASC function will not
+work. The INJKEY$ function returns a null string when no ket is pressed. 
+To eliminate this problem, you should add a CHR$(0) to the end of the
+string as shown below.
+
+EXAMPLE of ASC Function Avoiding ILLEGAL QUANTITY ERROR:
+
+  30 J = ASC(J$ + CHR$(0))
+
+
+### ATN
+
+TYPE: Extended BASIC Trigonometric Function
+FORMAT: ATN(<number>)
+
+Action: This mathematical function returns the arctangent of the
+number. The result is the angle (in radians) whose tangent is the 
+number given. The result is always in the range -pi/2 to +pi/2.
+
+EXAMPLES of ATN Function:
+
+  10 PRINT ATN(0)
+  20 X = ATN(J)*180/ {pi} : REM CONVERT TO DEGREES
+
+Note: The ATN keyword is defined in standard BASIC but not implemented.
+Using it will result in an ?SN Error.
+
+
+### CHR$
+
+TYPE: Function - String
+FORMAT: CHR$ (<number>)
+
+Action: This function converts an Aquarius ASCII code to its character
+equivalent. See Appendix C for a list of characters and their codes. The
+number must have a value between 0 and 255, or an ?FC error message results.
+
+EXAMPLES of CHR$ Function:
+
+  10 PRINT CHR$(65) : REM 65 = UPPER CASE A
+  20 A$=CHR$(13) : REM 13 = RETURN KEY
+  50 A=ASC(A$) : A$ = CHR$(A) : REM CONVERTS TO ASCII CODE AND BACK
+
+### CLEAR   
+
+TYPE: Statement - Variables
+FORMAT: CLEAR [<numeric> [, <location>]]
+
+Action: This statement makes available RAM memory that had been used
+but is no longer needed. Any BASIC program in memory is untouched, but
+all variables, arrays, GOSUB addresses, and FOR...NEXT loops, and their 
+space is mode available to new variables, etc.
+
+The first optional argument specifies the amount of RAM to reserve for string
+storage, and the second optional argumenr specifies the top of BASIC memory.
+
+EXAMPLES of CLEAR Statement:
+
+  ***TODO***
+
+
+### CLOAD Command - Tape
+
+TYPE: Statement
+FORMAT: CLOAD [<file-name>]
+        CLOAD? [<file-name]
+        CLOAD* [<array-name>]
+
+  ***TODO***
+
+### CONT  
+
+TYPE: Command - Flow Control
+FORMAT: CONT
+
+Action: This command re-starts the execution of a program which was
+halted by a STOP or END statement or the <RUN/STOP> key being pressed.
+The program will re-start at the exact place from which it left off.
+
+While the program is stopped, the user can inspect or change any
+variables or look at the program. When debugging or examining a program,
+STOP statements can be placed at strategic locations to allow examination
+of variables and to check the flow of the program.
+
+The ?CN error message will result from editing the program or if
+the program halted due to an error, or if you caused an error before
+typing CONT to re-start the program.
+
+EXAMPLE of CONT Command:
+
+  10 PI=0:C=1
+  20 PI=PI+4/C-4/(C+2)
+  30 PRINT PI
+  40 C=C+4:GOTO 20
+
+This program calculates the value of PI. RUN this program, and after
+a short while hit the <RUN/STOP> key. You will see the display:
+               
+  BREAK IN 20  *NOTE: Might be different number.*
+
+Type the command PRINT C to see how far the Aquarius has gotten.
+Then use CONT to resume from where the Aquarius left off.
+
+
+### COPY  
+
+TYPE: Statement - I/O
+FORMAT: COPY
+
+***TODO***
+
+
+### COS   
+
+TYPE: Function - Numeric
+FORMAT: COS(<number>)
+
+Action: This mathematical function calculates the cosine of the number,
+where the number is an angle in radians.
+
+EXAMPLES of COS Function:
+
+  10 PRINT COS(0)
+  20 X = COS(Y* {pi} /180) : REM CONVERT DEGREES TO RADIANS
+
+
+### DATA  
+
+TYPE: Statement - Variables
+FORMAT: DATA <list of constants>
+
+Action: DATA statements store information within a program. The program
+uses the information by means of the READ statement, which pulls
+successive constants from the DATA statements.
+
+The DATA statements don't have to be executed by the program, they
+only have to be present. Therefore, they are usually placed at the end of
+the program.
+
+All data statements in a program are treated as a continuous list. Data
+is READ from left to right, from the lowest numbered line to the highest.
+If the READ statement encounters data that doesn't fit the type requested
+(if it needs a number and finds a string) an error message occurs.
+
+Any characters can be included as data, but if certain ones are used
+the data item must be enclosed by quote marks (" "). These include
+punctuation like comma (,), colon (:), and blank spaces.
+
+EXAMPLES of DATA Statement:
+
+  10 DATA 1,10,5,8
+  20 DATA JOHN,PAUL,GEORGE,RINGO
+  30 DATA "DEAR MARY, HOW ARE YOU, LOVE, BILL"
+  40 DATA -1.7E-9, 3.33
+
+
+### DIM   
+
+TYPE: Statement - Variables
+FORMAT: DIM <variable>( <subscripts> )[
+        <variable> ( <subscripts> )...]
+
+Action: This statement defines an array or matrix of variables. This
+allows you to use the variable name with a subscript. The subscript
+points to the element being used. The lowest element number in an array
+is zero, and the highest is the number given in the DIM statement, which
+has a maximum of 32767.
+
+The DIM statement must be executed once and only once for each array.
+A REDIM'D ARRAY error occurs if this line is re-executed. Therefore,
+most programs perform all DIM operations at the very beginning.
+
+There may be any number of dimensions and 255 subscripts in an array,
+limited only by the amount of RAM memory which is available to hold the
+variables. The array may be mode up of normal numeric variables, as shown
+above, or of strings or integer numbers. If the variables are other than
+normal numeric, use the $ or % signs after the variable name to indicate
+string or integer variables,
+
+If an array referenced in a program was never DiMensioned, it is
+automatically dimensioned to 11 elements in each dimension used in the
+first reference.
+
+EXAMPLES of DIM Statement:
+
+  10 DIM A(100)
+  20 DIM Z (5,7), Y(3,4,5)
+  30 DIM Y7%(Q)
+  40 DIM PH$(1000)
+  50 F(4)=9 : REM AUTOMATICALLY PERFORMS DIM F(10)
+
+EXAMPLE of FOOTBALL SCORE-KEEPING Using DIM:
+
+  10 DIM S(1,5), T$(1)
+  20 INPUT"TEAM NAMES"; T$(0), T$(1)
+  30 FOR Q=1 TO 5: FOR T=0 TO 1
+  40 PRINT T$(T),"SCORE IN QUARTER" Q
+  50 INPUT S(T,Q): S(T,0)= S(T,0)+ S(T,Q)
+  60 NEXT T,Q
+  70 PRINT CHR$(147) "SCOREBOARD"
+  80 PRINT "QUARTER"
+  90 FOR Q= 1 TO 5
+ 100 PRINT TAB(Q*2+9) Q;
+ 110 NEXT: PRINT TAB(15) "TOTAL"
+ 120 FOR T=0 TO 1: PRINT T$(T);
+ 130 FOR Q= 1 TO 5
+ 140 PRINT TAB(Q*2+9) S(T,Q);
+ 150 NEXT: PRINT TAB(15) S(T,0)
+ 160 NEXT
+
+CALCULATING MEMORY USED BY DIM:
+
+   3 bytes for the array descriptor
+   2 bytes for each dimension
+   4 bytes/element for numeric variables
+   3 bytes/element for string variables
+   1 byte for each character in each string element
+
+
+### END
+
+TYPE: Statement - Flow Control
+FORMAT: END
+
+Action: This finishes a program's execution and displays the READY
+message, returning control to the person operating the computer. There
+may be any number of END statements within a program. While it is not
+necessary to include any END statements at all, it is recommended that
+a program does conclude with one, rather than just running out of lines.
+
+The END statement is similar to the STOP statement. The only difference
+is that STOP causes the computer to display the message BREAK IN LINE XX
+and END just displays READY. Both statements allow the computer to resume
+execution by typing the CONT command.
+
+EXAMPLES of END Statement:
+
+  10 PRINT"DO YOU REALLY WANT TO RUN THIS PROGRAM"
+  20 INPUT A$
+  30 IF A$ = "NO" THEN END
+  40 REM REST OF PROGRAM . . .
+  999 END
+
+
+### EXP
+
+TYPE: Function - Numeric
+FORMAT: EXP(<number>)
+
+Action: This mathematical function calculates the constant e
+(2.71828) raised to the power of the number given. A value greater
+than **FIGURE OUT NUMBER** causes an ?OV Error to occur.
+
+EXAMPLES of EXP Function:
+
+  10 PRINT EXP (1)
+  20 X = Y*EXP (Z*Q)
+
+
+### FOR ... TO ... [STEP ...
+
+TYPE: Statement - Flow Control
+FORMAT: FOR <variable> = <start> TO <limit> [ STEP <increment> ]
+
+Action: This is a special BASIC statement that lets you easily use a
+variable as a counter. You must specify certain parameters: the
+floating-point variable name, its starting value, the limit of the count,
+and how much to add during each cycle.
+
+Here is a simple BASIC program that counts from 1 to 10, PRINTing
+each number and ENDing when complete, and using no FOR statements:
+
+  100 L = 1
+  110 PRINT L
+  120 L = 1 + 1
+  130 IF L <= 10 THEN 110
+  140 END
+
+Using the FOR statement, here is the same program:
+
+  100 FOR L = 1 TO 10
+  110 PRINT L
+  120 NEXT L
+  130 END
+
+As you can see, the program is shorter and easier to understand using
+the FOR statement.
+
+When the FOR statement is executed, several operations take place.
+The <start> value is placed in the <variable> being used in the
+counter. In the example above, a I is placed in L.
+
+When the NEXT statement is reached, the <increment> value is added to
+the <variable>. If a STEP was not included, the <increment> is set to
++ 1. The first time the program above hits line 120, 1 is added to L,
+so the new value of L is 2.
+
+Now the value in the <variable> is compared to the <limit>. If the
+<limit> has not been reached yet, the program G0es TO the line after
+the original FOR statement. In this case, the value of 2 in L is less
+than the limit of 10, so it GOes TO line 110.
+
+Eventually, the value of <limit> is exceeded by the <variable>. At
+that time, the loop is concluded and the program continues with the line
+following the NEXT statement. In our example, the value of L reaches
+11, which exceeds the limit of 10, and the program goes on with line
+130.
+
+When the value of <increment> is positive, the <variable> must
+exceed the <limit>, and when it is negative it must become less than
+the <limit>.
+
+NOTE: A loop always executes at least once.
+
+EXAMPLES of FOR...TO...STEP...Statement:
+
+  100 FOR L = 100 TO 0 STEP -1
+  100 FOR L = PI TO 6* {pi} STEP .01
+  100 FOR AA = 3 TO 3
+
+
+### FRE
+
+TYPE: Function
+FORMAT: FRE(<numeric>)
+
+Action: This function tells you how much RAM is available for your
+program and its variables. If a program tries to use more space than is
+available, the ?OM error results.
+
+The expression in parentheses can have any value, and it is not used in
+the calculation.
+
+NOTE: If the result of FRE is negative, add 65536 to the FRE number to 
+get the number of bytes available in memory. 
+
+The following always tells you the current available RAM:
+  
+  PRINT FRE(0) - (FRE(0) < 0)* 65536
+
+EXAMPLES of FRE Function:
+
+  PRINT FRE(0)
+  10 X = (FRE(K)-1000)/7
+  950 IF FRE(0)< 100 THEN PRINT "NOT ENOUGH ROOM"
+
+
+### GOSUB
+
+TYPE: Statement - Flow Control
+FORMAT: GOSUB <line number>
+
+Action: This is a specialized form of the GOTO statement, with one
+important difference: GOSUB remembers where it came from. When the
+RETURN statement (different from the <RETURN> key on the keyboard)
+is reached in the program, the program jumps back to the statement
+immediately following the original GOSUB statement.
+
+The major use of a subroutine (GOSUB really means GO to a SUBroutine)
+is when a small section of program is used by different sections of the
+program. By using subroutines rather than repeating the same lines over
+and over at different places in the program, you can save lots of program
+space. In this way, GOSUB is similar to DEF FN. DEF FN lets you save
+space when using a formula, while GOSUB saves space when using a several-
+line routine. Here is an inefficient program that doesn't use GOSUB:
+
+  100 PRINT "THIS PROGRAM PRINTS"
+  110 FOR L = 1 TO 500:NEXT
+  120 PRINT "SLOWLY ON THE SCREEN"
+  130 FOR L = 1 TO 500:NEXT
+  140 PRINT "USING A SIMPLE LOOP"
+  150 FOR L = 1 TO 500:NEXT
+  160 PRINT "AS A TIME DELAY."
+  170 FOR L = 1 TO 500:NEXT
+
+Here is the same program using GOSUB:
+
+  100 PRINT "THIS PROGRAM PRINTS"
+  110 GOSUB 200
+  120 PRINT "SLOWLY ON THE SCREEN"
+  130 GOSUB 200
+  140 PRINT "USING A SIMPLE LOOP"
+  150 GOSUB 200
+  160 PRINT "AS A TIME DELAY."
+  170 GOSUB 200
+  180 END
+  200 FOR L = 1 TO 500 NEXT
+  210 RETURN
+
+Each time the program executes a GOSUB, 5 bytes (including a GOSUB token,
+the line number, and the position in the program line are saved in a 
+special area called the "stack," which takes up *FIGURE THIS OUT* bytes 
+of your memory. This limits the amount of data that can be stored in the 
+stack. Therefore, the number of subroutine return addresses that can be 
+stored is limited, and care should be taken to make sure every GOSUB hits 
+the corresponding RETURN, or else you'll run out of memory even though you 
+have plenty of bytes free.
+
+### GOTO
+
+TYPE: Statement - Flow Control
+FORMAT :GOTO <line number>
+ or GO TO <line number>
+
+Action: This statement allows the BASIC program to execute lines out
+of numerical order. The word GOTO followed by a number will make the
+program jump to the line with that number. GOTO NOT followed by a number
+equals GOTO 0. It must have the line number after the word GOTO.
+
+It is possible to create loops with GOTO that will never end. The
+simplest example of this is a line that GOes TO itself, like 10 GOTO 10.
+These loops can be stopped using the <RUN/STOP> key on the keyboard.
+
+EXAMPLES of GOTO Statement:
+
+  GOTO 100
+  10 GO TO 50
+  20 GOTO 999
+
+
+### IF...THEN...
+
+TYPE: Statement - Flow Control
+FORMAT: IF <numeric> THEN <line number>
+ IF <numeric> GOTO <line number>
+ IF <numeric> THEN <statements>
+
+Action: This is the statement that gives BASIC most of its "intelli-
+gence," the ability to evaluate conditions and take different actions de-
+pending on the outcome.
+
+The word IF is followed by an expression, which can include numeric 
+literals, variables and functions, comparisons, and arithmetic and logical 
+operators. If the expression evaluates to 0, it is considered false. 
+If it evaluates to any non-zero value it is considered true.
+
+The word THEN appears on the same line and is followed by either a line number 
+or one or more BASIC statements. When the expression is false, everything after
+the word THEN on that line is ignored, and execution continues with the
+next line number in the program. A true result makes the program either
+branch to the line number after the word THEN or execute whatever other
+BASIC statements are found on that line.
+
+EXAMPLE of IF...GOTO...Statement:
+
+  100 INPUT "TYPE A NUMBER"; N
+  110 IF N <= 0 GOTO 200
+  120 PRINT "SQUARE ROOT=" SQR(N)
+  130 GOTO 100
+  200 PRINT "NUMBER MUST BE >0"
+  210 GOTO 100
+
+This program prints out the square root of any positive number. The IF
+statement here is used to validate the result of the INPUT. When the
+result of N <= 0 is true, the program skips to line 200, and when the
+result is false the next line to be executed is 120. Note that THEN GOTO
+is not needed with IF...THEN, as in line 110 where GOTO 200 actually
+means THEN GOTO 200.
+
+EXAMPLE OF IF...THEN...Statement:
+
+  100 FOR L = 1 TO 100
+  110 IF RND(1) < .5 THEN X=X+1: GOTO 130
+  120 Y=Y+1
+  130 NEXT L
+  140 PRINT "HEADS=" X
+  150 PRINT "TAILS= " Y
+
+The IF in line 110 tests a random number to see if it is less than .5.
+When the result is true, the whole series of statements following the
+word THEN are executed: first X is incremented by 1, then the program
+skips to line 130. When the result is false, the program drops to the
+next statement, line 120.
+
+
+### INPUT
+
+TYPE: Statement - I/O
+FORMAT: INPUT ["<prompt>";] <variable list>
+
+Action: This is a statement that lets the person RUNning the program
+"feed" information into the computer. When executed, this statement
+PRINTs a question mark (?) on the screen, and positions the cursor 1
+space to the right of the question mark. Now the computer waits, cursor
+blinking, for the operator to type in the answer and press the <RETURN>
+key.
+
+The word INPUT may be followed by any text contained in quote marks
+(""). This text is PRINTed on the screen, followed by the question mark.
+
+After the text comes a semicolon (;) and the name of one or more
+variables separated by commas. This variable is where the computer
+stores the information that the operator types. The variable can be any
+legal variable name, and you can have several different variable
+names, each for a different input.
+
+EXAMPLES of INPUT Statement:
+
+  100 INPUT A
+  110 INPUT B, C, D
+  120 INPUT "PROMPT"; E
+
+When this program RUNs, the question mark appears to prompt the
+operator that the Aquarius is expecting an input for line 100. Any
+number typed in goes into A, for later use in the program. If the answer
+typed was not a number, the ?REDO FROM START message appears, which means
+that a string was received when a number was expected.
+
+If the operator just hits <RETURN> without typing anything, the vari-
+able's value doesn't change.
+
+Now the next question mark, for line 110, appears. If we type only
+one number and hit the <RETURN>, the Aquarius will now display 2
+question marks (??), which means that more input is required. You can
+just type as many inputs as you need separated by commas, which prevents
+the double question mark from appearing. If you type more data than the
+INPUT statement requested, the ?Extra Ignored message appears, which
+means that the extra items you typed were not put into any variables.
+
+Line 120 displays the word PROMPT before the question mark appears. The
+semicolon is required between the prompt and any list of variables.
+
+The INPUT statement can never be used outside a program. The Aquarius
+needs space for a buffer for the INPUT variables, the same space that
+is used for commands.
+
+
+### INT
+
+TYPE: Function - Integer
+FORMAT: INT(<numeric>)
+
+Action: Returns the integer value of the expression. If the expression
+is positive, the fractional part is left off. If the expression is
+negative, any fraction causes the next lower integer to be returned.
+
+EXAMPLES of INT Function:
+
+  A = INT(A+.5)     (Round A to nearest whole number)
+
+  120 PRINT INT(99.4343), INT(-12.34)
+
+  99       -13
+
+
+### LEFT$
+
+TYPE: Function - String 
+FORMAT: LEFT$(<string>, <integer>)
+
+Action: Returns a string comprised of the leftmost <integer> char-
+acters of the <string>. The integer argument value must be in the range
+0 to 255. If the integer is greater than the length of the string, the
+entire string will be returned. If an <integer> value of zero is used,
+then a null string (of zero length) is returned.
+
+EXAMPLES of LEFT$ Function:
+
+  10 A$ = "AQUARIUS COMPUTERS"
+  20 B$ = LEFT$(A$,8): PRINT B$
+  RUN
+
+  AQUARIUS
+
+
+### LEN
+
+TYPE: Function - Integer
+Format: LEN (<string>)
+ Action: Returns the number of characters in the string expression.
+Non-printed characters and blanks are counted.
+
+EXAMPLE of LEN Function:
+
+  CC$ = "AQUARIUS COMPUTER": PRINT LEN(CC$)
+
+  17
+
+
+### LET
+
+TYPE: Statement - Variables
+FORMAT: [LET] <variable> = <expression>
+
+Action: The LET statement can be used to assign a value to a variable.
+But the word LET is optional and therefore most advanced programmers
+leave LET out because it's always understood and wastes valuable memory.
+The equal sign (=) alone is sufficient when assigning the value of an
+expression to a variable name.
+
+EXAMPLES of LET Statement:
+
+  10 LET D = 12             (This is the same as D = 12)
+  20 LET E$ = "ABC"
+  30 F$ = "WORDS"
+  40 SUM$ = E$ + F$         (SUM$ would equal ABCWORDS)
+
+
+### LIST
+
+TYPE: Command - Direct Mode
+FORMAT: LIST [[<first-line>]-[<last-line>]]
+
+Action: The LIST command allows you to look at lines of the BASIC
+program currently in the memory of your Aquarius. 
+
+The LIST system command displays all or part of the program that is
+currently in memory on the default output device. The LIST will normally
+be directed to the screen and the CMD statement can be used to switch
+output to an external device such as a printer or a disk. The LIST com-
+mand can appear in a program, but BASIC always returns to the system
+READY message after a LIST is executed.
+
+When you bring the program LIST onto the screen, the "scrolling" of
+the display from the bottom of the screen to the top can be slowed by
+holding down the ***WHAT*** key. LIST is aborted by typing Ctrl-C.
+
+If no line-number are given the entire program is listed. If a line-number
+is given, that line and all higher-numbered lines are listed. 
+
+EXAMPLES of LIST Command:
+
+  LIST            (Lists the program currently in memory.)
+
+  LIST 500        (Lists line 500 only.)
+
+  LIST 150-       (Lists all lines from 150 to the end.)
+
+  LIST -1000      (Lists all lines from the lowest through 1000.)
+
+  LIST 150-1000   (Lists lines 150 through 1000, inclusive.)
+
+  10 PRINT "THIS  IS LINE 10"
+  20 LIST                             (LIST used in Program Mode)
+  30 PRINT "THIS  IS LINE 30"
+
+
+### LOG
+
+TYPE: Function - Floating-Point 
+FORMAT: LOG(<numeric>)
+
+Action: Returns the natural logarithm (log to the base of e) of the
+argument. If the value of the argument is zero or negative the BASIC
+error message ?ILLEGAL QUANTITY will occur.
+
+EXAMPLES of LOG Function:
+
+  25 PRINT LOG(45/7)
+   1.86075
+
+  10 NUM=LOG(ARG)/LOG(10)  (Calculates the LOG of ARG to the base 10)
+
+### LPRINT
+
+TYPE: Statement - I/O
+FORMAT: LPRINT [<variable>][<,/;><variable>]...
+
+Action: The LPRINT statement is used to write data items to an attached
+serial printer. It works like the PRINT statement with thr following
+exceptions.
+
+  The comma separator uses 9 prinr zones, each 14 characters wide.
+
+  A 132 character logical print line is used. When column 132 is reached,
+  a CR and LF are sent to the printer.
+
+  An LPRINT that does not end with a comma or semicolon sends a 
+  CHR$(13) [CR] and CHR$(10) [LF] to the printer when finished. 
+
+The only control character ecognized by LPRINT is
+
+  CHR$(9)  "TAB" Move the cusrsor to the next tab stop: 0, 8, 16, etc. 
+
+All other characters are passed directly through to the printer.
+
+EXAMPLES of LPRINT Statement:
+
+  ***TODO***
+
+
+### MID$
+
+TYPE: String Function
+FORMAT: MID$(<string>,<numeric-1>[,<numeric-2>])
+
+Action: The MID$ function returns a sub-string which is taken from
+within a larger <string> argument. The starting position of the sub-
+string is defined by the <numeric-1> argument and the length of the
+sub-string by the <numeric-2> argument. Both of the numeric arguments
+can have values ranging from 0 to 255.
+
+If the <numeric-1> value is greater than the length of the <string>,
+or if the <numeric-2> value is zero, then MID$ gives a null string value.
+If the <numeric-2> argument is left out, then the computer will assume
+that a length of the rest of the string is to be used. And if the source
+string has fewer characters than <numeric-2>, from the starting position
+to the end of the string argument, then the whole rest of the string is
+used.
+
+EXAMPLE of MID$ Function:
+
+  10 A$="GOOD"
+  20 B$="MORNING EVENING AFTERNOON"
+  30 PRINT A$ + MID$(B$,8,8)
+
+  GOOD EVENING
+
+
+### NEW
+
+TYPE: Direct Command
+FORMAT: NEW
+
+Action: The NEW command is used to delete the program currently in
+memory and clear all variables. Before typing in a new program, NEW
+should be used in direct mode to clear memory. NEW can also be used in
+a program, but you should be aware of the fact that it will erase
+everything that has gone before and is still in the computer's memory.
+This can be particularly troublesome when you're trying to debug your
+program.
+
+ BE CAREFUL: Not clearing out an old program before typing a new one   
+ can result in a confusing mix of the two programs.                    
+
+EXAMPLES of NEW Command:
+
+  NEW             (Clears the program and all variables)
+  10 NEW          (Performs a NEW operation and STOPs the program.)
+
+
+### NEXT
+
+TYPE: Program Flow Statement
+FORMAT: NEXT[<counter>][,<counter>]...
+
+Action: The NEXT statement is used with FOR to establish the end of a
+FOR...NEXT loop. The NEXT need not be physically the last statement
+in the loop, but it is always the last statement executed in a loop. The
+<counter> is the loop index's variable name used with FOR to start the
+loop. A single NEXT can stop several nested loops when it is followed by
+each FOR's <counter> variable name(s). To do this each name must appear
+in the order of inner-most nested loop first, to outer-most nested loop
+last. When using a single NEXT to increment and stop several variable
+names, each variable name must be separated by commas. Loops can be
+nested to 9 levels. If the counter variable(s) are omitted, the counter
+associated with the FOR of the current level (of the nested loops) is
+incremented.
+
+When the NEXT is reached, the counter value is incremented by 1 or by
+an optional STEP value. It is then tested against an end-value to see if
+it's time to stop the loop. A loop will be stopped when a NEXT is found
+which has its counter value greater than the end-value.
+
+EXAMPLES of NEXT Statement:
+
+  10 FOR J=1 TO 5: FOR K=10 TO 20: FOR N=5 TO -5 STEP - 1
+  20 NEXT N,K,J            (Stopping Nested Loops)
+
+
+  10 FOR L=1 TO 100
+  20 FOR M=1 TO 10
+  30 NEXT M
+  400 NEXT L               (Note how the loops do NOT cross each other)
+
+
+  10 FOR A=1 TO 10
+  20 FOR B=1 TO 20
+  30 NEXT
+  40 NEXT                  (Notice that no variable names are needed)
+
+
+### NOT
+
+TYPE: Logical Operator
+FORMAT: NOT <numeric>
+
+  Action: The NOT logical operator "complements" the value of each bit
+in its single operand, producing an integer "twos-complement" result. In
+other words, the NOT is really saying, "if it isn't. When working with a
+floating-point number, the operands are converted to integers and any
+fractions are lost. The NOT operator can also be used in a comparison to
+reverse the true/false value which was the result of a relationship test
+and therefore it will reverse the meaning of the comparison. In the first
+example below, if the "twos-complement" of "AA" is equal to "BB" and if
+"BB" is NOT equal to "CC" then the expression is true.
+
+EXAMPLES of NOT Operator:
+
+  10 IF NOT AA = BB AND NOT(BB = CC) THEN...
+
+  NN = NOT 96: PRINT NN
+  -97
+
+NOTE: TO find the value of NOT use the expression X=(-(X+1)). (The
+two's complement of any integer is the bit complement plus one.)  
+
+
+### ON
+
+TYPE: Program Flow Statement
+FORMAT: ON <variable> GOTO / GOSUB <line-number>[,<line-number>]...
+
+Action: The ON statement is used to GOTO one of several given line-
+numbers, depending upon the value of a variable. The value of the
+variables can range from zero through the number of lines given. if the
+value is a non-integer, the fractional portion is left off. For example,
+if the variable value is 3, ON will GOTO the third line-number in the
+list.
+
+If the value of the variable is negative, the BASIC ?FC Error message
+occurs. If the number is zero, or greater than the number of items in 
+the list, the program just "ignores" the statement and continues with 
+the statement following the ON statement.
+
+ON is really an underused variant of the IF...THEN...statement. Instead
+of using a whole lot of IF statements each of which sends the program to
+1 specific line, 1 ON statement can replace a list of IF statements. When
+you look at the first example you should notice that the 1 ON statement
+replaces 4 IF...THEN... statements.
+
+EXAMPLES of ON Statement:
+
+    ON -(A=7)-2*(A=3)-3*(A<3)-4*(A>7)GOTO 400,900,1000,100
+    ON X GOTO 100,130,180,220
+    ON X+3 GOSUB 9000,20,9000
+    100 ON NUM GOTO 150,300,320,390
+    500 ON SUM/2 + 1 GOSUB 50,80,20
+
+
+### OR
+
+TYPE: Logical Operator
+FORMAT: <operand> OR <operand>
+
+Action: Just as the relational operators can be used to make decisions
+regarding program flow, logical operators can connect two or more re-
+lations and return a true or false value which can then be used in a
+decision. When used in calculations, the logical OR gives you a bit
+result of I if the corresponding bit of either or both operands is 1.
+This will produce an integer as a result depending on the values of the
+operands. When used in comparisons the logical OR operator is also used
+to link two expressions into a single compound expression. If either of
+the expressions are true, the combined expression value is true (-1). In
+the first example below if AA is equal to BB OR if XX is 20, the
+expression is true.
+
+Logical operators work by converting their operands to 16-bit, signed,
+two's complement integers in the range of -32768 to +32767. If the
+operands are not in the range an error message results. Each bit of the
+result is determined by the corresponding bits in the two operands.
+
+EXAMPLES of OR Operator:
+
+  100 IF (AA=BB) OR (XX=20) THEN...
+  230 KK%=64 OR 32: PRINT KK%         
+      (You typed this with a bit value of 1000000 for 64 and 100000 for 32)
+
+  96  (The computer responded with bit value 1100000. 1100000=96.)
+
+
+### PEEK
+
+TYPE: System Integer Function
+FORMAT: PEEK(<location>)
+
+Action: Returns an integer in the range of 0 to 255, which is read
+from a memory location. The <numeric> expression is a memory location
+which must be in the range of 0 to 65535. If it isn't then the BASIC
+error message ?ILLEGAL QUANTITY occurs.
+
+EXAMPLES of PEEK Function:
+
+  10 PRINT PEEK(13312) AND 15   (Returns value of screen border color)
+
+  5 A=PEEK(14550)+PEEK(14551)*256    (Returns address of BASIC variable table)
+
+
+### POKE
+
+TYPE: System Statement
+FORMAT: POKE <location>,<value>
+
+Action: The POKE statement is used to write a one-byte (8-bits) binary
+value into a given memory location or input/output register. The
+<location> is an arithmetic expression which must equal a value in the
+range of 0 to 65535. The <value> is an expression which can be reduced to
+an integer value of 0 to 255. If either value is out of its respective
+range, the BASIC error message ?ILLEGAL QUANTITY occurs.
+
+The POKE statement and PEEK statement (which is a built-in function
+that looks at a memory location) are useful for data storage, controlling
+graphics displays , loading assembly language sub-routines, and passing 
+arguments and results to and from assembly language subroutines. 
+In addition, System parameters can be examined using PEEK statements or 
+changed and manipulated using POKE statements. A complete memory map of 
+useful locations is given in Appendix G.
+
+EXAMPLES of POKE Statement:
+
+  POKE 12329,65       (Puts an "A" at position 1 on the screen)
+  POKE -28657,8       (Puts 8 into memory locations 36879)
+  
+  10 Z=A+65536*(A>32767)
+  20 POKE Z,B  
+
+### POS
+
+TYPE: Screen Integer Function
+FORMAT: POS (<dummy>)
+
+  Action: Tells you the current cursor position which, of course, is in
+the range of 0 through position 39 on an 80-characterscreen line. The
+dummy argument is ignored.
+
+EXAMPLE of POS Function:
+
+  1000 IF POS(0)>38 THEN PRINT CHR$(13)
+
+
+### PRINT
+
+TYPE: I/O Statement
+FORMAT: PRINT [<variable>][<,/;><variable>]...
+
+Action: The PRINT statement is used to write data items to the 
+screen. The <variable(s)> in the output-list are expressions of 
+any type. If no output-list is present, a blank line is printed. The 
+position of each printed item is determined by the punctuation used 
+to separate items in the output-list.
+
+The punctuation characters that you can use are blanks, commas, or
+semicolons. The 40-character screen line is divided into 2 print
+zones, the first at column 0 and the second at column 14. In the 
+list of expressions, a comma causes the next value to be printed at 
+the beginning of the next zone. A semicolon causes the next value to 
+be printed immediately following the previous value. However, there 
+are two exceptions to this rule:
+
+  1) Numeric items are followed by an added space.
+
+  2) Positive numbers have a space preceding them.
+
+When you use blanks or no punctuation between string constants or
+variable names it has the same effect as a semicolon. However, blanks
+between a string and a numeric item or between two numeric items will
+stop output without printing the second item.
+
+If a comma or a semicolon is at the end of the output-list, the next
+PRINT statement begins printing on the same line, and spaced accord-
+ingly. If no punctuation finishes the list, a carriage-return and a line-
+feed are printed at the end of the data. The next PRINT statement will
+begin on the next line. If your output is directed to the screen and the
+data printed is longer than 40 columns, the output is continued on the
+next screen line.
+
+There is no statement in BASIC with more variety than the PRINT
+statement. There are so many symbols, functions, and parameters
+associated with this statement that it might almost be considered as a
+language of its own within BASIC; a language specially designed for
+writing on the screen.
+
+Control charatacters can be printed to perform specific actions. These
+include:
+
+  CHR$(7)  "BEL" Make a beep sound.
+  CHR$(8)  "BS"  Move cursor left and clear new cursor location.
+  CHR$(10) "LF"  Move the cursor to the same column on the next line.
+  CHR$(11) "FF"  Clear the screen. 
+  CHR$(13) "CR"  Move the cursor to the beginning of the next line.
+
+EXAMPLES of PRINT Statement:
+
+   5 X = 5
+  10 PRINT -5*X,X-5,X+5,X^5
+
+  -25            0     
+   10            3125
+
+   5 X=9
+  10 PRINT X;"SQUARED IS";X*X;"AND";
+  20 PRINT X "CUBED IS" X^3
+
+  9 SQUARED IS 81 AND 9 CUBED IS 729
+
+   90 AA$="ALPHA":BB$="BAKER":CC$="CHARLIE":DD$="DOG":EE$="ECHO"
+  100 PRINT AA$BB$,CC$ DD$;EE$
+
+  ALPHABAKER    CHARLIEDOGECHO
+
+   ***TODO***  comtrol character examples
+
+
+### READ
+
+TYPE: Assignment Statement
+FORMAT: READ <variable>[,<variable>]...
+
+Action: The READ statement is used to fill variable names from con-
+stants in DATA statements. The data actually read must agree with the
+variable types specified or the BASIC message ?SN error will
+result. Variables in the DATA input-list must be separated by commas.
+
+A single READ statement can access one or more DATA statements,
+which will be accessed in order (see DATA), or several READ statements
+can access the same DATA statement. If more READ statements are executed
+than the number of elements in DATA statements(s) in the program, the
+BASIC message ?OD error is printed. If the number of variables
+specified is fewer than the number of elements in the DATA statement(s),
+subsequent READ statements will continue reading at the next data
+element. (See RESTORE.)
+
+Note: The ?SN error will appear with the line number from the DATA 
+statement, NOT the READ statement.                               
+
+EXAMPLES of READ Statement:
+
+  110 READ A,B,C$
+  120 DATA 1,2,HELLO
+ 
+  100 FOR X=1 TO 10: READ A(X):NEXT
+ 
+  200 DATA 3.08, 5.19, 3.12, 3.98, 4.24
+  210 DATA 5.08, 5.55, 4.00, 3.16, 3.37
+ 
+  (Fills array items (line 1) in order of constants shown (line 5))
+ 
+  1 READ CITY$,STATE$,ZIP
+  5 DATA DENVER,COLORADO, 80211
+
+Under the Hood:
+
+The BASIC interpreter uses common code to execute READ and INPUT.
+During an INPUT, memory location 14541 contains 0, and the input buffer 
+is scanned. During a READ, memory location 14541 contains 239, and the 
+DATA lines in the BASIC program are scanned. In between READs,the address 
+of the next byte to scan is stores in locations 14556 and 14557.
+
+
+### REM
+
+TYPE: Statement
+FORMAT: REM [<remark>]
+
+Action: The REM statement makes your programs more easily understood
+when LISTed. It's a reminder to yourself to tell you what you had in
+mind when you were writing each section of the program. For instance,
+you might want to remember what a variable is used for, or some other
+useful information. The REMark can be any text, word, or character
+including the colon (:) or BASIC keywords.
+
+The REM statement and anything following it on the same line-number
+are ignored by BASIC, but REMarks are printed exactly as entered when
+the program is listed. A REM statement can be referred to by a GOTO or
+GOSUB statement, and the execution of the program will continue with
+the next higher program line having executable statements.
+
+EXAMPLES of REM Statement:
+
+  10 REM CALCULATE AVERAGE VELOCITY
+  20 FOR X= 1 TO 20 :REM LOOP FOR TWENTY VALUES
+  30 SUM=SUM + VEL(X): NEXT
+  40 AVG=SUM/20
+
+### RESTORE
+
+TYPE: Statement
+FORMAT: RESTORE [<line-number>]
+
+Action: BASIC maintains an internal pointer to the next DATA constant
+to be READ. This pointer can be reset to the first DATA constant in a
+program using the RESTORE statement. The RESTORE statement can be
+used anywhere in the program to begin re-READing DATA.
+
+When a line number is specified, the data pointer is set to the beginning
+of that line.
+
+EXAMPLES of RESTORE Statement:
+
+  100 FOR X=1 TO 10: READ A(X): NEXT
+  200 RESTORE
+  300 FOR Y=1 TO 10: READ B(Y): NEXT
+
+  4000 DATA 3.08, 5.19, 3.12, 3.98, 4.24
+  4100 DATA 5.08, 5.55, 4.00, 3.16, 3.37
+
+  (Fills the two arrays with identical data)
+
+  10 DATA 1,2,3,4
+  20 DATA 5,6,7,8
+  30 FOR L= 1 TO 8
+  40 READ A: PRINT A
+  50 NEXT
+  60 RESTORE
+  70 FOR L= 1 TO 8
+  80 READ A: PRINT A
+  90 NEXT
+
+  10 RESTORE 50
+  20 READ A$
+  30 PRINT A$
+  40 DATA FIRST
+  50 DATA LAST
+
+### VAL
+
+TYPE: Numeric Function
+FORMAT: VAL (<string>)
+
+Action: Returns a numeric VALue representing the data in the <string>
+argument. If the first non-blank character of the string is not a plus
+sign (+), minus sign (-), or a digit the VALue returned is zero. String
+conversion is finished when the end of the string or any non-digit
+character is found (except decimal point or exponential e).
+
+EXAMPLE of VAL Function:
+
+  10 INPUT#1, NAM$, ZIP$
+  20 IF VAL(ZIP$) < 19400 OR VAL(ZIP$) > 96699
+     THEN PRINT NAM$ TAB(25) "GREATER PHILADELPHIA"
+
+
+
+
+
 # Assembly Language Programming
+
+
+## Reading and Writing to the Cassette
+
+
+# Aquarius S2 Basic ROM Routines
 
 ## Print Routines
 
@@ -177,7 +1517,8 @@ WRTAIL - Write Cassette Trailer
     Entry point into CSAVE Routine. Writes 16 $00,
     waits 50 milliseconds, then pops HL off the stack
     and does a RET. 
-    USAGE: JP $1C1C
+    SETUP: PUSH HL at beginning of subroutine
+    USAGE: JP $1C1C at end of subroutine
     Affects: AF, BC
     Restores: HL
 
@@ -292,7 +1633,7 @@ PUSHF - Puch FACC onto stack
 ## Floating Point Tests
 
 FSIGN - Get Sign of FACC
-    Usage: RST $28
+    Usage: RST 20H
     Returns: A=$FF if nagative
                  0 if zero
                  1 if positive
@@ -481,9 +1822,20 @@ SCROLL - Scroll Screen Up One Line
     Affects: DE, HL
     Returns: A=$20, BC=0, P/V=0
 
-## Z80 Instruction Set by Opcode
 
-Instruction     Timing  Opcode        Size   ASCII
+# Appendix C - Aquarius ASCII Character Set
+
+
+# Appendix G - Aquarius Memory Map
+
+Name      Address  ` Description
+FLGINP     14541     Contains 239 during READ, 0 during INPUT
+DATPTR  14556-14557  Address after the data last scanned by READ
+
+
+# Appendix ??? - Z80 Instruction Set by Opcode
+
+Instruction     Timing  Opcode        Size   
 NOP             4       00              1       
 LD BC,nn        10      01 nn nn        3
 LD (BC),A       7       02              1
