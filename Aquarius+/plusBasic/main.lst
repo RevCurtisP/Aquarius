@@ -1,0 +1,586 @@
+   1:				; Plus BASIC Main Memory Resident Code
+   2:				; $2000 - $2FFF
+   3:				;
+   4:				; Requires Aquarius S3 BASIC at $0000-$1FFF
+   5:				;
+   6:				; Calls extended routines banked into $C000 - $FFFF
+   7:				
+   8:				; To assemble:
+   9:				;   zmac -o main.cim -o main.lst main.asm
+  10:				
+  11:     -	E000          	    org     $E000                 ; Assemble to RAM for now
+  12:				
+  13:				
+  14:				; ESP32 Symbols and Routines
+  15:				    include "esp.asm"
+**** esp.asm ****
+   1:				; Aquarius+ ESP32 Definitions and Routines
+   2:				
+   3:				;ESP32 File I/O Commands
+   4:     -	0001          	ESPCMD_RESET    = $01  ; Reset ESP
+   5:     -	0010          	ESPCMD_OPEN     = $10  ; Open / create file
+   6:     -	0011          	ESPCMD_CLOSE    = $11  ; Close open file
+   7:     -	0012          	ESPCMD_READ     = $12  ; Read from file
+   8:     -	0013          	ESPCMD_WRITE    = $13  ; Write to file
+   9:     -	0014          	ESPCMD_SEEK     = $14  ; Move read/write pointer
+  10:     -	0015          	ESPCMD_TELL     = $15  ; Get current read/write
+  11:     -	0016          	ESPCMD_OPENDIR  = $16  ; Open directory
+  12:     -	0017          	ESPCMD_CLOSEDIR = $17  ; Close open directory
+  13:     -	0018          	ESPCMD_READDIR  = $18  ; Read from directory
+  14:     -	0019          	ESPCMD_DELETE   = $19  ; Remove file or directory
+  15:     -	001A          	ESPCMD_RENAME   = $1A  ; Rename / move file or directory
+  16:     -	001B          	ESPCMD_MKDIR    = $1B  ; Create directory
+  17:     -	001C          	ESPCMD_CHDIR    = $1C  ; Change directory
+  18:     -	001D          	ESPCMD_STAT     = $1D  ; Get file status
+  19:     -	001E          	ESPCMD_GETCWD   = $1E  ; Get current working directory
+  20:     -	001F          	ESPCMD_CLOSEALL = $1F  ; Close any open file/directory descriptor
+  21:				
+  22:				;ESP I/O Registers
+  23:     -	00F4          	_ESPCTRL        = $F4   
+  24:     -	00F5          	_ESPDATA        = $F5   
+  25:				
+  26:				;;; reset_esp
+  27:				;;; Reset ESP32
+  28:				;;; Destroys: AF, AF'
+  29:     -	E000          	do_esp_reset:
+  30:    0+7	E000  3E01    	    ld      a,ESPCMD_RESET       ; Send RESET Command
+  31:				
+  32:				;;; esp_cmd
+  33:				;;; Send Command to ESP32
+  34:				;;; Args: A = Byte
+  35:				;;; Destroys: AF'
+  36:     -	E002          	do_esp_cmd:
+  37:    7+4	E002  08      	    ex      af,af'                ; Save Byte
+  38:   11+7	E003  3E83    	    ld      a,$83                 
+  39:   18+13	E005  32F400  	    ld      (_ESPCTRL),a        
+  40:   31+10	E008  C343E1  	    jp      esp_send_byte         ; Send the Command
+  41:				
+  42:				;;; esp_send_long
+  43:				;;; Send Long to ESP32
+  44:				;;; Args: DEBC = Long
+  45:				;;; Destroys: AF, AF',BC
+  46:     -	E00B          	do_esp_send_long:
+  47:   41+17	E00B  CD10E0  	    call    do_esp_send_word      ; Send Low Word
+  48:   58+4	E00E  42      	    ld      b,d
+  49:   62+4	E00F  4B      	    ld      c,e                   ; Send High Word
+  50:				
+  51:				;;; esp_send_word
+  52:				;;; Send Word to ESP32
+  53:				;;; Args: BC = Word
+  54:				;;; Destroys: AF, AF'
+  55:     -	E010          	do_esp_send_word:
+  56:   66+4	E010  79      	    ld      a,c                   ; Send LSB
+  57:   70+17	E011  CD15E0  	    call    do_esp_send_byte
+  58:   87+4	E014  78      	    ld      a,b                   ; Send MSB
+  59:				
+  60:				;;; esp_send_byte
+  61:				;;; Send Single Byte to ESP32
+  62:				;;; Args: A = Byte
+  63:				;;; Destroys: AF'
+  64:     -	E015          	do_esp_send_byte:
+  65:   91+4	E015  08      	    ex      af,af'                ; Save Byte
+  66:     -	E016          	_esp_send_byte:                     
+  67:   95+13	E016  3AF400  	    ld      a,(_ESPCTRL)          ; Wait for Ready
+  68:  108+7	E019  E602    	    and     2                     
+  69:  115+7+5	E01B  20F9    	    jr      nz,_esp_send_byte     
+  70:  122+4	E01D  08      	    ex      af,af'                ; Restore Byte
+  71:  126+13	E01E  32F500  	    ld      (_ESPDATA),a          ; Write It
+  72:  139+10	E021  C9      	    ret                               
+  73:				
+  74:				; Get Single Byte from ESP32           
+  75:				; Returns: A = Byte                    
+  76:     -	E022          	do_esp_get_byte:
+  77:  149+13	E022  3AF400  	    ld      a,(_ESPCTRL)          ; Wait for Ready
+  78:  162+7	E025  E601    	    and     1                       
+  79:  169+7+5	E027  28F9    	    jr      z,do_esp_get_byte       
+  80:  176+13	E029  3AF500  	    ld      a,(_ESPDATA)          ; Read a Byte
+  81:  189+10	E02C  C9      	    ret
+  82:				
+  83:				; Send Multiple Bytes to ESP32
+  84:				; Args: BC = Byte Count
+  85:				;       DE = Start Address
+  86:				; Destroys: AF, AF', BC, DE
+  87:     -	E02D          	do_esp_send_bytes:
+  88:  199+7	E02D  1A      	    ld      a,(de)                ; Get Next Byte
+  89:  206+17	E02E  CD15E0  	    call    do_esp_send_byte      ; Send It
+  90:  223+6	E031  13      	    inc     de                    ; Bump Data Pointer
+  91:  229+6	E032  0B      	    dec     bc                    ; Decrement Byte Count
+  92:  235+4	E033  78      	    ld      a,b                   
+  93:  239+4	E034  B1      	    or      c                     ; If Not Zero
+  94:  243+7+5	E035  20F6    	    jr      nz,do_esp_send_bytes  ;   Send Another Byte
+  95:  250+10	E037  C9      	    ret
+  96:				
+  97:				;Get Multiple Bytes from ESP32
+  98:				;Args: BC = Byte Count
+  99:				;      DE = Start Address
+ 100:				;Destroys: AF, AF', BC, DE
+ 101:     -	E038          	do_esp_get_bytes:
+ 102:  260+17	E038  CD22E0  	    call    do_esp_get_byte       ; Get a Byte
+ 103:  277+7	E03B  12      	    ld      (de),a                ; Store It
+ 104:  284+6	E03C  13      	    inc     de                    ; Bump Data Pointer
+ 105:  290+6	E03D  0B      	    dec     bc                    ; Decrement Byte Count
+ 106:  296+4	E03E  78      	    ld      a,b   
+ 107:  300+4	E03F  B1      	    or      c                     ; If Not Zero
+ 108:  304+7+5	E040  20F6    	    jr      nz,do_esp_get_bytes   ;   Send Another Byte
+ 109:  311+10	E042  C9      	    ret
+ 110:				
+ 111:				
+ 112:				;;; esp_get_word
+ 113:				;;; Get Word from ESP32
+ 114:				;;; Destroys: AF, AF'
+ 115:				;;; Returns: BC = Word
+ 116:     -	E043          	do_esp_get_word:
+ 117:  321+17	E043  CD22E0  	    call    do_esp_get_byte       ; Read LSB
+ 118:  338+4	E046  4F      	    ld      c,a                   ; into C
+ 119:  342+17	E047  CD22E0  	    call    do_esp_get_byte       ; Read MSB
+ 120:  359+4	E04A  47      	    ld      b,a                   ; into B
+ 121:  363+10	E04B  C9      	    ret
+ 122:				
+ 123:				;;; esp_get_long
+ 124:				;;; Get Word from ESP32
+ 125:				;;; Destroys: AF, AF'
+ 126:				;;; Returns: BC = Word
+ 127:     -	E04C          	do_esp_get_long:
+ 128:  373+17	E04C  CD43E0  	    call    do_esp_get_word       ; Read Low Word
+ 129:  390+17	E04F  CD22E0  	    call    do_esp_get_byte       ; Read High Word LSB
+ 130:  407+4	E052  5F      	    ld      e,a                   ; into E
+ 131:  411+17	E053  CD22E0  	    call    do_esp_get_byte       ; Read High Word MSB
+ 132:  428+4	E056  57      	    ld      d,a                   ; into D
+ 133:  432+10	E057  C9      	    ret
+**** main.asm ****
+  16:				    
+  17:				; DOS Kernel Routines
+  18:				    include "dos.asm"
+**** dos.asm ****
+   1:				; Aquarius+ PlusBASIC Kernel DOS Routines
+   2:				
+   3:     -	0009          	dos_statlen = 9
+   4:				
+   5:				;;; dos_rename
+   6:				;;; Args: BC = Old Path Length
+   7:				;;;       DE = Old Path Address
+   8:				;;;       HL = New Path Address
+   9:				;;;       IX = New Path Length
+  10:				;;; Destroys: AF, AF', BC, DE
+  11:				;;; Returns: A = Result
+  12:     -	E058          	do_dos_rename:
+  13:  442+7	E058  3E1A    	    ld      a,ESPCMD_RENAME       ; Send Rename Command
+  14:  449+17	E05A  CD3DE1  	    call    esp_cmd               
+  15:  466+17	E05D  CD49E1  	    call    esp_send_bytes        ; Send Old Path
+  16:  483+4	E060  EB      	    ex      de,hl                 ; Get New Path Address into DE
+  17:  487+8	E061  DD44    	    ld      b,ixh                 ; Get New Path Length into BC
+  18:  495+8	E063  DD4D    	    ld      c,ixl
+  19:  503+12	E065  180F    	    jr      _dos_cmd              ; Send New Path and Return Result
+  20:				
+  21:				;;; dos_mkdir
+  22:				;;; Create Directory
+  23:				;;; Args: BC = String Length
+  24:				;;;       DE = String Start Address
+  25:				;;; Destroys: AF', BC, DE
+  26:				;;; Returns: A = Result
+  27:     -	E067          	do_dos_mkdir:
+  28:  515+7	E067  3E1B    	    ld      a,ESPCMD_MKDIR
+  29:  522+12	E069  180B    	    jr      _dos_cmd
+  30:				
+  31:				;;; dos_opendir
+  32:				;;; Args: BC = Dirspec Length
+  33:				;;;       DE = Dirspec Start Address
+  34:				;;; Destroys: AF', BC, DE
+  35:				;;; Returns: A = File Number or Error
+  36:     -	E06B          	do_dos_opendir:
+  37:  534+7	E06B  3E16    	    ld      a,ESPCMD_OPENDIR
+  38:  541+12	E06D  1807    	    jr      _dos_cmd
+  39:				
+  40:				;;; dos_delete      
+  41:				;;; Delete File
+  42:				;;; Args: BC = String Length
+  43:				;;;       DE = String Start Address
+  44:				;;; Destroys: AF, AF', BC, DE
+  45:     -	E06F          	do_dos_delete:
+  46:  553+7	E06F  3E19    	    ld      a,ESPCMD_DELETE       ; Do Delete Command
+  47:  560+10	E071  C376E0  	    jp      _dos_cmd
+  48:				
+  49:				;;; dos_chdir
+  50:				;;; Change Directory
+  51:				;;; Args: BC = String Length
+  52:				;;;       DE = String Start Address
+  53:				;;; Destroys: AF', BC, DE
+  54:				;;; Returns: A = Result
+  55:     -	E074          	do_dos_chdir:
+  56:  570+7	E074  3E1C    	    ld      a,ESPCMD_CHDIR
+  57:				
+  58:				; Execute DOS Command
+  59:				; Args: A = ESP32 DOS Command
+  60:				;       BC = String Length
+  61:				;       DE = String Start Address
+  62:				; Destroys: AF', BC, DE
+  63:				; Returns: A = Result
+  64:     -	E076          	_dos_cmd:
+  65:  577+17	E076  CD3DE1  	    call    esp_cmd               ; Send DOS Command Byte
+  66:     -	E079          	_send_string: 
+  67:  594+17	E079  CD49E1  	    call    esp_send_bytes        ; Send Command String  
+  68:  611+4	E07C  AF      	    xor     a 
+  69:     -	E07D          	_send_byte: 
+  70:  615+17	E07D  CD43E1  	    call    esp_send_byte         ; Send String Terminator
+  71:     -	E080          	_get_result:  
+  72:  632+17	E080  CD46E1  	    call    esp_get_byte          ; Get Result
+  73:  649+4	E083  B7      	    or      a                     ; Set Flags
+  74:  653+10	E084  C9      	    ret
+  75:				
+  76:				;;; dos_open
+  77:				;;; Args: A = Mode
+  78:				;;;       BC = Filespec Length
+  79:				;;;       DE = Filespec Start Address
+  80:				;;; Destroys: AF', BC, DE
+  81:				;;; Returns: A = File Number or Error
+  82:     -	E085          	do_dos_open:
+  83:  663+11	E085  F5      	    push    af                    ; Save Mode
+  84:  674+7	E086  3E10    	    ld      a,ESPCMD_OPEN         
+  85:  681+17	E088  CD3DE1  	    call    esp_cmd               ;
+  86:  698+10	E08B  F1      	    pop     af                    ; Restore Mode
+  87:  708+17	E08C  CD43E1  	    call    esp_send_byte         ; and Send It
+  88:  725+12	E08F  18E8    	    jr      _send_string          ; Send Filespec and Return Result
+  89:				
+  90:				;;; dos_close
+  91:				;;; Close File
+  92:				;;; Args: A = File Number
+  93:				;;; Destroys: AF'
+  94:				;;; Returns: A = Result
+  95:     -	E091          	do_dos_close:
+  96:  737+11	E091  F5      	    push    af                    ; Save File Number
+  97:  748+7	E092  3E11    	    ld      a,ESPCMD_CLOSE        ; Send Close Command
+  98:  755+12	E094  180A    	    jr      _send_cmd_byte        ; Send Command & Byte, Return Result
+  99:				      
+ 100:				;;; dos_closeall
+ 101:				;;; Close all Files
+ 102:				;;; Args: A = File Number
+ 103:				;;; Destroys: AF'
+ 104:				;;; Returns: A = Result
+ 105:     -	E096          	do_dos_closeall:
+ 106:  767+7	E096  3E1F    	    ld      a,ESPCMD_CLOSEALL     ; Send Close All Command
+ 107:     -	E098          	_send_cmd:  
+ 108:  774+17	E098  CD3DE1  	    call    esp_cmd 
+ 109:  791+12	E09B  18E3    	    jr      _get_result           ; Get Result and Routine
+ 110:				  
+ 111:				;;; dos_closedir  
+ 112:				;;; Close Directory
+ 113:				;;; Args: A = File Number
+ 114:				;;; Destroys: AF'
+ 115:				;;; Returns: A = Result
+ 116:     -	E09D          	do_dos_closedir:
+ 117:  803+11	E09D  F5      	    push    af                    ; Save File Number
+ 118:  814+7	E09E  3E17    	    ld      a,ESPCMD_CLOSEDIR     ; Send Close Command
+ 119:     -	E0A0          	_send_cmd_byte: 
+ 120:  821+17	E0A0  CD3DE1  	    call    esp_cmd 
+ 121:  838+10	E0A3  F1      	    pop     af                    ; Restore File Number
+ 122:  848+12	E0A4  18D7    	    jr      _send_byte            ; Send File Number and Return Result
+ 123:				
+ 124:				;;; dos_getcwd
+ 125:				;;; Get Current Working Directory
+ 126:				;;; Args: C = Buffer Length
+ 127:				;;;       DE = Buffer Start Address
+ 128:				;;; Destroys: AF, AF', DE
+ 129:				;;; Returns: B = 0
+ 130:				;;;          C = Result Length
+ 131:     -	E0A6          	do_dos_getcwd:
+ 132:  860+7	E0A6  3E1E    	      ld      a,ESPCMD_GETCWD     
+ 133:  867+17	E0A8  CD98E0  	      call    _send_cmd           ; Send Get Current Working Directory Command
+ 134:  884+5+6	E0AB  F8      	      ret     m                   ; Return if Error
+ 135:  889+11	E0AC  F5      	      push    af                  ; Save Result
+ 136:     -	E0AD          	_get_string:
+ 137:  900+4	E0AD  41      	      ld      b,c                 ; Put Buffer Length in B
+ 138:  904+4	E0AE  05      	      dec     b                   ; Decrement for Null Terminator
+ 139:  908+7	E0AF  0E00    	      ld      c,0                 ; Initialize Length
+ 140:     -	E0B1          	.loop
+ 141:  915+17	E0B1  CD46E1  	      call    esp_get_byte        ; Get Next Byte
+ 142:  932+4	E0B4  B7      	      or      a                   ; 
+ 143:  936+7+5	E0B5  2804    	      jr      z,_terminate        ; If Not ASCII 0
+ 144:  943+7	E0B7  12      	      ld      (de),a              ;   Store Byte
+ 145:  950+4	E0B8  0C      	      inc     c                   ;   Increment Length
+ 146:  954+8+5	E0B9  10F6    	      djnz    .loop               ;   Decrement Counter and Loop
+ 147:     -	E0BB          	_terminate:
+ 148:  962+4	E0BB  AF      	      xor     a
+ 149:  966+7	E0BC  12      	      ld      (de),a              ; Terminate String
+ 150:     -	E0BD          	_pop_result:
+ 151:  973+10	E0BD  F1      	      pop     af                  ; Get Back Result
+ 152:  983+10	E0BE  C9      	      ret
+ 153:				 
+ 154:				;;; dos_read:
+ 155:				;;; Read from File
+ 156:				;;; Args: A = File Number
+ 157:				;;;       BC = Byte Count
+ 158:				;;;       DE = Start Address
+ 159:				;;; Destroys: AF', BC, DE
+ 160:				;;; Returns: A = Result
+ 161:     -	E0BF          	do_dos_read:
+ 162:  993+11	E0BF  F5      	    push    af                    ; Save File Number
+ 163: 1004+7	E0C0  3E12    	    ld      a,ESPCMD_READ         ; Send READ Command
+ 164: 1011+17	E0C2  CD3DE1  	    call    esp_cmd               ; Send Command & Byte, Return Result
+ 165: 1028+10	E0C5  F1      	    pop     af                    ; Get Back File Number
+ 166: 1038+17	E0C6  CD43E1  	    call    esp_send_byte         ; Send File Number
+ 167: 1055+17	E0C9  CD4FE1  	    call    esp_send_word         ; Send Byte Count
+ 168: 1072+12	E0CC  18B2    	    jr      _get_result           ; Get Result and Return
+ 169: 1084+5+6	E0CE  F8      	    ret     m                     ; Return if Error
+ 170: 1089+11	E0CF  F5      	    push    af                    ; Save Result
+ 171: 1100+17	E0D0  CD52E1  	    call    esp_get_word          ; Get Result Count in BC
+ 172:     -	E0D3          	.loop:  
+ 173: 1117+4	E0D3  78      	    ld      a,b 
+ 174: 1121+4	E0D4  B1      	    or      c                     ; If Count = 0
+ 175: 1125+7+5	E0D5  28E6    	    jr      z,_pop_result         ;   Pop Result and Return
+ 176: 1132+17	E0D7  CD46E1  	    call    esp_get_byte          ; Read Byte
+ 177: 1149+7	E0DA  12      	    ld      (de),a                ; Store in Memory
+ 178: 1156+6	E0DB  13      	    inc     de                    ; Increment Pointer
+ 179: 1162+6	E0DC  0B      	    dec     bc                    ; Decrement Counter
+ 180: 1168+12	E0DD  18F4    	    jr      .loop                 ; Get Next Byte
+ 181:				
+ 182:				;;; dos_readdir:
+ 183:				;;; Read Directory Entry
+ 184:				;;; Args: A = File Number
+ 185:				;;;       BC = String Buffer Size
+ 186:				;;;       DE = String Buffer Start Address
+ 187:				;;;       HL = Stat Buffer Address
+ 188:				;;; Destroys: AF', BC, DE
+ 189:				;;; Returns: A = Result
+ 190:				;;;
+ 191:				;;; stat structure  9 bytes
+ 192:				;;;   word  DATE
+ 193:				;;;   word  TIME
+ 194:				;;;   char  ATTR
+ 195:				;;;   long  SIZE    32 bits
+ 196:     -	E0DF          	do_dos_readdir:
+ 197: 1180+11	E0DF  F5      	    push    af                    ; Save File Number
+ 198: 1191+7	E0E0  3E18    	    ld      a,ESPCMD_READDIR      ; Send READDIR Command
+ 199: 1198+10	E0E2  F1      	    pop     af                    ; Restore File Number
+ 200: 1208+17	E0E3  CD7DE0  	    call    _send_byte            ; Send it and Get Result
+ 201: 1225+5+6	E0E6  F8      	    ret     m                     ; Return if Error
+ 202: 1230+11	E0E7  F5      	    push    af                    ; Save Result
+ 203: 1241+11	E0E8  C5      	    push    bc                    ; Save String Buffer Length
+ 204: 1252+17	E0E9  CD35E1  	    call    _get_stat             ; Read STAT
+ 205: 1269+4	E0EC  EB      	    ex      de,hl                 ; Get String Address Back into DE
+ 206: 1273+10	E0ED  C1      	    pop     bc                    ; Restore String Buffer Length
+ 207: 1283+12	E0EE  18BD    	    jr      _get_string           ; Read Filename and Return Result
+ 208:				    
+ 209:				;;; dos_seek
+ 210:				;;; Args: A = File Number
+ 211:				;;;       DEBC = File Position
+ 212:				;;; Destroys: AF, AF', BC, DE
+ 213:				;;; Returns: A = Result
+ 214:     -	E0F0          	do_dos_seek:
+ 215: 1295+11	E0F0  F5      	    push    af                    ; Save File Number
+ 216: 1306+7	E0F1  3E14    	    ld      a,ESPCMD_SEEK         ; Send SEEK Command
+ 217: 1313+10	E0F3  F1      	    pop     af                    ; Restore File Number
+ 218: 1323+17	E0F4  CD43E1  	    call    esp_send_byte         ; and Send It
+ 219: 1340+17	E0F7  CD55E1  	    call    esp_send_long         ; Send File Position Low Word
+ 220: 1357+12	E0FA  1884    	    jr      _get_result           ; Get Result and Return
+ 221:				
+ 222:				;;; dos_tell
+ 223:				;;; Args: A = File Number
+ 224:				;;; Destroys: AF, AF'
+ 225:				;;; Returns: A = Result
+ 226:				;;;          DEBC = File Position
+ 227:     -	E0FC          	do_dos_tell:
+ 228: 1369+11	E0FC  F5      	    push    af                    ; Save File Number
+ 229: 1380+7	E0FD  3E15    	    ld      a,ESPCMD_TELL         ; Send TELL Command
+ 230: 1387+10	E0FF  F1      	    pop     af                    ; Restore File Number
+ 231: 1397+17	E100  CD7DE0  	    call    _send_byte            ; Send it and Get Result
+ 232: 1414+5+6	E103  F8      	    ret     m                     ; Return if Error
+ 233: 1419+11	E104  F5      	    push    af                    ; Save Result
+ 234: 1430+17	E105  CD58E1  	    call    esp_get_long          ; Get File Position
+ 235: 1447+10	E108  F1      	    pop     af                    ; Restore Result
+ 236: 1457+10	E109  C9      	    ret
+ 237:				    
+ 238:				;;; dos_write:
+ 239:				;;; Write from File
+ 240:				;;; Args: A = File Number
+ 241:				;;;       BC = Byte Count
+ 242:				;;;       DE = Start Address
+ 243:				;;; Destroys: AF', BC, DE
+ 244:				;;; Returns: A = Result
+ 245:				;;;          BC = Bytes Written?
+ 246:     -	E10A          	do_dos_write:
+ 247: 1467+11	E10A  F5      	    push    af                    ; Save File Number
+ 248: 1478+7	E10B  3E12    	    ld      a,ESPCMD_READ         ; Send READ Command
+ 249: 1485+17	E10D  CD3DE1  	    call    esp_cmd               ; Send Command & Byte, Return Result
+ 250: 1502+10	E110  F1      	    pop     af                    ; Get Back File Number
+ 251: 1512+17	E111  CD43E1  	    call    esp_send_byte         ; Send File Number
+ 252: 1529+17	E114  CD49E1  	    call    esp_send_bytes        ; Send Data
+ 253: 1546+17	E117  CD80E0  	    call    _get_result           ; Get Result
+ 254: 1563+5+6	E11A  F8      	    ret     m                     ; Return if Error
+ 255: 1568+11	E11B  F5      	    push    af                    ; Save Result
+ 256: 1579+17	E11C  CD52E1  	    call    esp_get_word          ; Get Return Value
+ 257: 1596+10	E11F  F1      	    pop     af                    ; Return Result
+ 258: 1606+10	E120  C9      	    ret
+ 259:				
+ 260:				;;; dos_stat
+ 261:				;;; Args: BC = Filespec Length
+ 262:				;;;       DE = Filespec Start Address
+ 263:				;;;       HL = Stat Buffer Address
+ 264:				;;; Destroys: AF', BC, DE, HL
+ 265:				;;; Returns: A = Result
+ 266:     -	E121          	do_dos_stat:
+ 267: 1616+11	E121  F5      	    push    af                    ; Save Mode
+ 268: 1627+7	E122  3E1D    	    ld      a,ESPCMD_STAT         
+ 269: 1634+17	E124  CD3DE1  	    call    esp_cmd               ;
+ 270: 1651+10	E127  F1      	    pop     af                    ; Restore Mode
+ 271: 1661+17	E128  CD43E1  	    call    esp_send_byte         ; and Send It
+ 272: 1678+17	E12B  CD79E0  	    call    _send_string          ; Send Filespec and Return Result
+ 273: 1695+5+6	E12E  F8      	    ret     m                     ; Return if Error
+ 274: 1700+11	E12F  F5      	    push    af                    ; Save Result
+ 275: 1711+17	E130  CD35E1  	    call    _get_stat             ; Get Return Value
+ 276: 1728+10	E133  F1      	    pop     af                    ; Return Result
+ 277: 1738+10	E134  C9      	    ret
+ 278:				
+ 279:     -	E135          	_get_stat:
+ 280: 1748+10	E135  010900  	    ld      bc,dos_statlen        ; Set Buffer Size to STAT length
+ 281: 1758+4	E138  EB      	    ex      de,hl                 ; Swap STAT Buffer Address into DE
+ 282: 1762+17	E139  CD4CE1  	    call    esp_get_bytes         ; Read STAT
+**** main.asm ****
+  19: 1779+10	E13C  C9      	    ret
+  20:				
+  21:				; System Routines Jump Table
+  22:				
+  23:				; ESP32 Routines Jump Table
+  24: 1789+10	E13D  C302E0  	esp_cmd:        jmp     do_esp_cmd
+  25: 1799+10	E140  C300E0  	esp_reset:      jmp     do_esp_reset
+  26: 1809+10	E143  C315E0  	esp_send_byte:  jmp     do_esp_send_byte
+  27: 1819+10	E146  C322E0  	esp_get_byte:   jmp     do_esp_get_byte
+  28: 1829+10	E149  C32DE0  	esp_send_bytes: jmp     do_esp_send_bytes
+  29: 1839+10	E14C  C338E0  	esp_get_bytes:  jmp     do_esp_get_bytes
+  30: 1849+10	E14F  C310E0  	esp_send_word:  jmp     do_esp_send_word
+  31: 1859+10	E152  C343E0  	esp_get_word:   jmp     do_esp_get_word
+  32: 1869+10	E155  C310E0  	esp_send_long:  jmp     do_esp_send_word
+  33: 1879+10	E158  C343E0  	esp_get_long:   jmp     do_esp_get_word
+  34: 1889+10	E15B  C3B5E1  	                jmp     _return
+  35: 1899+10	E15E  C3B5E1  	                jmp     _return
+  36: 1909+10	E161  C3B5E1  	                jmp     _return
+  37: 1919+10	E164  C3B5E1  	                jmp     _return
+  38: 1929+10	E167  C3B5E1  	                jmp     _return
+  39: 1939+10	E16A  C3B5E1  	                jmp     _return
+  40:				
+  41:				; DOS Routines Jump Table
+  42: 1949+10	E16D  C385E0  	dos_open:       jmp     do_dos_open    
+  43: 1959+10	E170  C391E0  	dos_close:      jmp     do_dos_close   
+  44: 1969+10	E173  C3BFE0  	dos_read:       jmp     do_dos_read    
+  45: 1979+10	E176  C30AE1  	dos_write:      jmp     do_dos_write   
+  46: 1989+10	E179  C3F0E0  	dos_seek:       jmp     do_dos_seek    
+  47: 1999+10	E17C  C3FCE0  	dos_tell:       jmp     do_dos_tell    
+  48: 2009+10	E17F  C36BE0  	dos_opendir:    jmp     do_dos_opendir 
+  49: 2019+10	E182  C39DE0  	dos_closedir:   jmp     do_dos_closedir
+  50: 2029+10	E185  C3DFE0  	dos_readdir:    jmp     do_dos_readdir 
+  51: 2039+10	E188  C36FE0  	dos_delete:     jmp     do_dos_delete  
+  52: 2049+10	E18B  C358E0  	dos_rename:     jmp     do_dos_rename  
+  53: 2059+10	E18E  C367E0  	dos_mkdir:      jmp     do_dos_mkdir   
+  54: 2069+10	E191  C321E1  	dos_stat:       jmp     do_dos_stat    
+  55: 2079+10	E194  C374E0  	dos_chdir:      jmp     do_dos_chdir   
+  56: 2089+10	E197  C3A6E0  	dos_getcwd:     jmp     do_dos_getcwd  
+  57: 2099+10	E19A  C396E0  	dos_closeall:   jmp     do_dos_closeall
+  58: 2109+10	E19D  C3B5E1  	                jmp     _return
+  59: 2119+10	E1A0  C3B5E1  	                jmp     _return
+  60: 2129+10	E1A3  C3B5E1  	                jmp     _return
+  61: 2139+10	E1A6  C3B5E1  	                jmp     _return
+  62: 2149+10	E1A9  C3B5E1  	                jmp     _return
+  63: 2159+10	E1AC  C3B5E1  	                jmp     _return
+  64: 2169+10	E1AF  C3B5E1  	                jmp     _return
+  65: 2179+10	E1B2  C3B5E1  	                jmp     _return
+  66:				
+  67: 2189+10	E1B5  C9      	_return         ret
+
+
+
+Statistics:
+
+     4	passes
+     0	jr promotions
+    86	symbols
+   438	bytes
+
+
+
+Symbol Table:
+
+.loop$28        E0B1      57521
+.loop$31        E0D3      57555
+ESPCMD_CHDIR   =1C        28
+ESPCMD_CLOSE   =11        17
+ESPCMD_CLOSEALL=1F        31
+ESPCMD_CLOSEDIR=17        23
+ESPCMD_DELETE  =19        25
+ESPCMD_GETCWD  =1E        30
+ESPCMD_MKDIR   =1B        27
+ESPCMD_OPEN    =10        16
+ESPCMD_OPENDIR =16        22
+ESPCMD_READ    =12        18
+ESPCMD_READDIR =18        24
+ESPCMD_RENAME  =1A        26
+ESPCMD_RESET   =01        1
+ESPCMD_SEEK    =14        20
+ESPCMD_STAT    =1D        29
+ESPCMD_TELL    =15        21
+ESPCMD_WRITE   =13        19
+_ESPCTRL$esp.asm=F4        244
+_ESPDATA$esp.asm=F5        245
+_dos_cmd$dos.asm E076      57462
+_esp_send_byte$esp.asm E016      57366
+_get_result$dos.asm E080      57472
+_get_stat$dos.asm E135      57653
+_get_string$dos.asm E0AD      57517
+_pop_result$dos.asm E0BD      57533
+_return$main.asm E1B5      57781
+_send_byte$dos.asm E07D      57469
+_send_cmd$dos.asm E098      57496
+_send_cmd_byte$dos.asm E0A0      57504
+_send_string$dos.asm E079      57465
+_terminate$dos.asm E0BB      57531
+do_dos_chdir    E074      57460
+do_dos_close    E091      57489
+do_dos_closeall E096      57494
+do_dos_closedir E09D      57501
+do_dos_delete   E06F      57455
+do_dos_getcwd   E0A6      57510
+do_dos_mkdir    E067      57447
+do_dos_open     E085      57477
+do_dos_opendir  E06B      57451
+do_dos_read     E0BF      57535
+do_dos_readdir  E0DF      57567
+do_dos_rename   E058      57432
+do_dos_seek     E0F0      57584
+do_dos_stat     E121      57633
+do_dos_tell     E0FC      57596
+do_dos_write    E10A      57610
+do_esp_cmd      E002      57346
+do_esp_get_byte E022      57378
+do_esp_get_bytes E038      57400
+do_esp_get_long E04C      57420
+do_esp_get_word E043      57411
+do_esp_reset    E000      57344
+do_esp_send_byte E015      57365
+do_esp_send_bytes E02D      57389
+do_esp_send_long E00B      57355
+do_esp_send_word E010      57360
+dos_chdir       E194      57748
+dos_close       E170      57712
+dos_closeall    E19A      57754
+dos_closedir    E182      57730
+dos_delete      E188      57736
+dos_getcwd      E197      57751
+dos_mkdir       E18E      57742
+dos_open        E16D      57709
+dos_opendir     E17F      57727
+dos_read        E173      57715
+dos_readdir     E185      57733
+dos_rename      E18B      57739
+dos_seek        E179      57721
+dos_stat        E191      57745
+dos_statlen    =09        9
+dos_tell        E17C      57724
+dos_write       E176      57718
+esp_cmd         E13D      57661
+esp_get_byte    E146      57670
+esp_get_bytes   E14C      57676
+esp_get_long    E158      57688
+esp_get_word    E152      57682
+esp_reset       E140      57664
+esp_send_byte   E143      57667
+esp_send_bytes  E149      57673
+esp_send_long   E155      57685
+esp_send_word   E14F      57679
