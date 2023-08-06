@@ -5,8 +5,10 @@
 ; machine language programs. Internal machine language routines should be at
 ; the same addresses as in S2 BASIC.
 ;
-; To compile:
+; To assemble:
 ;   zmac -o s3basic.cim -o s3basic.lst s3basic.asm
+; To build Aquarius+ ROM
+;  copy /b s3basic.cim+aqplus.rom aquarius.rom
 ;
 ;BASIC Constants
 LPTSIZ  equ     132     ;{M80} WIDTH OF PRINTER
@@ -29,7 +31,18 @@ FDIVB   equ     $3814   ;
 FDIVA   equ     $3818   ;
 FDIVG   equ     $381B   ;
 RNDCNT  equ     $381F   ;
+ifdef noreskeys
+;;;Code Change: Moved RNDTBL to 
+;;;to allow changing ;;;of default values for new System Variables
+;;;INCHIR deprecated - 34 bytes
+;;;For Aquarius II and Aquarius+
+KEYADR  equ     $3821   ;;Key Lookup Table Address
+SHFADR  equ     $3823   ;;Shifted Key Lookup Table Address  
+CTLADR  equ     $3825   ;;Control Key Lookup Table Address
+SHCADR  equ     $3827   ;;Shift-Control Key Lookup Table Address
+else
 RNDTAB  equ     $3821   ;;Random Number TABLE
+endif
 RNDX    equ     $3841   ;[M80] LAST RANDOM NUMBER GENERATED, BETWEEN 0 AND 1
 CLMWID  equ     $3845   ;;Comma Column Width
 LPTPOS  equ     $3846   ;[M80] POSITION OF LPT PRINT HEAD
@@ -99,15 +112,38 @@ SAVSTK  equ     $38F9   ;[M80] NEWSTT SAVES STACK HERE BEFORE SO THAT ERROR REVE
 ;;        $38FB-$38FF   ;;??Unused
 ;;              $3900   ;;This is always 0
 BASTXT  equ     $3901   ;;Start of Basic Program
+ifdef aqplus
+XPLUS   equ     $2000   ;;Extended BASIC Reset
+XCOLD   equ     $2003   ;;Extended BASIC Cold Start`
+XCART   equ     $2006   ;;Extended BASIC Start Cartridge
+endif
 EXTBAS  equ     $2000   ;;Start of Extended Basic
 XSTART  equ     $2010   ;;Extended BASIC Startup Routine
 XINIT   equ     $E010   ;;ROM Cartridge Initialization Entry Point
         org     $0000   ;;Starting Address of Standard BASIC
 ;;RST 0 - Startup
-START:  jp      JMPINI            ;;Start Initialization
+
+START:  
+ifdef noreskeys
+;;; Code Change: Set System variables before doing aything else
+;;; so the Key Table vectoes are loaded.
+
+        ld      sp,TMPSTK         ;[M80] SET UP TEMP STACK
+        call    COLDST            ;;Load DEFAULT Values
+        jr      DOINIT
+else
+  ifdef aqplus
+  ;;; Code Change: Aquarius+ only
+  ;;; Instead of checking for the Extended BASIC signature
+  ;;; jump straight into Extended BASIC init 
+        jp      XPLUS             ;;Start Extended BASIC
+  else        
+        jp      JMPINI            ;;Start Initialization
+  endif
         byte    $82,$06,$22       ;;Revision Date 1982-06-22
         byte    11                ;;Revision Number?
         nop                       ;;Pad out the RST routine
+endif
 ;;RST 1 - Syntax Check
 SYNCHK: ld      a,(hl)
         ex      (sp),hl
@@ -123,8 +159,17 @@ CHRGET: inc     hl                ;[M65] INCREMENT THE TEXT PNTR
         jp      CHRCON            ;;Continue in CHRGETR
 ;;RST 3 - Output Character
 OUTCHR: jp      OUTDO             ;;Execute print character routine
+ifdef noreskeys
+DOINIT: 
+  ifdef aqplus
+        jp      XPLUS             ;;Start Extended BASIC
+  else        
+        jp      JMPINI            ;;Start Initialization
+  endif
+        byte    0,0
+else
         byte    0,0,0,0,0         ;;Pad out the RST routine
-                                  ;;;(The hook call code from OUTDO could be moved here)
+endif
 ;;RST 4 - Integer Compare
 COMPAR: ld      a,h               ;;Compare [DE] to [HL]
         sub     d                 ;;Sets Z flag if equal
@@ -188,7 +233,11 @@ CRTCH2: add     a,(hl)            ;
         xor     (hl)              ;
         out     ($FF),a           ;
         ld      (SCRMBL),a        ;
+ifdef aqplus
+        jp      XCART             ;;Run Extended Cart Initialization Routine
+else        
         jp      XINIT             ;;Execute Cartridge Code
+endif
 CRTSIG: byte    "+7$$3,",0        ;;$A000 Cartridge Signature
 ;;Display Startup Screen
 RESET:  ld      de,SCREEN+417     ;;Display "BASIC"
@@ -221,10 +270,17 @@ COLOR1: ld      (hl),b            ;;memory, addresses $3400 through $3FFF
         jr      nz,COLOR1         ;
         ld      hl,$4000          ;;Loop 12,288 times
 COLOR2: call    INCHRC            ;;Check for keypress
+ifdef noreskeys
+        cp      3                 ;;Is it CTRL-C?
+        jr      z,WARMST          ;;Warm Start
+        sub    13                 ;{M80} IS IT A CARRIAGE RETURN?
+        jr      z,CLRBUF          ;;Cold Start
+else
         cp      13                ;{M80} IS IT A CARRIAGE RETURN?
         jr      z,COLDST          ;;Cold Start
         cp      3                 ;;Is it CTRL-C?
         jr      z,WARMST          ;;Warm Start
+endif
         dec     hl                ;;Decrement Counter
         ld      a,h               ;
         or      l                 ;
@@ -237,16 +293,36 @@ WARMST: ld      a,11              ;
         out     ($FF),a           ;;Reset I/O Port 255
         call    STKINI            ;;Initialize stack
         call    WRMCON            ;;Finish Up
-COLDST:
-        ld      hl,DEFALT         ;Set System Variable Default Values
+COLDST: ld      hl,DEFALT         ;Set System Variable Default Values
         ld      bc,81             ;
         ld      de,USRPOK         ;;Copy 80 bytes starting at DEFALT
         ldir                      ;;to the first 80 bytes of System Variables
+ifdef noreskeys
+        ret
+else
         xor     a                 ;
-        ld      (ENDBUF),a        ;;Clear byte after end of BUF
+endif
+CLRBUF: ld      (ENDBUF),a        ;;Clear byte after end of BUF
         ld      (BASTXT-1),a      ;;Clear byte before start of basic program
+;;; On the Aquarius+ From MEMTST to INITFF-1 is deprecated: 68 bytes
+ifdef aqplus
+        jp      XCOLD             ;;Do Extended BASIC Cold Start
+else        
 ;;Test Memory to Find Top of RAM
         ld      hl,BASTXT+99      ;;Set RAM Test starting address
+endif
+ifdef xxxxx
+;; Code Change: Default Control-Shift Key Lookup Tablefor Aquarius+
+SHCTAB: byte    $93, 0 , 0 , 0 , 0 , 0  ;F12 
+        byte    $92, 0 ,$91,$88, 0 , 0  ;F11  ...   F10  PrtScr
+        byte    $90,$9C, 0 ,$8C, 0 , 0  ;F9   Ins         Menu    
+        byte    $87, 0 ,$86,$8A,$9B,$9D ;F8   ...   F7    PgUp   Home BkTab
+        byte    $85,$8D, 0 , 0 ,$99, 0  ;F6   ...   Tab   ....  Break
+        byte    $84, 0 ,$83,$98,$8B, 0  ;F5         F4   SysReq  PgDn
+        byte    $82,$9A,$89, 0 , 0 , 0  ;F3   End  Pause     
+        byte    $81, 0 ,$80, 0          ;F2         F1  
+        byte    0                       ;Filler
+else
 MEMTST: inc     hl                ;;Bump pointer
         ld      c,(hl)            ;;Save contents of location
         ld      a,h               ;
@@ -261,7 +337,7 @@ MEMTST: inc     hl                ;;Bump pointer
         cpl                       ;;and revert back
         ld      (hl),c            ;;Write original byte to location
         cp      b                 ;;Did reads match writes?
-        jr      z,MEMTST          ;;Yes, check next location
+        jr      z,MEMTST          ;;Yes, check next locationn
 ;;Check Memory Size               ;
 MEMCHK: dec     hl                ;;Back up to last good address
         ld      de,BASTXT+299     ;
@@ -276,11 +352,16 @@ MEMCHK: dec     hl                ;;Back up to last good address
         call    PRNTIT            ;;Print copyright message
         ld      sp,OLDSTK         ;;Top of of stack used to be here
         call    STKINI            ;;Set stack pointer to TOPMEM
+endif
 ;;Check for Extended BASIC
         ld      hl,EXTBAS+5       ;;End of signature in Extended BASIC
         ld      de,CRTSIG         ;;Text to check signature against
 EXTCHK: ld      a,(de)            ;;Get byte from signature
+ifdef aqplus
+        xor     a
+else 
         or      a                 ;;Did we reach a terminator?
+endif
         jp      z,XBASIC          ;;Yes, start Extended BASIC
         cp      (hl)              ;;Does it match byte in ROM?
         jr      nz,INITFF         ;;No, move on
@@ -324,6 +405,29 @@ DEFALT: jp      USRDO             ;;3803 USRPOK
         byte    0                 ;;381E
         byte    0                 ;;381F RNDCNT
         byte    0                 ;;3820
+ifdef noreskeys
+;;;Code Change: Moved RNDTBL to location freed
+;;;by removing Reserved Key expansion.
+;;;of default values for new System Variables
+;;;RNDTBL deprecated - 32 bytes
+;;;Extended BASIC can add Shift-Control Table by 
+;;;putting the table address minus 1 at SHCADR
+;;;For Aquarius II and Aquarius+
+        word    KEYTAB-1          ;;3821 KEYADR
+        word    SHFTAB-1          ;;3823 SHFADR
+        word    CTLTAB-1          ;;3825 CTLADR
+  ifdef xxxxx
+        word    SHCTAB-1          ;;3827 SHCADR
+  else
+        word    0                 ;;3827 SHCADR 
+  endif
+        byte    $00,$00,$00,$00   ;;3829 
+        byte    $00,$00,$00,$00   
+        byte    $00,$00,$00,$00   
+        byte    $00,$00,$00,$00   
+        byte    $00,$00,$00,$00   
+        byte    $00,$00,$00,$00   
+else  
 RNDTBL: byte    $35,$4A,$CA,$99   ;;3821 RNDTAB
         byte    $39,$1C,$76,$98   ;;3825
         byte    $22,$95,$B3,$98   ;;3829
@@ -332,6 +436,7 @@ RNDTBL: byte    $35,$4A,$CA,$99   ;;3821 RNDTAB
         byte    $0A,$1A,$9F,$98   ;;3835
         byte    $65,$BC,$CD,$98   ;;3839
         byte    $D6,$77,$3E,$98   ;;383D
+endif
         byte    $52,$C7,$4F,$80   ;;3841 RNDX
         byte    $0E               ;;3845 CLMWID
         byte    $00               ;;3846 LPTPOS
@@ -1159,17 +1264,21 @@ INTFR2: rst     FSIGN             ;[M80] DON'T ALLOW NEGATIVE NUMBERS
         jp      m,FCERR           ;[M80] TOO BIG. FUNCTION CALL ERROR
 ;;Convert FAC to Integer and Return in [D,E]
 ;;; Code Change: FAC Exponent <= 145 instead of 144 to allow numbers 
-;;; in the range -65536 to 65535 istead of -32768 to 32767.
+;;; in the range -65535 to 65535 istead of -32768 to 32767.
 FRCINT: ld      a,(FAC)           ;
         cp      145               ;[M65] FAC .GT. 32767?
         jp      c,QINT            ;[M65] GO TO QINT AND SHOVE IT
-        ld      bc,$9080          ;
-        ld      de,$0000          ;[M65] -32768
-        push    hl                ;
-        call    FCOMP             ;[M65] SEE IF FAC=[B,C,D,E]
-        pop     hl                ;
-        ld      d,c               ;
-        ret     z                 ;[M65] NO, FAC IS TOO BIG.
+        jr      FCERR             ;                               
+;;; Code Change: Patch to Get Comma Column Width from System Variable
+;;; Replaces Deprecated code to test for -32768                   Original Code
+COMWID: ret     z                 ;;If Not a Comma, Get Out       nop
+        ld      a,(CLMWID)        ;;Get Column Width              ld      bc,$9180
+        ld      c,a               ;;Put it in C for MORCOM        ld      de,$0000          
+        jp      COMPRT            ;;Do PRINT Comma Code           call    FCOMP
+        pop     hl                ;;deprecated`
+        ld      d,c               ;;deprecated
+        ret     z                 ;;deprecated
+;; End Deprecate Code             
 FCERR:  ld      e,ERRFC           ;[M65] "FUNCTION CALL" ERROR
         jp      ERROR             ;
 ;[M80]  LINGET READS A LINE # FROM THE CURRENT TEXT POSITION
@@ -1377,9 +1486,9 @@ PRINTC: jp      z,FINPRT          ;{M80} FINISH BY RESETTING FLAGS, TERMINATOR S
         jp      z,TABER           ;[M80] THE TAB FUNCTION?
         cp      SPCTK             ;
         jp      z,TABER           ;[M80] THE SPC FUNCTION?
-        push    hl                ;{M80} SAVE THE TEXT POINTER
-        cp      ','               ;
-        jp      z,COMWID          ;[M80] IS IT A COMMA?
+        push    hl                ;{M80} SAVE THE TEXT POINTER       Original Code
+        call    COMWID            ;;                                 cp      ','       
+        nop                       ;;                                 jr      z,COMPRT  
         cp      $3B               ;{M80} IS IT A ";"
         jp      z,NOTABR          ;
         pop     bc                ;[M80] GET RID OF OLD TEXT POINTER
@@ -1426,7 +1535,7 @@ ISCTTY: ld      a,(CLMLST)        ;[M80] POSITION OF LAST COMMA COLUMN
 CHKCOM: call    nc,CRDO           ;[M80] TYPE CRLF
         jp      nc,NOTABR         ;[M80] AND QUIT IF BEYOND THE LAST COMMA FIELD
 MORCOM: sub     c                 ;[M80] GET [A] MODULUS CLMWID
-        jr      nc,MORCOM         ;
+        jp      nc,MORCOM         ;
         cpl                       ;[M80] FILL OUT TO AN EVEN CLMWID: CLMWID-[A] MOD CLMWID SPACES
         jr      ASPA2             ;[M80] GO PRINT [A]+1 SPACES
 TABER:  push    af                ;[M80] REMEMBER IF [A]=SPCTK OR TABTK
@@ -1956,13 +2065,14 @@ POKE:   call    FRMNUM            ;[M80] READ A FORMULA
         ret                       ;[M80] SCANNED EVERYTHING
 
 ;;; Code Change: New Default USR Routine - Execute Code at Argument Address
-;;; Replaces orphan routine FRMINT
+;;; Replaces orphan routine FRMINT - 9 bytes
 USRDO:  call    FRCINT            ;;Convert Argument to Int in DE            call    FRMEVL  
         ld      ixh,d             ;;Copy into IX                             push    hl
         ld      ixl,e             ;;                                         call    FRCINT
         jp      (IX)              ;;Jump to it                               pop     hl
                                   ;;                                         ret
-;;Do the Block Transfer and return same values as original BLTU routine
+;;; Code Chage: Do the Block Transfer and return same values as original BLTU routine
+;;; Replaces Deprecated Routine: PROMEM - 10 Bytes
                                   ;;Copy Loop: 21 cycles                     Original Code
 BLTUDO: inc     bc                ;;6    Byte Count                  PROMEM: push    hl
         lddr                      ;;16+5 Do the Memory Move                  ld      hl,$2FFF       
@@ -2230,14 +2340,14 @@ CLEARS: ld      a,l               ;[M80] SUBTRACT [H,L]-[D,E] INTO [D,E]
         ld      (MEMSIZ),hl       ;[M80] SET IT UP, MUST BE OK
         pop     hl                ;[M80] REGAIN THE TEXT POINTER
         jp      CLEARC            ;[M80] GO CLEAR
-;;;Code Change: Patch to make room in RND routine                   Original Code
-RNDSTL: ld      hl,RNDCNT+1       ;;Load HL for RNDSTR              ld      a,l
-                                  ;;                                sub     e
-                                  ;;                                ld      e,a
-        jp      RNDSTR            ;;and go do it                    ld      a,h
-                                  ;;                                sbc     a,d
-                                  ;;                                ld      d,a
-        nop                       ;;                                ret
+;;DE = HL - DE  *** Orphan Code - 7 bytes 
+        ld      a,l 
+        sub     e
+        ld      e,a
+        ld      a,h
+        sbc     a,d
+        ld      d,a
+        ret
 ;;The NEXT STATEMENT
 ;;See FOR for description of the stack entry
 NEXT:   ld      de,0              ;{M80} FOR "NEXT" WITHOUT ARGS CALL FNDFOR WITH [D,E]=0
@@ -2333,9 +2443,9 @@ NOTRUB: ld      a,c               ;[M80] GET BACK CURRENT CHAR
         jp      z,FININL          ;[M80] IS IT A CARRIAGE RETURN?
         cp      21                ;[M80] ;LINE DELETE? (CONTROL-U)
         jp      z,INLINU          ;[M80] GO DO IT
+        nop                       ;;;Orphan Code: Move this down to reuse - 5 bytes
         nop                       ;;;Whatever was removed isn't in the
         nop                       ;;;available source codes
-        nop                       ;
         nop                       ;
         nop                       ;
         cp      8                 ;[M80] BACKSPACE? (CONTROL-H)?
@@ -4204,19 +4314,18 @@ POLY1:  pop     af                ;[M80] GET DEGREE
 ;;;of the copy at $3821 in RAM. This frees up the 32 bytes of System RAM 
 ;;;at $3821 through $3840. The table still gets copied to RAM by COLDST,
 ;;;but that can be overwritten with no adverse effects.
-RND:    rst     FSIGN             ;[M80] GET SIGN OF ARG                    Original Code
-                                  ; moved to RNDSTL to make room below      ld      hl,RNDCNT+1     
-        jp      m,RNDSTL          ;[M80] START NEW SEQUENCE IF NEGATIVE     jp      m,RNDSTR          
+RND:    rst     FSIGN             ;[M80] GET SIGN OF ARG                    
+        ld      hl,RNDCNT+1       ;;Get Starting Address of Permutation Table
+        jp      m,RNDSTR          ;[M80] START NEW SEQUENCE IF NEGATIVE
         ld      hl,RNDX           ;[M80] GET LAST NUMBER GENERATED
         call    MOVFM             ;
         ld      hl,RNDCNT+1       ;
         ret     z                 ;[M80] RETURN LAST NUMBER GENERATED IF ZERO
         add     a,(hl)            ;[M80] GET COUNTER INTO CONSTANTS AND ADD ONE
-        and     7                 ;;Modulo 8 Counter
-        ld      b,0               ;;
-        ld      (hl),a            ;;Store it back in RNDCNT+1 
-        nop                       ;;keep code aligned                       inc     hl
-        ld      hl,RNDTBL         ;;Now HL points to Table in ROM 
+        and     7                 ;;Modulo 8 Counter                        Original Code
+        call    RNDSTL            ;;Patch to get RNDTBL into HL             ld      b,0              
+                                  ;;                                        ld      (hl),a            
+        nop                       ;;                                        inc     hl                
         add     a,a               ;;
         add     a,a               ;;A = A * 4
         ld      c,a               ;;BC = Counter * 4 + Counter
@@ -5020,7 +5129,7 @@ TTYXPR: exx                       ;Restore [BC], [DE] and [HL]
         pop     af                ;Restore [AF]
         ret
 ;;; Code Change: Code to check for Operator moved to make room for new UDF Hook
-;;; Replaes TTYRES - Restore Character Under Cursor
+;;; Replaces Orphan TTYRES - Restore Character Under Cursor - 9 + 1 bytes
 CHKOP:  cp      PLUSTK            ;If < Plus Token                 ;ld      hl,(CURRAM)       ;;Get position
         ret     c                 ;  Return with Carry Set                              
         cp      LESSTK+1          ;If > Less Than Token            ;ld      a,(CURCHR)        ;;Get character
@@ -5075,7 +5184,7 @@ TTYCLR: ld      b,' '             ;
         jp      TTYFIS            ;;Save and Finish
 ;;Fill 1024 bytes atarting at HL with A
 FILLIT: ld      de,$3FF           ;;Count down from 1023
-;;Fill BC bytes atartinf at HL with A
+;;Fill BC bytes atarting at HL with A
 FILLIP: ld      (hl),b            ;;Store byte
         inc     hl                ;;Increment pointer
         dec     de                ;;Decrement Counter
@@ -5105,7 +5214,23 @@ SDELAL: ld      a,h               ;
 INCHRH: rst     HOOKDO
         byte    18
 ;;Check for keypress
-INCHRC: exx                       ;;Save Registers
+INCHRC: 
+ifdef noreskeys
+;;;Code Change: Moved RNDTBL to here to allow changing 
+;;;of default values for new System Variables
+;;;INCHRI - Expand Reserved Word deprecated - 33 bytes
+;;;For Aquarius II and Aquarius+
+        jr      KEYJEX            ;;Do EXX then do KEYSCN
+RNDTBL: byte    $35,$4A,$CA,$99   ;;
+        byte    $39,$1C,$76,$98   ;;
+        byte    $22,$95,$B3,$98   ;;
+        byte    $0A,$DD,$47,$98   ;;
+        byte    $53,$D1,$99,$99   ;;
+        byte    $0A,$1A,$9F,$98   ;;
+        byte    $65,$BC,$CD,$98   ;;
+        byte    $D6,$77,$3E,$98   ;;
+else
+        exx                       ;;Save Registers
 INCHRI: ld      hl,(RESPTR)
         ld      a,h
         or      a
@@ -5125,6 +5250,7 @@ INCHRI: ld      hl,(RESPTR)
         jp      p,KEYRET
         xor     a
         ld      (RESPTR+1),a
+endif
 ;;Scan Keyboard
 KEYSCN: ld      bc,$FF            ;;B=0 to scan all columns
         in      a,(c)             ;;Read rows from I/O Port 255
@@ -5139,72 +5265,110 @@ KEYSCN: ld      bc,$FF            ;;B=0 to scan all columns
         and     $0F               ;;Check rows 0 through 3 - %00001111
         jr      nz,KEYDN          ;;Key down? Process it
         ;;Scan the Rest of the Columns
-        ld      b,$BF              ;;Start with column 6 - %10111111
-KEYSCL: in      a,(c)              ;;Read rows and invert
-        cpl                        ;
-        and     $3F                ;;Check rows 0 through 5 - %00111111
-        jr      nz,KEYDN           ;;Key down? Process it
-        rrc     b                  ;;Next column
-        jr      c,KEYSCL           ;;Loop if not out of columns
-NOKEYS: inc     hl                 ;;Point to KCOUNT
-        ld      a,70               ;
-        cp      (hl)               ;
-        jr      c,KEYFIN           ;;Less than 70? Clean up and return
-        jr      z,SCNINC           ;;0? Increment KCOUNT and return
-        inc     (hl)               ;
-KEYFIN: xor     a                  ;;Clear A
-        exx                        ;;Restore Registers
-        ret                        ;
-SCNINC: inc     (hl)               ;;Increment KCOUNT
-        dec     hl                 ;
-        ld      (hl),0             ;;Clear LSTX
-        jr      KEYFIN             ;;Clean up and Return
-;;Process Key Currently Pressed
-KEYDN:  ld      de,0               ;
-KEYROW: inc     e                  ;;Get row number (1-5)
-        rra                        ;
-        jr      nc,KEYROW          ;
-        ld      a,e                ;
-KEYCOL: rr      b                  ;;Add column number times 6
-        jr      nc,KEYCHK          ;
-        add     a,6                ;
-        jr      KEYCOL             ;
-KEYCHK: ld      e,a                ;
-        cp      (hl)               ;;Compare scan code to LSTX
-        ld      (hl),a             ;;Update LSTX with scan code
-        inc     hl                 ;;Point to KCOUNT
-        jr      nz,KEYCLR          ;;Not the same? Clear KCOUNT and exit
-        ld      a,4
-        cp      (hl)               ;;Check KCOUNT
-        jr      c,KEYFN6           ;;Greater than 4? Set to 6 and return
-        jr      z,KEYASC           ;;Equal to 4? Convert scan code
-        inc     (hl)               ;;Increment KCOUNT
-        jr      KEYFN2             ;;Clean up and exit
-KEYFN6: ld      (hl),6             ;;Set KCOUNT to 6
-KEYFN2: xor     a                  ;;Clear A
-        exx                        ;;Restore registers
-        ret                        ;
-KEYCLR: ld      (hl),0             ;;Clear KCOUNT
-        jr      KEYFN2             ;;Clean up and return
+        ld      b,$BF             ;;Start with column 6 - %10111111
+KEYSCL: in      a,(c)             ;;Read rows and invert
+        cpl                       ;
+        and     $3F               ;;Check rows 0 through 5 - %00111111
+        jr      nz,KEYDN          ;;Key down? Process it
+        rrc     b                 ;;Next column
+        jr      c,KEYSCL          ;;Loop if not out of columns
+NOKEYS: inc     hl                ;;Point to KCOUNT
+        ld      a,70              ;
+        cp      (hl)              ;
+        jr      c,KEYFIN          ;;Less than 70? Clean up and return
+        jr      z,SCNINC          ;;0? Increment KCOUNT and return
+        inc     (hl)              ;
+KEYFIN: xor     a                 ;;Clear A
+        exx                       ;;Restore Registers
+        ret                       ;
+SCNINC: inc     (hl)              ;;Increment KCOUNT
+        dec     hl                ;
+        ld      (hl),0            ;;Clear LSTX
+        jr      KEYFIN            ;;Clean up and Return
+;;Process Key Currently Pressed   
+KEYDN:  ld      de,0              ;
+KEYROW: inc     e                 ;;Get row number (1-5)
+        rra                       ;
+        jr      nc,KEYROW         ;
+        ld      a,e               ;
+KEYCOL: rr      b                 ;;Add column number times 6
+        jr      nc,KEYCHK         ;
+        add     a,6               ;
+        jr      KEYCOL            ;
+KEYCHK: ld      e,a               ;
+        cp      (hl)              ;;Compare scan code to LSTX
+        ld      (hl),a            ;;Update LSTX with scan code
+        inc     hl                ;;Point to KCOUNT
+        jr      nz,KEYCLR         ;;Not the same? Clear KCOUNT and exit
+        ld      a,4               
+        cp      (hl)              ;;Check KCOUNT
+        jr      c,KEYFN6          ;;Greater than 4? Set to 6 and return
+ifdef noreskeys
+        jr      z,SHFCTL          ;;Equal to 4? Convert scan code
+else
+        jr      z,KEYASC          ;;Equal to 4? Convert scan code
+endif
+        inc     (hl)              ;;Increment KCOUNT
+        jr      KEYFN2            ;;Clean up and exit
+KEYFN6: ld      (hl),6            ;;Set KCOUNT to 6
+KEYFN2: xor     a                 ;;Clear A
+        exx                       ;;Restore registers
+        ret                       ;
+KEYCLR: ld      (hl),0            ;;Clear KCOUNT
+        jr      KEYFN2            ;;Clean up and return
 ;;Convert Keyboard Scan Code to ASCII Character
+ 
+ifdef noreskeys
+KEYJEX: exx                       ;;Save Registers
+        jp      KEYEXX            ;;JR didn't reach
+KEYCTL: bit     5,a               ;;Check Control key
+        ld      ix,(CTLADR)       ;;Point to control table
+        jr      z,KEYLUP          ;;Control? Do lookup
+else    
 KEYASC: inc     (hl)              ;;Increment KCOUNT
         ld      b,$7F             ;;Read column 7
         in      a,(c)             ;;Get row
         bit     5,a               ;;Check Control key
         ld      ix,CTLTAB-1       ;;Point to control table
         jr      z,KEYLUP          ;;Control? Do lookup
-        bit     4,a               ;;Check Shift key
+endif
+NOTCTL: bit      4,a               ;;Check Shift key
+ifdef noreskeys
+        ld      ix,(SHFADR)       ;;Point to shift table
+else    
         ld      ix,SHFTAB-1       ;;Point to shift table
-        jr      z,KEYLUP          ;;Shift? Do lookup
-        ld      ix,KEYTAB-1
+endif
+NOTSHF: jr      z,KEYLUP          ;;Shift? Do lookup
+NOTSHC:
+ifdef noreskeys
+        ld      ix,(KEYADR)
+else    
+        ld      ix,KEYTAB-1       ;;Point to control table
+endif
 KEYLUP: add     ix,de             ;;Get pointer into table
         ld      a,(ix+0)          ;;Load ASCII value
         or      a                 ;;Reserved Word?
+ifdef noreskeys
+;;;Code Change:  
+;;;Add Optional Ctrl-Shift Lookup Table
+;;;KEYRES - Keyword Expansion deprecated - 16 bytes
+;;;For Aquarius II and Aquarius+
+        jr      KEYRET
+KEYEXX: jp      KEYSCN  
+SHFCTL: inc     (hl)              ;;Increment KCOUNT
+        ld      b,$7F             ;;Read column 7
+        in      a,(c)
+        bit     5,a               ;;If CTL Not Pressed
+        jr      nz,NOTCTL          ;;  Go Check for Shift
+        bit     4,a               ;;If Shift Not Pressed  
+        jr      nz,KEYCTL         ;;  Go Do Control Lookup
+        ld      ix,(SHCADR)       ;;Point to Shift-Control Table
+        jr      KEYLUP            ;;and Look it Up
+else
         jp      p,KEYRET          ;;No, return ASCII code
         sub     $7F               ;;Convert to Reserved Word Count
         ld      c,a               ;;and copy to C
         ld      hl,RESLST-1       ;;Point to Reserved Word List
-;;Enter Reserved Word From Ctrl-Key Combo
 KEYRES: inc     hl                ;;Bump pointer
         ld      a,(hl)            ;;Get next character
         or      a                 ;;First letter of reserved word?
@@ -5213,8 +5377,10 @@ KEYRES: inc     hl                ;;Bump pointer
         jr      nz,KEYRES         ;;Not 0? Find next word
         ld      (RESPTR),hl       ;;Save Keyword Address
         and     $7F               ;;Strip high bit from first character
+endif
 KEYRET: exx                       ;;Restore Registers
         ret
+;;Key Lookup Tables - 46 bytes each
 ;;Unmodified Key Lookup Table
 KEYTAB: byte    '=',$08,':',$0D,';','.' ;;Backspace and Return
         byte    '-','/','0','p','l',','
@@ -5234,7 +5400,18 @@ SHFTAB: byte    '+',$5C,'*',$0D,'@','>' ;;Backslash, Return
         byte    '#','E','S','Z',' ','A'
         byte    $22,'W','!','Q'         ;;Quotation Mark
 ;;Control Key Lookup Table
-CTLTAB: byte    $82,$1C,$C1,$0D,$94,$C4 ;;NEXT ^\ PEEK Return POKE VAL
+CTLTAB:
+ifdef noreskeys
+        byte    $1B,$7F,$1D, 0 ,$A0,$7D ;ESC DEL GS      NUL  }   
+        byte    $1F,$1E,$1C,$10,$0C,$7B ;GS  RS  FS  DLE FF   {   
+        byte    $5D,$0F,$0B,$0D,$0E,$0A ; ]  SI  VT  CR  SO  LF   
+        byte    $5B,$09,$60,$15,$08,$02 ; [  Tab  `  NAK BS  SOH  
+        byte    $8E,$19,$07,$16,$03,$06 ;rt  EM  BEL SYN ETX ACK  
+        byte    $9F,$14,$8F,$12,$04,$18 ;dn  DC4 up  DC2 EOT CAN  
+        byte    $9E,$05,$13,$1A, 0 ,$01 ;lft ENC DC3 SUB     SOH  
+        byte    $7E,$17,$7C,$11         ; ~  ETB  |  DC1
+else
+        byte    $82,$1C,$C1,$0D,$94,$C4 ;;NEXT ^\ PEEK Return POKE VAL
         byte    $81,$1E,$30,$10,$CA,$C3 ;;FOR ^^ 0 ^P POINT STR$
         byte    $92,$0F,$9D,$0D,$C8,$9C ;;COPY ^O PRESET ^M RIGHT$ PSET
         byte    $8D,$09,$8C,$15,$08,$C9 ;;RETURN ^I GOSUB ^U ^H MID$
@@ -5242,6 +5419,7 @@ CTLTAB: byte    $82,$1C,$C1,$0D,$94,$C4 ;;NEXT ^\ PEEK Return POKE VAL
         byte    $88,$84,$A5,$12,$86,$18 ;;GOTO INPUT THEN ^R READ ^X
         byte    $8A,$85,$13,$9A,$C6,$9B ;;IF DIM ^S CLOAD CHR$ CSAVE
         byte    $97,$8E,$89,$11         ;;LIST REM RUN ^Q
+endif
 ;;Check for Ctrl-C, called from NEWSTT
 INCNTC: push    hl                ;;Save text pointer
         ld      hl,4              ;
@@ -5272,10 +5450,11 @@ XBASIC: ld      a,$AA             ;;
 ;;Called from COLDST to print BASIC startup message
 PRNTIT: ld      hl,HEDING         ;;Print copyright message and return
         jp      STROUT            ;
-;;; Code Change: Patch to Get Comma Column Width from System Variable
-COMWID: ld      a,(CLMWID)        ;;Get Column Width
-        ld      c,a               ;;Put it in C for MORCOM
-        jp      COMPRT            ;;Do PRINT Comma Code
 ;;Pad rest of ROM space
-        byte    $F5               
-        end                       ;;End of Standard BASIC
+;;;Code Change: Patch to make room in RND routine - 6 + 2           Original Code
+RNDSTL: ld      b,0               ;;
+        ld      (hl),a            ;;Store it back in RNDCNT+1 
+        ld      hl,RNDTBL         ;;Now HL points to Table in ROM 
+        ret
+        byte    $F5
+end                       ;;End of Standard BASIC
