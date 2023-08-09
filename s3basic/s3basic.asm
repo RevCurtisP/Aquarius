@@ -5269,48 +5269,8 @@ ifndef noreskeys
         jp      p,KEYRET          ;;No, loop          
 else                                                                         ;Original Code
         jp      KEYRET            ;;                                          1F1F  jp      p,KEYRET
-endif
-ifdef addkeyrows                                                            
-;;;!!This won't work. The keys will be at the end of each key lookup matrix
-;;;!!and standard Scan Codes will shifted, so what is really needed is a
-;;;!!new set of 64 byte key lookup tables.
-;;; 
-;;;Code Change: Add 2 more Rows to the Keyboard Matrix 
-;;;Scan Codes are mapped directly to High ASCII characters
-;;;Add $10 (16) for Shifted Key $20 (32) for Shifted Key
-;;;
-;;;Column  1   2   3   4   5   6   7   8
-;;;Row 7  INS CUP CUL HOM PUP P/B MNU meta
-;;;Code    49  50  51  52  53  54  55  56
-;;;ASCII: $80 $81 $82 $83 $84 $85 $86 $87
-
-;;;Row 8  DEL CUR CUD END PUD P/S TAB alt
-;;;Code    57  58  59  60  61  62  63  64
-;;;ASCII: $88 $89 $8A $8B $8C $8D $8E $88
-
-KEYLUC: ld      a,e               ;;1  Scan Code into A                       1F22  ld      c,a 
-        cp      46                ;;2  If less than 46                        1F23  sub     $7F 
-                                  ;;                                          1F24  
-        jr      nc,KEYLUX         ;;2     Look It Up                          1F25  ld      hl,RESLST-1
-                                  ;;                                          1F26  
-KEYLUX: add     ix,de             ;;2 Get pointer into table                  1F27    
-                                  ;;                                          1F28  inc     hl          
-        jr      keylud            ;;2                                         1F29  ld      a,(hl)        
-        ;;Convert Table Address to Multiple of 16                             1F2A  or      a                 
-        ;;                                 KEYTAB    SHFTAB    CTLTAB                     
-        ld      a,ixl             ;;2  A= 00111000  01100101  10010100        1F2B  jp      p,KEYRES              
-                                  ;;                                          1F2C     
-        rra                       ;;1  A= 00011100  00110010  01001010        1F2D  
-        rra                       ;;1  A= 00001110  10011001  00100101        1F2E  dec     c           
-        and     $3F               ;;2  A= 00000000  00010000  00100000        1F2F  jr      nz,KEYRES                   
-                                  ;;                                          1F40  
-        add     a,e               ;;1  Add Shift/Control Offset to Scan Code  1F31  ld      (RESPTR),hl     
-        add     $80-48            ;;2  Convert Scan Code to High ASCII        1F32    
-                                  ;;                                          1F33  
-        jr      keylud            ;;2  Look it Up                             1F34  and     $7F  
-                                  ;;                                          1F35  
-else                            ;;20 Bytes                                   
 ;;;Deprecated Code: 20 bytes                                                  
+endif                                                                       
         ld      c,a               ;;and copy to C                             
         sub     $7F               ;;Convert to Reserved Word Count             
         ld      hl,RESLST-1       ;;Point to Reserved Word List               
@@ -5322,8 +5282,6 @@ KEYRES: inc     hl                ;;Bump pointer
         jr      nz,KEYRES         ;;Not 0? Find next word                     
         ld      (RESPTR),hl       ;;Save Keyword Address                      
         and     $7F               ;;Strip high bit from first character       
-endif                                                                       
-
 KEYRET: exx                       ;;Restore Registers
         ret
 ;;Key Lookup Tables - 46 bytes each
