@@ -146,8 +146,9 @@ CHRGET: inc     hl                ;[M65] INCREMENT THE TEXT PNTR
         ret     nc                ;[M65] IT IS .GE. ":"
         jp      CHRCON            ;;Continue in CHRGETR
 ;;RST 3 - Output Character
-OUTCHR: jp      OUTDO             ;;Execute print character routine           Original Code
+OUTCHR: jp      OUTDO             ;;Execute print character routine           
         byte    0,0,0,0,0         ;;Pad out the RST routine
+
 ;;RST 4 - Integer Compare
 COMPAR: ld      a,h               ;;Compare [DE] to [HL]
         sub     d                 ;;Sets Z flag if equal
@@ -2007,8 +2008,9 @@ POKE:   call    FRMNUM            ;[M80] READ A FORMULA
         ld      (de),a            ;[M80] STORE IT AWAY
         ret                       ;[M80] SCANNED EVERYTHING
 
+;; Orphan Code - GETINT does the same thing
 ;;; Code Change: New Default USR Routine - Execute Code at Argument Address
-;;; Replaces orphan routine FRMINT - 9 bytes                                  Original Code
+;;; Replaces orphan routine FRMINT  (use GETINT instead)- 9 bytes             Original Code
 USRDO:  call    FRCINT            ;;Convert Argument to Int in DE             0B7F  call    FRMEVL  
                                   ;;                                          0B80
                                   ;;                                          0B81
@@ -2018,9 +2020,9 @@ USRDO:  call    FRCINT            ;;Convert Argument to Int in DE             0B
                                   ;;                                          0B85
         jp      (IX)              ;;Jump to it                                0B86  pop     hl
                                   ;;                                          0B87  ret
+                                  
 ;;; Code Change: Do the Block Transfer and return same values as original BLTU routine
 ;;; Replaces Deprecated Routine: PROMEM - 10 Bytes
-                                  ;;Copy Loop: 21 cycles                      Original Code
 BLTUDO: inc     bc                ;;6    Byte Count                  PROMEM:  0B88 push    hl
         lddr                      ;;16+5 Do the Memory Move                   0B89 ld      hl,$2FFF       
                                   ;;4	  BC = End Destination                  0B8A
@@ -2046,8 +2048,8 @@ BLTUDO: inc     bc                ;;6    Byte Count                  PROMEM:  0B
 ;[M80]
 ;[M80] ON EXIT [H,L]=[D,E]=LOW [B,C]=LOCATION LOW WAS MOVED INTO
 ;;; Code Change: Replace Loop with LDDR
-;;; Original Code: 46 + byte count * 54 cycles
-;;; Updated Code: 113 + byte count * 21 cycles
+;;; Original Code: 46 + byte count * 54 cycles - 207 millseconds per kilobyte (57780 * 3.579545 / 1000) 
+;;; Updated Code: 113 + byte count * 21 cycles - 85 millseconds per kilobyte (23877 * 3.579545 / 1000) 
 BLTU:   call    REASON            ;[M80] CHECK DESTINATION TO MAKE SURE STACK WON'T BE OVERRUN
 ;;Execute Block Transfer
 ;;REASON returned with Carry Set which will be used in the cause sbc hl,de to 
@@ -2289,14 +2291,14 @@ CLEARS: ld      a,l               ;[M80] SUBTRACT [H,L]-[D,E] INTO [D,E]
         ld      (MEMSIZ),hl       ;[M80] SET IT UP, MUST BE OK
         pop     hl                ;[M80] REGAIN THE TEXT POINTER
         jp      CLEARC            ;[M80] GO CLEAR
-;;DE = HL - DE  *** Orphan Code - 7 bytes 
-        ld      a,l 
-        sub     e
-        ld      e,a
-        ld      a,h
-        sbc     a,d
-        ld      d,a
-        ret
+;;;Code Change: Patch to make room in RND routine - 7 bytes                   Original Code
+RNDSTL: ld      b,0               ;;                                          0D0C  ld      a,l 
+                                  ;;                                          0D0D  sub     e
+        ld      (hl),a            ;;Store it back in RNDCNT+1                 0D0E  ld      e,a
+        ld      hl,RNDTBL         ;;Now HL points to Table in ROM             0D0F  ld      a,h
+                                  ;;                                          0D10  sbc     a,d
+                                  ;;                                          0D11  ld      d,a
+        ret                                                               
 ;;The NEXT STATEMENT
 ;;See FOR for description of the stack entry
 NEXT:   ld      de,0              ;{M80} FOR "NEXT" WITHOUT ARGS CALL FNDFOR WITH [D,E]=0
@@ -5077,16 +5079,13 @@ TTYFIN: ld      hl,(CURRAM)       ;
 TTYXPR: exx                       ;Restore [BC], [DE] and [HL]
         pop     af                ;Restore [AF]
         ret
-;;; Code Change: Code to check for Operator moved to make room for new UDF Hook
-;;; Replaces Orphan TTYRES - Restore Character Under Cursor - 7 bytes     Original Code
-CHKOP:  cp      PLUSTK            ;;If < Plus Token                           1FF6 ld      hl,(CURRAM) 
-                                  ;;                                          1FF7                       
-        ret     c                 ;;  Return with Carry Set                   1FF8                     
-        cp      LESSTK+1          ;;If > Less Than Token                      1FF9 ld      a,(CURCHR)  
-                                  ;;                                          1FFA                       
-        ccf                       ;;  Return with Carry Set                   1FFB                     
-        nop                       ;;Filler                                    1FFC ld      (hl),a     
-        ret
+
+;;Restore Character Under Cursor
+;;*** Orphan Code that's still useful
+TTYRES: ld      hl,(CURRAM)       ;;Get position
+        ld      a,(CURCHR)        ;;Get character
+        ld      (hl),a            ;;Put character at position
+        ret                       ;
 
 ;;Scroll Screen Up one Line
 SCROLL: ld      bc,920            ;;Move 23 * 40 bytes
@@ -5258,30 +5257,73 @@ KEYASC: inc     (hl)              ;;Increment KCOUNT
         bit     5,a               ;;Check Control key
         ld      ix,CTLTAB-1       ;;Point to control table
         jr      z,KEYLUP          ;;Control? Do lookup
-        bit      4,a               ;;Check Shift key
+        bit     4,a               ;;Check Shift key
         ld      ix,SHFTAB-1       ;;Point to shift table
         jr      z,KEYLUP          ;;Shift? Do lookup
         ld      ix,KEYTAB-1       ;;Point to control table
 KEYLUP: add     ix,de             ;;Get pointer into table
-        ld      a,(ix+0)          ;;Load ASCII value
+keylud: ld      a,(ix+0)          ;;Load ASCII value
         or      a                 ;;Reserved Word?
-ifdef noreskeys
+ifndef noreskeys
 ;;;Code Change: Do not expand CTRL-KEYS into Reserved Words
-        jp      KEYRET
-else
         jp      p,KEYRET          ;;No, loop          
+else                                                                         ;Original Code
+        jp      KEYRET            ;;                                          1F1F  jp      p,KEYRET
 endif
-        sub     $7F               ;;Convert to Reserved Word Count            
-        ld      c,a               ;;and copy to C
-        ld      hl,RESLST-1       ;;Point to Reserved Word List
-KEYRES: inc     hl                ;;Bump pointer
-        ld      a,(hl)            ;;Get next character
-        or      a                 ;;First letter of reserved word?
-        jp      p,KEYRES          ;;No, loop
-        dec     c                 ;;Decrement Count
-        jr      nz,KEYRES         ;;Not 0? Find next word
-        ld      (RESPTR),hl       ;;Save Keyword Address
-        and     $7F               ;;Strip high bit from first character
+ifdef addkeyrows                                                            
+;;;!!This won't work. The keys will be at the end of each key lookup matrix
+;;;!!and standard Scan Codes will shifted, so what is really needed is a
+;;;!!new set of 64 byte key lookup tables.
+;;; 
+;;;Code Change: Add 2 more Rows to the Keyboard Matrix 
+;;;Scan Codes are mapped directly to High ASCII characters
+;;;Add $10 (16) for Shifted Key $20 (32) for Shifted Key
+;;;
+;;;Column  1   2   3   4   5   6   7   8
+;;;Row 7  INS CUP CUL HOM PUP P/B MNU meta
+;;;Code    49  50  51  52  53  54  55  56
+;;;ASCII: $80 $81 $82 $83 $84 $85 $86 $87
+
+;;;Row 8  DEL CUR CUD END PUD P/S TAB alt
+;;;Code    57  58  59  60  61  62  63  64
+;;;ASCII: $88 $89 $8A $8B $8C $8D $8E $88
+
+KEYLUC: ld      a,e               ;;1  Scan Code into A                       1F22  ld      c,a 
+        cp      46                ;;2  If less than 46                        1F23  sub     $7F 
+                                  ;;                                          1F24  
+        jr      nc,KEYLUX         ;;2     Look It Up                          1F25  ld      hl,RESLST-1
+                                  ;;                                          1F26  
+KEYLUX: add     ix,de             ;;2 Get pointer into table                  1F27    
+                                  ;;                                          1F28  inc     hl          
+        jr      keylud            ;;2                                         1F29  ld      a,(hl)        
+        ;;Convert Table Address to Multiple of 16                             1F2A  or      a                 
+        ;;                                 KEYTAB    SHFTAB    CTLTAB                     
+        ld      a,ixl             ;;2  A= 00111000  01100101  10010100        1F2B  jp      p,KEYRES              
+                                  ;;                                          1F2C     
+        rra                       ;;1  A= 00011100  00110010  01001010        1F2D  
+        rra                       ;;1  A= 00001110  10011001  00100101        1F2E  dec     c           
+        and     $3F               ;;2  A= 00000000  00010000  00100000        1F2F  jr      nz,KEYRES                   
+                                  ;;                                          1F40  
+        add     a,e               ;;1  Add Shift/Control Offset to Scan Code  1F31  ld      (RESPTR),hl     
+        add     $80-48            ;;2  Convert Scan Code to High ASCII        1F32    
+                                  ;;                                          1F33  
+        jr      keylud            ;;2  Look it Up                             1F34  and     $7F  
+                                  ;;                                          1F35  
+else                            ;;20 Bytes                                   
+;;;Deprecated Code: 20 bytes                                                  
+        ld      c,a               ;;and copy to C                             
+        sub     $7F               ;;Convert to Reserved Word Count             
+        ld      hl,RESLST-1       ;;Point to Reserved Word List               
+KEYRES: inc     hl                ;;Bump pointer                              
+        ld      a,(hl)            ;;Get next character                        
+        or      a                 ;;First letter of reserved word?            
+        jp      p,KEYRES          ;;No, loop                                  
+        dec     c                 ;;Decrement Count                           
+        jr      nz,KEYRES         ;;Not 0? Find next word                     
+        ld      (RESPTR),hl       ;;Save Keyword Address                      
+        and     $7F               ;;Strip high bit from first character       
+endif                                                                       
+
 KEYRET: exx                       ;;Restore Registers
         ret
 ;;Key Lookup Tables - 46 bytes each
@@ -5354,14 +5396,14 @@ XBASIC: ld      a,$AA             ;;
 ;;Called from COLDST to print BASIC startup message
 PRNTIT: ld      hl,HEDING         ;;Print copyright message and return
         jp      STROUT            ;
-;;Pad rest of ROM space
-;;;Code Change: Patch to make room in RND routine - 7 bytes                   Original Code
-RNDSTL: ld      b,0               ;;                                          1FF8  byte    $F5
-                                  ;;                                          1FF9  byte    $FF
-        ld      (hl),a            ;;Store it back in RNDCNT+1                 1FFA  byte    $FF
-        ld      hl,RNDTBL         ;;Now HL points to Table in ROM             1FFB  byte    $FF
-                                  ;;                                          1FFC  byte    $FF
-                                  ;;                                          1FFD  byte    $FF
-        ret                       ;;`                                         1FFE  byte    $FF
-        byte    $F5                                                           
-end                       ;;End of Standard BASIC                             
+;;; Code Change: Code to check for Operator moved to make room for new UDF Hook
+;;; Replaces Filler Bytes - 7/8 bytes                                         Original Code
+CHKOP:  cp      PLUSTK            ;;If < Plus Token                           1FF8 ld      hl,(CURRAM) 
+                                  ;;                                          1FF9                       
+        ret     c                 ;;  Return with Carry Set                   1FFA                     
+        cp      LESSTK+1          ;;If > Less Than Token                      1FFB ld      a,(CURCHR)  
+                                  ;;                                          1FFC                       
+        ccf                       ;;  Return with Carry Set                   1FFD                    
+        ret                       ;;                                          1FFE
+        byte    $F5
+end                               ;;End of S3 BASIC                             
