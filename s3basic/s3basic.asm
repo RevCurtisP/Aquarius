@@ -111,13 +111,18 @@ ifdef aqplus
 XPLUS   equ     $2000   ;;Extended BASIC Reset
 XCOLD   equ     $2003   ;;Extended BASIC Cold Start`
 XCART   equ     $2006   ;;Extended BASIC Start Cartridge
+SCART   equ     $2009   ;;Show Cart Bypass Screen
 endif
 EXTBAS  equ     $2000   ;;Start of Extended Basic
 XSTART  equ     $2010   ;;Extended BASIC Startup Routine
 XINIT   equ     $E010   ;;ROM Cartridge Initialization Entry Point
+ifdef addkeyrows
+;;;Code Change: Address of Expanded Key Tables, stored in the last 256 bytes of Extended BASIC.
+KEYADR  equ     $2F00   ;;Key Tables for 64 key matrix
+endif
         org     $0000   ;;Starting Address of Standard BASIC
 ;;RST 0 - Startup
-START:  
+START:
 ifdef aqplus
   ;;; Code Change: Aquarius+ only
   ;;; Instead of checking for the Extended BASIC signature
@@ -277,7 +282,7 @@ ifdef aqplus
 ;;; On the Aquarius+ From MEMTST to before INITFF is deprecated: 68 bytes     Original Code
         jp      XCOLD             ;;Do Extended BASIC Cold Start              010F  ld      hl,BASTXT+99
                                   ;;                                          0110  
-                                  ;;                                          0111 
+                                  ;;                                          0111
 else                              ;;
 ;;Test Memory to Find Top of RAM  ;;
         ld      hl,BASTXT+99      ;;Set RAM Test starting address
@@ -4513,6 +4518,7 @@ WRMCON: ld      a,(CLFLAG)        ;;Get CLOAD Status
         jp      WRMFIN            ;;Finish Warm Start
 CNTCCR: or      a                 ;;Set flags
         ret                       ;
+
 ;;Pixel Graphics Routines - PSET, PRESET, and POINT
 PRESET: xor     a                 ;[EBU] PRESET FLAG
         jr      PPRSET            ;
@@ -5190,23 +5196,73 @@ endif
         xor     a                                                             
         ld      (RESPTR+1),a                                                  
 ;;Scan Keyboard
+ifdef addkeyrows
+;;;Code Change: Read extended 64 key Keyboard by also checking Rows 6 and 7
+;;;Must be combined with "noreskeys" and requires a compatible Extended BASIC
+;;;Extended BASIC must contain replacement key tables and put the address in KEYVCT
+;;;
+;;;Extended BASIC Key Matrix
+;;; Column  1   2   3   4   5   6   7   8
+;;; Row 1   =   -   9   8   6   5   3   2
+;;; Row 2  <--  /   O   I   Y   T   E   W
+;;; Row 3   :   0   K   7   G   4   S   1
+;;; Row 4  RTN  P   M   U   V   R   Z   Q
+;;; Row 5   ;   L   N   H   C   D  SPC SHF
+;;; Row 6   .   ,   J   B   F   X   A  CTL
+;;; Row 7  INS CUP CUL HOM PUP P/B MNU meta
+;;; Row 8  DEL CUR CUD END PUD P/S TAB alt
+;;;
+;;;Each Key Table is 64 bytes long and they must be consecutive
+;;;Each line of a Key Table is 8 bytes long instead of 6 bytes.
+;;;
+;;;Sample Key Table
+;;; Column   1    2     3    4     5     6    7     8
+;;; Row 1    =    -     9    8     6     5    3     2
+;;; Row 2   <--   /     O    I     Y     T    E     W
+;;; Row 3    :    0     K    7     G     4    S     1
+;;; Row 4   RTN   P     M    U     V     R    Z     Q
+;;; Row 5    ;    L     N    H     C     D  SPACE SHIFT
+;;; Row 6    .    ,     J    B     F     X    A    CTL
+;;; Row 7   INS CsrUp CsrLf HOME  PgUp Break Menu  META
+;;; Row 8   DEL CrsRt CsrDn END   PgDn SysRq TAB   ALT
+;;;
+;;;Recommended Key Layout for Above Table. Keys in a Column Grouped Together
+;;;
+;;; META 1   2   3   4   5   6   7   8   9  0   -   =  <---    
+;;; TAB    Q   W   E   R   T   Y   U   I   O   P   :             
+;;; ALT MNU  A   S   D   F   G   H   J   K   L   ;   RETURN   
+;;; SHIFT      Z   X   C   V   B   N   M   ,   .   /    INS           
+;;; CTL  SPACE  P/S P/B PUP PUD HOM END CUL CUD CUP CUR DEL 
+;;;
+;;;ALT and META currently generate ASCII characters
+;;;To change them to modifier keys, revert CSHSK to $0F,
+;;;patch KEYASC to check bits 6 and 7, and add two more keytables.
+;;;
+ROWMSK  equ     $FF               ;;Checking All 8 Rows`
+ROWCNT  equ     8                 
+CSHMSK  equ     $FC               ;;Check Rows 0 through 3 plus 6 and 7
+else
+ROWMSK  equ     $3F               ;;Check Rows 0 through 5
+ROWCNT  equ     6                 
+CSHMSK  equ     $0F               ;;Check rows 0 through 3 - %00001111
+endif
 KEYSCN: ld      bc,$00FF          ;;B=0 to scan all columns
         in      a,(c)             ;;Read rows from I/O Port 255
         cpl                       ;
-        and     $3F               ;;Check rows 0 through 5 - %00111111
+        and     ROWMSK            ;;Mask Rows to Check
         ld      hl,LSTX           ;;Pointer to last scan code
         jr      z,NOKEYS          ;;No key pressed? ???do a thing
-        ;;Check for Shift and Control Keys
+        ;;Scsn Column 7
         ld      b,$7F             ;;Scanning column 7 - %01111111
         in      a,(c)             ;;Read rows and invert
         cpl                       
-        and     $0F               ;;Check rows 0 through 3 - %00001111
+        and     CSHMSK            ;;Mask Off Control and Shift Keys
         jr      nz,KEYDN          ;;Key down? Process it
         ;;Scan the Rest of the Columns
         ld      b,$BF             ;;Start with column 6 - %10111111 
 KEYSCL: in      a,(c)             ;;Read rows and invert
         cpl                       ;
-        and     $3F               ;;Check rows 0 through 5 - %00111111
+        and     ROWMSK            ;;Mask Rows to Check
         jr      nz,KEYDN          ;;Key down? Process it
         rrc     b                 ;;Next column
         jr      c,KEYSCL          ;;Loop if not out of columns
@@ -5229,9 +5285,9 @@ KEYROW: inc     e                 ;;Get row number (1-5)
         rra                       ;
         jr      nc,KEYROW         ;
         ld      a,e               ;
-KEYCOL: rr      b                 ;;Add column number times 6
+KEYCOL: rr      b                 ;;Add column number number of ROWS
         jr      nc,KEYCHK         ;
-        add     a,6               ;
+        add     a,ROWCNT          ;
         jr      KEYCOL            ;
 KEYCHK: ld      e,a               ;
         cp      (hl)              ;;Compare scan code to LSTX
@@ -5251,6 +5307,35 @@ KEYFN2: xor     a                 ;;Clear A
 KEYCLR: ld      (hl),0            ;;Clear KCOUNT
         jr      KEYFN2            ;;Clean up and return
 ;;Convert Keyboard Scan Code to ASCII Character
+ifdef addkeyrows
+;;; KEYASC replacement 25/25 bytes
+;;; Meta, Alt, Control, and Shift are bits 7, 6, 5, and 4 of Column 7.        Original Code
+KEYASC: inc     (hl)              ;;Increment KCOUNT                          1F00 inc     (hl)        
+        ld      bc,$7F            ;;Read column 7                             1F01 ld      b,$7F       
+                                  ;;                                          1F02 
+                                  ;;                                          1F03 in      a,(c)        
+        in      b,(c)             ;;Get row                                   1F04  
+                                  ;;                                          1F05 bit     5,a         
+        ld      a,192             ;;Meta Table Offset                         1F06 
+                                  ;;                                          1F07 ld      ix,CTLTAB-1 
+KEYALP: rl      b                 ;;Rotate Bits Left                          1F08  
+                                  ;;                                          1F09  
+        jp      nc,KEYLUX         ;;If key pressed, go do lookup              1F0A  
+                                  ;;                                          1F0B jr      z,KEYLUP   
+                                  ;;                                          1F0C            
+        sub     a,64              ;;Offset to Previous TABLE                  1F0D bit     4,a
+                                  ;;                                          1F0E ld      ix,SHFTAB-1
+        jp      nz,KEYALP         ;;Loopif not first table                    1F1F                     
+                                  ;;                                          1F10                                                                         ;;                                          1F0E         
+                                  ;;                                          1F11                                                    ;;                                          1F0E         
+KEYLUX: ld      ix,KEYADR-1       ;;Point to Start of Lookup Tables           1F12 jr      z,KEYLUP   
+                                  ;;                                          1F13
+                                  ;;                                          1F14 ld      ix,KEYTAB-1
+                                  ;;                                          1F15 
+        add     ix,de             ;;Add Scan Code (Key Offset)                1F16 
+                                  ;;                                          1F17 
+        ld      e,a               ;;DE = Table Offet                          1F18
+else                                                                          
 KEYASC: inc     (hl)              ;;Increment KCOUNT
         ld      b,$7F             ;;Read column 7
         in      a,(c)             ;;Get row
@@ -5260,19 +5345,20 @@ KEYASC: inc     (hl)              ;;Increment KCOUNT
         bit     4,a               ;;Check Shift key
         ld      ix,SHFTAB-1       ;;Point to shift table
         jr      z,KEYLUP          ;;Shift? Do lookup
-        ld      ix,KEYTAB-1       ;;Point to control table
+        ld      ix,KEYTAB-1         
+endif
 KEYLUP: add     ix,de             ;;Get pointer into table
-keylud: ld      a,(ix+0)          ;;Load ASCII value
-        or      a                 ;;Reserved Word?
+        ld      a,(ix+0)          ;;Load ASCII value
+        or      a                 ;;Reserved Word? 
 ifndef noreskeys
 ;;;Code Change: Do not expand CTRL-KEYS into Reserved Words
         jp      p,KEYRET          ;;No, loop          
 else                                                                         ;Original Code
         jp      KEYRET            ;;                                          1F1F  jp      p,KEYRET
+endif
 ;;;Deprecated Code: 20 bytes                                                  
-endif                                                                       
-        ld      c,a               ;;and copy to C                             
         sub     $7F               ;;Convert to Reserved Word Count             
+        ld      c,a               ;;and copy to C                             
         ld      hl,RESLST-1       ;;Point to Reserved Word List               
 KEYRES: inc     hl                ;;Bump pointer                              
         ld      a,(hl)            ;;Get next character                        
