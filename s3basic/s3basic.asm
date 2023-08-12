@@ -112,9 +112,6 @@ XPLUS   equ     $2000   ;;Extended BASIC Reset
 XCOLD   equ     $2003   ;;Extended BASIC Cold Start`
 XCART   equ     $2006   ;;Extended BASIC Start Cartridge
 endif
-ifdef bypass
-SCART   equ     $2009   ;;Show Cart Bypass Screen
-endif
 EXTBAS  equ     $2000   ;;Start of Extended Basic
 XSTART  equ     $2010   ;;Extended BASIC Startup Routine
 XINIT   equ     $E010   ;;ROM Cartridge Initialization Entry Point
@@ -207,12 +204,8 @@ CRTCH1: dec     de                ;
         cp      (hl)              ;
         jr      z,CRTCH1          ;
         ld      a,(hl)            ;
-ifdef bypass
-        jp      SCART             ;;Show Cart Bypass Screen
-else
         or      a                 ;
         jr      nz,RESET          ;;ROM not found, start Basic
-endif
 CRTCHC: ex      de,hl             ;
         ld      b,$0C             ;
 CRTCH2: add     a,(hl)            ;
