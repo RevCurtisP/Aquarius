@@ -155,11 +155,7 @@ _coldboot:
     call    CRDO
     call    CRDO
 
-ifdef nocart
-    jp      READY
-else
     jp      INITFF              ; Continue in ROM
-endif
 
 .str_basic:
     db $0D, $0A
@@ -169,9 +165,15 @@ endif
 ; Cartridge start entry point - A hold scramble value
 ;-----------------------------------------------------------------------------
 _start_cart:
+    ex      af,af'
+    ld      bc,$7FFF              ;See if CTL is pressed
+    in      a,(c)             
+    and     $10               
+    jp      z,RESET               ;If it is, Start BASIC
+    ex      af,af'
     cp      $00
     jp      nz, .descramble
-    jp      XINIT
+    jp      start_rom
 
 .descramble:
     ; Map destination RAM in bank2
@@ -188,12 +190,8 @@ _start_cart:
     ld      a, 35
     out     (IO_BANK3), a
 
-ifdef nocart
-    jp      RESET
-else
     ; Descramble and start ROM
     jp      descramble_rom
-endif
 
 ;-----------------------------------------------------------------------------
 ; Hook handler
