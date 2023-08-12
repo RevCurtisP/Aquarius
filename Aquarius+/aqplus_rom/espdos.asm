@@ -1277,12 +1277,4 @@ descramble_rom:
     ld      sp, $38A0
 
     ; Start ROM
-start_rom:
-    ld      bc,$7FFF              ;See if CTL is pressed
-    in      a,(c)             
-    and     $20               
-    jp      z,RESET               ;If it is, Start BASIC
-    jp      $E010                 ;Else Start Cartridge
-
-
-
+    jp      $E010

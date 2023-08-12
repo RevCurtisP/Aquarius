@@ -165,15 +165,9 @@ _coldboot:
 ; Cartridge start entry point - A hold scramble value
 ;-----------------------------------------------------------------------------
 _start_cart:
-    ex      af,af'
-    ld      bc,$7FFF              ;See if CTL is pressed
-    in      a,(c)             
-    and     $10               
-    jp      z,RESET               ;If it is, Start BASIC
-    ex      af,af'
     cp      $00
     jp      nz, .descramble
-    jp      start_rom
+    jp      XINIT
 
 .descramble:
     ; Map destination RAM in bank2
