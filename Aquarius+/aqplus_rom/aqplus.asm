@@ -126,7 +126,7 @@ _coldboot:
     ; Set memory size
     ld      hl, BASIC_RAM_END   ; Top of public RAM
     ld      (MEMSIZ), hl        ; MEMSIZ, Contains the highest RAM location
-    ld      de, -50             ; Subtract 50 for strings space
+    ld      de, -1024           ; Subtract 1k for strings space
     add     hl, de
     ld      (TOPMEM), hl        ; TOPMEM, Top location to be used for stack
     ld      hl, BASTXT-1
