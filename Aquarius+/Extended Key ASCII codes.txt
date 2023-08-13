@@ -1,0 +1,50 @@
+ PC: PrtSc Pause PgUp PgDn Tab Right Up  SysRq Break End Home Menu Ins Left Down 
+Hex:  $88   $89  $8A  $8B  $8C $8E   $8F  $98   $99  $9A $9B  $9C  $9D $9E  $9F
+Dec:  136   137  138  139  140 142   143  152   153  154 155  156  157 158  159
+KWd:              IF  RSTR GSB REM  STOP             CLD CSAV      PRST SND NEW
+
+Alt:  1   2   3   4   5   6   7   8   9   0   -   =   E   R   T   Y
+ PC: F1  F2  F3  F4  F5  F6  F7  F8  F9  F10 F11 F12 F13 F14 F15 F16 
+Hex: $80 $81 $82 $83 $84 $85 $86 $87 $90 $91 $92 $93 $94 $95 $96 $97
+Dec: 128 129 130 131 132 133 134 135 144 145 146 147 149 149 150 151
+Kwd: END FOR NXT DTA INP DIM RD  LET ON LPRT CPY DEF
+
+Alt:  U   I   O   J   K   L   M   ,   .   P   ;   /   \   X 
+Hex: $DE $DC $CE $CD $C8 $DD $CF $CC $DF $AC $D6 $CA $DA $D8
+Dec: 222 220 206 205 200 221 207 204 223 172 214     
+Dsc: xtl xtp xtr xlf xct xrt xbl xbt xbr xhz xvt gr/ gr\ grX 
+
+Alt:  D   F   G   H   C   V   B   N   Q   W   A   S   Z
+Hex: $CB $D2 $D7 $C9 $DB $C2 $C7 $D9 $C0 $C1 $C4 $C5 $C6
+Dec:                      
+Dsc: blf btp bul bur brt bbt bll blr tr/ tr\ sqr dmd dot
+
+Shift: RTN
+  Hex: $8D
+  Dec:
+KeyWd: RTN
+  
+Keyboard Layout
+
+Key:     1   2   3   4   5   6   7   8   9   0   -   =   \ 
+Alt:    F1  F2  F3  F4  F5  F6  F7  F8  F9  F10 F11 F12 gr\
+
+Key: Tab   Q   W   E   R   T   Y   U   I   O   P   : 
+Alt:      tr/ tr\ F13 F14 F15 F16 btl btp btr bhz     
+                          bal
+
+Key:         A   S   D   F   G   H   J   K   L   ; 
+Alt:        sqr dmd blf btp bul bur xlf xct xrt xvt
+
+Key:           Z   X   C   V   B   N   M   ,   .   /  
+Alt:          dot grX brt bbt bll blr xbl xbt xbr gr/
+
+   0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+8 F1  F2  F3  F4  F5  F6  F7  F8  PrS Pse PUp PDn Tab SRt CRt CUp
+9 F9  F10 F11 F12 F13 F14 F15 F16 SyR Brk End Hom Mnu Ins CLf CDn
+A ^@                                              ~P~
+B                                         
+C ~Q~ ~W~ ~V~     ~A~ ~S~ ~Z~ ~B~ ~K~ ~H~ ~/~ ~D~ ~,~ ~J~ ~O~ ~M~      
+D         ~F~             ~;~ ~G~ ~X~ ~N~ ~\~ ~C~ ~I~ ~L~ ~U~ ~.~
+E                 
+F 
