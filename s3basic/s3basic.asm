@@ -114,13 +114,15 @@ FBUFFR  equ     $38E8   ;[M80] BUFFER FOR FOUT
 RESHO   equ     $38F6   ;[M65] RESULT OF MULTIPLIER AND DIVIDER
 RESMO   equ     $38F7   ;;RESMO and RESLO are loaded into and stored from HL
 SAVSTK  equ     $38F9   ;[M80] NEWSTT SAVES STACK HERE BEFORE SO THAT ERROR REVERY CAN
-;;        $38FB-$38FF   ;;??Unused
+INTJMP  equ     $38FB   ;;RST 7 Interrupt JMP
+;;        $38FE-$38FF   ;;??Unused
 ;;              $3900   ;;This is always 0
 BASTXT  equ     $3901   ;;Start of Basic Program
 ifdef aqplus
 XPLUS   equ     $2000   ;;Extended BASIC Reset
 XCOLD   equ     $2003   ;;Extended BASIC Cold Start`
 XCART   equ     $2006   ;;Extended BASIC Start Cartridge
+XINTR   equ     $2009   ;;Interrupt Handler Routine
 endif
 EXTBAS  equ     $2000   ;;Start of Extended Basic
 XSTART  equ     $2010   ;;Extended BASIC Startup Routine
@@ -130,6 +132,14 @@ ifdef addkeyrows
 KEYADR  equ     $2F00   ;;Key Tables for 64 key matrix
 endif
         org     $0000   ;;Starting Address of Standard BASIC
+ifdef aqplus
+;;;Aquarius+ I/O Port Assignments
+XBANK0  equ     $F0     ;;Bank 0 ($0000-$3FFF) Page (0-63)
+XBANK1  equ     $F1     ;;Bank 1 ($4000-$7FFF) Page (0-63)
+XBANK2  equ     $F2     ;;Bank 1 ($8000-$BFFF) Page (0-63)
+XBANK3  equ     $F3     ;;Bank 1 ($C000-$FFFF) Page (0-63)
+endif
+
 ;;RST 0 - Startup
 START:
 ifdef aqplus
@@ -179,10 +189,10 @@ FSIGN:  ld      a,(FAC)           ;
 ;;RST 6 - Extended BASIC Hook Dispatch
 ;;
 HOOKDO: ld      ix,(HOOK)         ;;Get hook routine address
-        jp      (ix)              ;;and jump to it
+JUMPIX: jp      (ix)              ;;and jump to it
         byte    0,0               ;;Pad out RST routine
 ;;RST 7 - Execute USR Routine
-USRFN:  jp      USRPOK            ;;Execute USR() routine
+USRFN:  jp      INTJMP            ;;Execute Interrupt routine
 ;;Default Extended BASIC Hook Routine
 NOHOOK: exx                       ;;Save BC, DE, and HL
         pop     hl                ;;Get return address off stack
@@ -5372,11 +5382,13 @@ endif
 KEYLUP: add     ix,de             ;;Get pointer into table
         ld      a,(ix+0)          ;;Load ASCII value
         or      a                 ;;Reserved Word? 
-ifndef noreskeys
-;;;Code Change: Do not expand CTRL-KEYS into Reserved Words
-        jp      p,KEYRET          ;;No, loop          
-else                                                                         ;Original Code
+ifdef noreskeys
+;;;Code Change: Do not expand CTRL-KEYS into Reserved Words                   Original Code
         jp      KEYRET            ;;                                          1F1F  jp      p,KEYRET
+;;;Code Change: Put Useful Routines from Extended BASIC into Deprecated Area  1F20
+                                  ;;                                          1F21
+else
+        jp      p,KEYRET          ;;No, loop
 endif
 ;;;Deprecated Code: 20 bytes                                                  
         sub     $7F               ;;Convert to Reserved Word Count             
