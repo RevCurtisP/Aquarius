@@ -22,10 +22,6 @@ noreskeys   equ   1
 addkeyrows  equ   1
 endif
 
-ifdef fastbltu
-    assert !(1) ;Fast BLTU code is broken. Do not use this switch.
-endif
-
 ;BASIC Constants
 LPTSIZ  equ     132     ;{M80} WIDTH OF PRINTER
 SCREEN  equ     $3000   ;;Screen Character Matrix
@@ -225,9 +221,14 @@ CRTCH1: dec     de                ;
         jr      z,CRTCH1          ;
         ld      a,(hl)            ;
         or      a                 ;
-        jr      nz,RESET          ;;ROM not found, start Basic
-CRTCHC: ex      de,hl             ;
+        jr      nz,RESET          ;;ROM not found, start Basic    
+ifdef cartkeys                    ;;                                          Original Code
+        call    CRTCTL            ;;Check for Control Key                     0070 ex      de,hl
+                                  ;;                                          0071 ld      b,$0C
+else                              ;;                                          0072                                            
+        ex      de,hl             ;
         ld      b,$0C             ;
+endif
 CRTCH2: add     a,(hl)            ;
         inc     hl                ;
         add     a,b               ;
@@ -239,7 +240,11 @@ CRTCH2: add     a,(hl)            ;
 ifdef aqplus
         jp      XCART             ;;Run Extended Cart Initialization Routine
 else        
+  ifdef xcartkeys
+        jp      CRTSHF            ;;Check For Shift Key
+  else
         jp      XINIT             ;;Execute Cartridge Code
+  endif
 endif
 CRTSIG: byte    "+7$$3,",0        ;;$A000 Cartridge Signature
 ;;Display Startup Screen
@@ -302,10 +307,21 @@ ifdef aqplus
         jp      XCOLD             ;;Do Extended BASIC Cold Start              010F  ld      hl,BASTXT+99
                                   ;;                                          0110  
                                   ;;                                          0111
+;; Utility Routines from Aquarius Extended BASIC                              
+;; Convert A to Upper Case                                                    
+MAKUPR: cp      'a'               ;;                                          0112  inc     hl      
+                                  ;;                                          0113  ld      c,(hl)  
+        ret     c                 ;;If >= 'a'                                 0114  ld      a,h     
+        cp      '{'               ;;                                          0115  or      l       
+                                  ;;                                          0116  jr      z,MEMCHK
+        ret     nc                ;;and less than <'{'                        0117  xor     c       
+        and     $5F               ;;Clear Bit 5                               0118  ld      (hl),a  
+                                  ;;                                          0119  ld      b,(hl)  
+        ret                       ;;                                          011A  cpl             
+MEMTST  equ     MAKUPR
 else                              ;;
 ;;Test Memory to Find Top of RAM  ;;
         ld      hl,BASTXT+99      ;;Set RAM Test starting address
-endif
 MEMTST: inc     hl                ;;Bump pointer
         ld      c,(hl)            ;;Save contents of location
         ld      a,h               ;
@@ -315,6 +331,7 @@ MEMTST: inc     hl                ;;Bump pointer
         ld      (hl),a            ;;and write to location
         ld      b,(hl)            ;;Read back into B
         cpl                       ;;Invert scrambled bits
+endif
         ld      (hl),a            ;;Write to location
         ld      a,(hl)            ;;read it back
         cpl                       ;;and revert back
@@ -2043,39 +2060,17 @@ USRDO:  call    FRCINT            ;;Convert Argument to Int in DE             0B
         ld      ixl,e             ;;                                          0B84
                                   ;;                                          0B85
         jp      (IX)              ;;Jump to it                                0B86  pop     hl
-                                  ;;                                          0B87  ret
-                                  
-ifdef fastbltu
-;; Code Change: Do the Block Transfer and return same values as original BLTU routine
-;;; Replaces Deprecated Routine: PROMEM - 10 Bytes
-BLTUDO: inc     bc                ;;6    Byte Count                  PROMEM:  0B88 push    hl
-        lddr                      ;;16+5 Do the Memory Move                   0B89 ld      hl,$2FFF       
-                                  ;;4	  BC = End Destination                  0B8A
-        ld      b,d               ;;                                          0B8B
-        ld      c,e               ;;4	                                        0B8C
-        inc     bc                ;;6	  Bump it up                            0B8D rst     COMPAR  
-        inc     hl                ;;6	  Bump up End Source                    0B8E pop     hl      
-        ld      d,h               ;;4	  Copy into DE                          0B8F jp      nc,FCERR
-        ld      e,l               ;;4	                                        0B90 
-        ret                       ;;10	                                      0B91
-                           
-;;; Code Change: Replace Loop with LDDR
-;;; Original Code: 46 + byte count * 54 cycles - 207 millseconds per kilobyte (57780 * 3.579545 / 1000) 
-;;; Updated Code: 113 + byte count * 21 cycles - 85 millseconds per kilobyte (23877 * 3.579545 / 1000) 
-BLTU:   call    REASON            ;[M80] CHECK DESTINATION TO MAKE SURE STACK WON'T BE OVERRUN
-;;Execute Block Transfer
-;;REASON returned with Carry Set which will be used in the cause sbc hl,de to 
-BLTUC:  push    bc                ; +11 [M80] EXCHANGE [B,C] AND [H,L]        Original Code      +11      Setup: 40 cycles
-        ex      (sp),hl           ;;+19 HL = Source, Stack = Destination                         +19  
-        ld      a,l               ;;+4  Stack = Source, Destination           pop     bc         +10              
-        sub     a,e               ;;+4  BC = HL - DE (Byte Delta)     BLTLOP: rst     COMPAR     +11      Copy Loop: 54 cycles
-        ld      c,a               ;;+4                                        ld      a,(hl)     +7  
-        ld      a,h               ;;+4  BC = Number of Bytes                  ld      (bc),a     +7  
-        sbc     a,d               ;;+4                                        ret     z          +5+6     Finish: 6 cycles
-        ld      b,a               ;;+4  HL = Source                           dec     bc         +6  
-        jp      BLTUDO            ;;+10 Do the LDIR                           dec     hl         +6  
-                                  ;;                                          jr      BLTLOP     +12  
-                                  ;;Setup: 80 cycles 
+ifdef cartkeys
+CRTKEY: ex      af,af'            ;;Save AF                                   
+        ld      b,$7F             ;;Read column 7                             
+                                  ;;                                          
+        in      a,(c)             ;;Get row                                   
+                                  ;;                                          
+        and     e                 ;;If Key is Presser                         
+        jp      z,RESET           ;;  Start BASIC                             
+                                  ;;                                          
+                                  ;;                                          
+        ex      af,af'            ;;Save AF                                   
 else
 PROMEM: push    hl                ;
         ld      hl,$2FFF          ;
@@ -2083,7 +2078,7 @@ PROMEM: push    hl                ;
         pop     hl                ;
         jp      nc,FCERR          ;{M80} YES, BLOW HIM UP NOW
         ret                       ;
-
+endif
 BLTU:   call    REASON            ;[M80] CHECK DESTINATION TO MAKE SURE STACK WON'T BE OVERRUN
 ;Execute Block Transfer
 BLTUC:  push    bc                ;[M80] EXCHANGE [B,C] AND [H,L]
@@ -2096,7 +2091,6 @@ BLTLOP: rst     COMPAR            ;[M80] SEE IF WE ARE DONE
         dec     bc                ;
         dec     hl                ;[M80] BACKUP FOR NEXT GUY
         jr      BLTLOP            ;
-endif
 
 ;;Check Stack Size
 GETSTK: push    hl                ;[M80] SAVE [H,L]
@@ -5385,12 +5379,31 @@ KEYLUP: add     ix,de             ;;Get pointer into table
 ifdef noreskeys
 ;;;Code Change: Do not expand CTRL-KEYS into Reserved Words                   Original Code
         jp      KEYRET            ;;                                          1F1F  jp      p,KEYRET
-;;;Code Change: Put Useful Routines from Extended BASIC into Deprecated Area  1F20
-                                  ;;                                          1F21
-else
+else                                                                          
         jp      p,KEYRET          ;;No, loop
 endif
-;;;Deprecated Code: 20 bytes                                                  
+ifdef cartkeys
+CRTCTL: ex      de,hl             ;;Enrypt bytes into HL - DE unused          1F22 sub     $7F        
+        ld      e,$20             ;;CTL Mask                                  1F23 
+                                  ;;                                          1F24
+        call    CRTKEY            ;;Check for CTL Ket                         1F25 ld      c,a        
+                                  ;;                                          1F26
+                                  ;;                                          1F27
+        ld      b,$0C             ;;ROM not found, start Basic                1F28 jr      nz,KEYRES
+                                  ;;                                          1F29
+        ret                       ;;                                          1F2A ld      (RESPTR),hl
+CRTSHF: ld      e,$10             ;;SHIFT Mask                                1F2B 
+                                  ;;                                          1F2C
+        call    CRTKEY            ;;Check for CTL Ket                         1F2D ld      c,a        
+                                  ;;                                          1F2E
+                                  ;;                                          1F2F
+        jp      XINIT             ;;                                          1F30
+                                  ;;                                          1F31                                  ;;                                          1F2
+                                  ;;                                          1F32
+        byte    $38               ;;                                          1F33
+        and     $7F               ;;                                          1F34
+                                  ;;                                          1F35                                  ;;                                          1F2
+else
         sub     $7F               ;;Convert to Reserved Word Count             
         ld      c,a               ;;and copy to C                             
         ld      hl,RESLST-1       ;;Point to Reserved Word List               
@@ -5401,7 +5414,8 @@ KEYRES: inc     hl                ;;Bump pointer
         dec     c                 ;;Decrement Count                           
         jr      nz,KEYRES         ;;Not 0? Find next word                     
         ld      (RESPTR),hl       ;;Save Keyword Address                      
-        and     $7F               ;;Strip high bit from first character       
+        and     $7F               ;;Strip high bit from first character
+endif
 KEYRET: exx                       ;;Restore Registers
         ret
 ;;Key Lookup Tables - 46 bytes each

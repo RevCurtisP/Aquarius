@@ -384,7 +384,7 @@
 006C 006C : 7E                       ld      a,(hl)            ;
 006D 006D : B7                       or      a                 ;
 006E 006E : 20 19                    jr      nz,RESET          ;;ROM not found, start Basic
-0070 0070 : EB                       ex      de,hl             ;
+0070 0070 : EB                       ex      de,hl             ;;Encryption Key Address into HL
 0071 0071 : 06 0C                    ld      b,$0C             ;
 0073 0073 : 86         (~~~) CRTCH2: add     a,(hl)            ;
 0074 0074 : 23                       inc     hl                ;
@@ -1478,22 +1478,22 @@
 05DD 05DD : E5                       push    hl                ;[M80] SAVE THE STACK POINTER FOR THE COMPARISON
 05DE 05DE : 2A C7 38                 ld      hl,(ENDFOR)       ;[M80] GET ENDING TEXT POINTER FOR THIS "FOR"
 05E1 05E1 : E7                       rst     COMPAR            ;[M80] SEE IF THEY MATCH
-05E2 05E2 : E1                       pop     hl                ;[M80] GET BACK THE STACK POINTER
-05E3 05E3 : D1                       pop     de                ;
-05E4 05E4 : 20 EA                    jr      nz,LPFORM         ;;[M80] KEEP SEARCHING IF NO MATCH
-05E6 05E6 : D1                       pop     de                ;[M80] GET BACK THE TEXT POINTER
-05E7 05E7 : F9                       ld      sp,hl             ;[M80] DO THE ELIMINATION
-05E8 05E8 : 0C                       inc     c                 ;
-05E9 05E9 : D1         (M80) NOTOL:  pop     de                ;
-05EA 05EA : EB                       ex      de,hl             ;[M80] [H,L]=TEXT POINTER
-05EB 05EB : 0E 08                    ld      c,8               ;[M80] MAKE SURE 16 BYTES ARE AVAILABLE
-05ED 05ED : CD A0 0B                 call    GETSTK            ;[M80] OFF OF THE STACK
-05F0 05F0 : E5                       push    hl                ;[M80] REALLY SAVE THE TEXT POINTER
-05F1 05F1 : 2A C7 38                 ld      hl,(ENDFOR)       ;[M80] PICK UP POINTER AT END OF "FOR"
-05F4 05F4 : E3                       ex      (sp),hl           ;[M80] PUT POINTER ON STACK AND RESTORE TEXT POINTER
-05F5 05F5 : E5                       push    hl                ;[M80] PUSH POINTER TO VARIABLE ONTO THE STACK
-05F6 05F6 : 2A 4D 38                 ld      hl,(CURLIN)       ;[M80] [H,L] GET THE CURRENT LINE #
-05F9 05F9 : E3                       ex      (sp),hl           ;[M80] LINE # ON THE STACK AND [H,L] IS THE TEXT POINTER
+05E2 05E2 : E1                       pop     hl                ;[M80] GET BACK THE STACK POINTER                          CP/M BASIC
+05E3 05E3 : D1                       pop     de                ;;;                                                      * missing
+05E4 05E4 : 20 EA                    jr      nz,LPFORM         ;;[M80] KEEP SEARCHING IF NO MATCH                         JNZ	LPFORM
+05E6 05E6 : D1                       pop     de                ;[M80] GET BACK THE TEXT POINTER                           POP D
+05E7 05E7 : F9                       ld      sp,hl             ;[M80] DO THE ELIMINATION                                  SPHL
+05E8 05E8 : 0C                       inc     c                 ;;; SHLD SAVSTK in CP/M BASOC                            * SHLD	SAVSTK
+05E9 05E9 : D1         (M80) NOTOL:  pop     de                ;;;                                                        missing`
+05EA 05EA : EB                       ex      de,hl             ;[M80] [H,L]=TEXT POINTER                                * XCHG
+05EB 05EB : 0E 08                    ld      c,8               ;[M80] MAKE SURE 16 BYTES ARE AVAILABLE                    MVI	C,8
+05ED 05ED : CD A0 0B                 call    GETSTK            ;[M80] OFF OF THE STACK                                    CALL	GETSTK
+05F0 05F0 : E5                       push    hl                ;[M80] REALLY SAVE THE TEXT POINTER                        PUSH	H
+05F1 05F1 : 2A C7 38                 ld      hl,(ENDFOR)       ;[M80] PICK UP POINTER AT END OF "FOR"                     LHLD	ENDFOR
+05F4 05F4 : E3                       ex      (sp),hl           ;[M80] PUT POINTER ON STACK AND RESTORE TEXT POINTER       XTHL
+05F5 05F5 : E5                       push    hl                ;[M80] PUSH POINTER TO VARIABLE ONTO THE STACK             
+05F6 05F6 : 2A 4D 38                 ld      hl,(CURLIN)       ;[M80] [H,L] GET THE CURRENT LINE #                        
+05F9 05F9 : E3                       ex      (sp),hl           ;[M80] LINE # ON THE STACK AND [H,L] IS THE TEXT POINTER   
 05FA 05FA : CD 75 09                 call    CHKNUM            ;
 05FD 05FD : CF                       rst     SYNCHK            ;
 05FE 05FE : A1                       byte    TOTK              ;[M80] "TO" IS NECESSARY
@@ -5245,7 +5245,7 @@
 181A 181A              [M80] ;*************************************************************
 181A 181A : 07         [M80] EXPBCN  byte    7                 ;[M80] DEGREE + 1
 181B 181B : 7C 88 59 74              byte    $7C,$88,$59,$74   ;[M80] .00020745577403-
-181F 181F : E0 97 26 77              byte    $E0,$97,$26,$77   ;[M80] .00127100574569-
+181F 181F : E0 97 26 77              byte    $E0,$97,$26,$77   ;[M80] .037100574569-
 1823 1823 : C4 1D 1E 7A              byte    $C4,$1D,$1E,$7A   ;[M80] .00965065093202+
 1827 1827 : 5E 50 63 7C              byte    $5E,$50,$63,$7C   ;[M80] .05549656508324+
 182B 182B : 1A FE 75 7E              byte    $1A,$FE,$75,$7E   ;[M80] .24022713817633-
@@ -7320,7 +7320,7 @@
      E3BC X C3 B7 E3                 ..                        
 2334 E3BF X                                                    
 2334 E3BF X                  ;;Convert Character to Uppercase     
-2334 E3BF X FE 61      [GWB] MAKUPS: cp      'a'               
+2334 E3BF X FE 61      [GWB] MAKUPR: cp      'a'               
 2336 E3C1 X D8                       ret     c                 ;;If >= 'a' 
 2337 E3C2 X FE 7B                    cp      '{'               
 2339 E3C4 X D0                       ret     nc                ;;and less than <'{'
@@ -7429,7 +7429,7 @@
 23B6 E441 X CD DA 19   [M80] DISPI:  call    INCHR           ;[M80] GET A CHAR FROM USER
 23B9 E444 X B7                       or      a               ;[M80] IGNORE NULLS
 23BA E445 X 28 FA                    jr      z,DISPI         
-23BC      X CD 34 23                 call    MAKUPS          ;[M80] MAKE UPPER CASE COMMAND
+23BC      X CD 34 23                 call    MAKUPR          ;[M80] MAKE UPPER CASE COMMAND
      E447 X CD BF E3                 ..
 23BF E44A X D6 30                    sub     '0'             ;[M80] GET RID OF OFFSET
 23C1 E44C X 38 0E                    jr      c,NOTDGI        ;[M80] ... 
@@ -8062,6 +8062,7 @@
 26EB E776 X CD 0E 39                 call    MINUPD          ;[GWB] ADVANCE MINOR AXIS           
 26EE E779 X 18 E3                    jr      LINLOP          ;[GWB] CONTINUE UNTIL COUNT EXHAUSTED
 26F0 E77B X    
+26F0 E77B X                  ;;;On the Z80 this can be done with RR D : RR E (4 bytes)
 26F0 E77B X 7A         [GWB] HLFDE:  ld      a,d             ;;DE = DE/2
 26F1 E77C X B7                       or      a
 26F2 E77D X 1F                       rra
