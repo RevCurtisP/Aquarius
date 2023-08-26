@@ -1028,17 +1028,17 @@
 039F 039F                  | ;
 039F 039F :            [M80] FORSIZ  equ     13                ;;Size of a FOR entry on the stack
 039F 039F
-039F 039F : 21 04 00   [M80] FNDFOR: ld      hl,4+0            ;[M80] IGNORING THE RETURN ADDRESS OF
-03A2 03A2 : 39                       add     hl,sp             ;[M80] THIS SUBROUTINE, SET [H,L]=SP
-03A3 03A3 : 7E         [M80] LOOPER: ld      a,(hl)            ;[M80] SEE WHAT TYPE OF THING IS ON THE STACK
-03A4 03A4 : 23                       inc     hl                ;
+039F 039F : 21 04 00   [M80] FNDFOR: ld      hl,4+0            ;[M80] IGNORING THE RETURN ADDRESS OF                      --BC--  --DE--  --HL--  Stack
+03A2 03A2 : 39                       add     hl,sp             ;[M80] THIS SUBROUTINE, SET [H,L]=SP                                       StkPtr
+03A3 03A3 : 7E         [M80] LOOPER: ld      a,(hl)            ;[M80] SEE WHAT TYPE OF THING IS ON THE STACK              
+03A4 03A4 : 23                       inc     hl                ;                                                                           SP+1   SP+3
 03A5 03A5 : FE 81                    cp      FORTK             ;[M80] IS THIS STACK ENTRY A "FOR"?
 03A7 03A7 : C0                       ret     nz                ;[M80] NO SO OK
-03A8 03A8 : 4E                       ld      c,(hl)            ;[M80] DO EQUIVALENT OF PUSHM / XTHL
-03A9 03A9 : 23                       inc     hl                ;
-03AA 03AA : 46                       ld      b,(hl)            ;
-03AB 03AB : 23                       inc     hl                ;
-03AC 03AC : E5                       push    hl                ;[M80] PUT H  ON
+03A8 03A8 : 4E                       ld      c,(hl)            ;[M80] DO EQUIVALENT OF PUSHM / XTHL                                        
+03A9 03A9 : 23                       inc     hl                ;                                                                           SP+2
+03AA 03AA : 46                       ld      b,(hl)            ;                                                          (SP+1)                 
+03AB 03AB : 23                       inc     hl                ;                                                                           SP+3   
+03AC 03AC : E5                       push    hl                ;[M80] PUT H  ON                                                                   SP+3
 03AD 03AD : 60                       ld      h,b               ;[M80] PUSH B / XTHL IS SLOWER
 03AE 03AE : 69                       ld      l,c               ;
 03AF 03AF : 7A                       ld      a,d               ;[M80] FOR THE "NEXT" STATMENT WITHOUT AN ARGUMENT
@@ -1049,7 +1049,7 @@
 03B5 03B5 : E7                       rst     COMPAR            ;
 03B6 03B6 : 01 0D 00   [M80] POPGOF: ld      bc,FORSIZ         ;[M80] TO WIPE OUT A "FOR" ENTRY
 03B9 03B9 : E1                       pop     hl                ;[M80] IF VARIABLE IN THIS ENTRY MATCHES RETURN
-03BA 03BA : C8                       ret     z                 ;[M80] WITH [H,L] POINTING THE BOTTOM ;OF THE ENTRY
+03BA 03BA : C8                       ret     z                 ;[M80] WITH [H,L] POINTING THE BOTTOM OF THE ENTRY
 03BB 03BB : 09                       add     hl,bc             ;[M80] NOW POINTING TO THE START OF THE NEXT ENTRY.
 03BC 03BC : 18 E5                    jr      LOOPER            ;[M80] SEE IF ITS A "FOR" ENTRY AND IF THE VARIABLE MATCHES
 03BE 03BE  
@@ -1459,13 +1459,13 @@
 05BC 05BC : 3E 64      [M80] FOR:    ld      a,100
 05BE 05BE : 32 CB 38                 ld      (SUBFLG),a        ;[M80] DONT RECOGNIZE SUBSCRIPTED VARIABLES
 05C1 05C1 : CD 31 07                 call    LET               ;[M65] READ VARIABLE AND ASSIGN INITIAL VALUE
-05C4 05C4 : C1                       pop     bc                ;
-05C5 05C5 : E5                       push    hl                ;[M80] SAVE THE TEXT POINTER
+05C4 05C4 : C1                       pop     bc                ;                                                          --BC--  --DE--  --HL--  Stack
+05C5 05C5 : E5                       push    hl                ;[M80] SAVE THE TEXT POINTER                                               TxtPtr  TxtPtr
 05C6 05C6 : CD 1C 07                 call    DATA              ;[M80] SET [H,L]=END OF STATEMENT
 05C9 05C9 : 22 C7 38                 ld      (ENDFOR),hl       ;[M80] SAVE FOR COMPARISON
-05CC 05CC : 21 02 00                 ld      hl,2              ;[M80] SET UP POINTER INTO STACK
-05CF 05CF : 39                       add     hl,sp             ;
-05D0 05D0 : CD A3 03   (M80) LPFORM: call    LOOPER            ;[M80] MUST HAVE VARIABLE POINTER IN [D,E]
+05CC 05CC : 21 02 00                 ld      hl,2              ;[M80] SET UP POINTER INTO STACK                                               
+05CF 05CF : 39                       add     hl,sp             ;;                                                                          SP+1 
+05D0 05D0 : CD A3 03   (M80) LPFORM: call    LOOPER            ;[M80] MUST HAVE VARIABLE POINTER IN [D,E]                                 
 05D3 05D3 : 20 14                    jr      nz,NOTOL          ;[M80] NO MATCHING ENTRY, DON'T ELIMINATE ANYTHING
 05D5 05D5 : 09                       add     hl,bc             ;[M80] ELIMINATE THE MATCHING ENTRY
 05D6 05D6 : D5                       push    de                ;[M80] SAVE THE TEXT POINTER
@@ -1478,19 +1478,19 @@
 05DD 05DD : E5                       push    hl                ;[M80] SAVE THE STACK POINTER FOR THE COMPARISON
 05DE 05DE : 2A C7 38                 ld      hl,(ENDFOR)       ;[M80] GET ENDING TEXT POINTER FOR THIS "FOR"
 05E1 05E1 : E7                       rst     COMPAR            ;[M80] SEE IF THEY MATCH
-05E2 05E2 : E1                       pop     hl                ;[M80] GET BACK THE STACK POINTER                          CP/M BASIC
-05E3 05E3 : D1                       pop     de                ;;;                                                      * missing
-05E4 05E4 : 20 EA                    jr      nz,LPFORM         ;;[M80] KEEP SEARCHING IF NO MATCH                         JNZ	LPFORM
-05E6 05E6 : D1                       pop     de                ;[M80] GET BACK THE TEXT POINTER                           POP D
-05E7 05E7 : F9                       ld      sp,hl             ;[M80] DO THE ELIMINATION                                  SPHL
-05E8 05E8 : 0C                       inc     c                 ;;; SHLD SAVSTK in CP/M BASOC                            * SHLD	SAVSTK
-05E9 05E9 : D1         (M80) NOTOL:  pop     de                ;;;                                                        missing`
-05EA 05EA : EB                       ex      de,hl             ;[M80] [H,L]=TEXT POINTER                                * XCHG
-05EB 05EB : 0E 08                    ld      c,8               ;[M80] MAKE SURE 16 BYTES ARE AVAILABLE                    MVI	C,8
-05ED 05ED : CD A0 0B                 call    GETSTK            ;[M80] OFF OF THE STACK                                    CALL	GETSTK
-05F0 05F0 : E5                       push    hl                ;[M80] REALLY SAVE THE TEXT POINTER                        PUSH	H
-05F1 05F1 : 2A C7 38                 ld      hl,(ENDFOR)       ;[M80] PICK UP POINTER AT END OF "FOR"                     LHLD	ENDFOR
-05F4 05F4 : E3                       ex      (sp),hl           ;[M80] PUT POINTER ON STACK AND RESTORE TEXT POINTER       XTHL
+05E2 05E2 : E1                       pop     hl                ;[M80] GET BACK THE STACK POINTER                        
+05E3 05E3 : D1                       pop     de                ;;;                                                      
+05E4 05E4 : 20 EA                    jr      nz,LPFORM         ;;[M80] KEEP SEARCHING IF NO MATCH                       
+05E6 05E6 : D1                       pop     de                ;[M80] GET BACK THE TEXT POINTER                         
+05E7 05E7 : F9                       ld      sp,hl             ;[M80] DO THE ELIMINATION                                
+05E8 05E8 : 0C                       inc     c                 ;;; SHLD SAVSTK in CP/M BASOC                            
+05E9 05E9 : D1         (M80) NOTOL:  pop     de                ;;;                                                      
+05EA 05EA : EB                       ex      de,hl             ;[M80] [H,L]=TEXT POINTER                                
+05EB 05EB : 0E 08                    ld      c,8               ;[M80] MAKE SURE 16 BYTES ARE AVAILABLE                  
+05ED 05ED : CD A0 0B                 call    GETSTK            ;[M80] OFF OF THE STACK                                  
+05F0 05F0 : E5                       push    hl                ;[M80] REALLY SAVE THE TEXT POINTER                      
+05F1 05F1 : 2A C7 38                 ld      hl,(ENDFOR)       ;[M80] PICK UP POINTER AT END OF "FOR"                   
+05F4 05F4 : E3                       ex      (sp),hl           ;[M80] PUT POINTER ON STACK AND RESTORE TEXT POINTER     
 05F5 05F5 : E5                       push    hl                ;[M80] PUSH POINTER TO VARIABLE ONTO THE STACK             
 05F6 05F6 : 2A 4D 38                 ld      hl,(CURLIN)       ;[M80] [H,L] GET THE CURRENT LINE #                        
 05F9 05F9 : E3                       ex      (sp),hl           ;[M80] LINE # ON THE STACK AND [H,L] IS THE TEXT POINTER   
@@ -1543,7 +1543,7 @@
 0637 0637 : B7                       or      a                 ;
 0638 0638 : C2 C4 03                 jp      nz,SNERR          ;[M80] MUST BE A ZERO
 063B 063B : 23                       inc     hl                ;
-063C 063C : 7E         [M80] GONE4:  ld      a,(hl)            ;[M80] IF POINTER IS ZERO, END OF PROGRAM
+063C 063C : 7E         [M80} GONE4:  ld      a,(hl)            ;[M80] IF POINTER IS ZERO, END OF PROGRAM
 063D 063D : 23                       inc     hl                ;
 063E 063E : B6                       or      (hl)              ;[M80] OR IN HIGH PART
 063F 063F : CA 29 0C                 jp      z,ENDCON          ;[M80] FIX SYNTAX ERROR IN UNENDED ERROR ROUTINE
