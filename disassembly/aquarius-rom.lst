@@ -1543,7 +1543,7 @@
 0637 0637 : B7                       or      a                 ;
 0638 0638 : C2 C4 03                 jp      nz,SNERR          ;[M80] MUST BE A ZERO
 063B 063B : 23                       inc     hl                ;
-063C 063C : 7E         [M80} GONE4:  ld      a,(hl)            ;[M80] IF POINTER IS ZERO, END OF PROGRAM
+063C 063C : 7E         {M80} GONE4:  ld      a,(hl)            ;[M80] IF POINTER IS ZERO, END OF PROGRAM
 063D 063D : 23                       inc     hl                ;
 063E 063E : B6                       or      (hl)              ;[M80] OR IN HIGH PART
 063F 063F : CA 29 0C                 jp      z,ENDCON          ;[M80] FIX SYNTAX ERROR IN UNENDED ERROR ROUTINE
@@ -4938,44 +4938,6 @@
 1680 1680                  | ;[M80] ALTERS ALL REGISTERS
 1680 1680                  | ;[M80] THE ORIGINAL CONTENTS OF THE FAC IS LOST
 1680 1680                  | ;[M80] 
-1680 1680                  | ;[M80]        OUTPUT THE VALUE IN THE FAC ACCORDING TO THE FORMAT SPECIFICATIONS
-1680 1680                  | ;[M80]        IN A,B,C
-1680 1680                  | ;[M80]        ALL REGISTERS ARE ALTERED
-1680 1680                  | ;[M80]        THE ORIGINAL CONTENTS OF THE FAC IS LOST
-1680 1680                  | ;[M80] 
-1680 1680                  | ;[M80]        THE FORMAT IS SPECIFIED IN A, B AND C AS FOLLOWS:
-1680 1680                  | ;[M80]        THE BITS OF A MEAN THE FOLLOWING:
-1680 1680                  | ;[M80] BIT 7  0 MEANS FREE FORMAT OUTPUT, I.E. THE OTHER BITS OF A MUST BE ZERO,
-1680 1680                  | ;[M80]        TRAILING ZEROS ARE SUPPRESSED, A NUMBER IS PRINTED IN FIXED OR FLOATING
-1680 1680                  | ;[M80]        POINT NOTATION ACCORDING TO ITS MAGNITUDE, THE NUMBER IS LEFT
-1680 1680                  | ;[M80]        JUSTIFIED IN ITS FIELD, B AND C ARE IGNORED.
-1680 1680                  | ;[M80]        1 MEANS FIXED FORMAT OUTPUT, I.E. THE OTHER BITS OF A ARE CHECKED FOR
-1680 1680                  | ;[M80]        FORMATTING INFORMATION, THE NUMBER IS RIGHT JUSTIFIED IN ITS FIELD,
-1680 1680                  | ;[M80]        TRAILING ZEROS ARE NOT SUPPRESSED.  THIS IS USED FOR PRINT USING.
-1680 1680                  | ;[M80] BIT 6  1 MEANS GROUP THE DIGITS IN THE INTEGER PART OF THE NUMBER INTO GROUPS
-1680 1680                  | ;[M80]        OF THREE AND SEPARATE THE GROUPS BY COMMAS
-1680 1680                  | ;[M80]        0 MEANS DON'T PRINT THE NUMBER WITH COMMAS
-1680 1680                  | ;[M80] BIT 5  1 MEANS FILL THE LEADING SPACES IN THE FIELD WITH ASTERISKS ("*")
-1680 1680                  | ;[M80] BIT 4  1 MEANS OUTPUT THE NUMBER WITH A FLOATING DOLLAR SIGN ("$")
-1680 1680                  | ;[M80] BIT 3  1 MEANS PRINT THE SIGN OF A POSITIVE NUMBER AS A PLUS SIGN ("+")
-1680 1680                  | ;[M80]        INSTEAD OF A SPACE
-1680 1680                  | ;[M80] BIT 2  1 MEANS PRINT THE SIGN OF THE NUMBER AFTER THE NUMBER
-1680 1680                  | ;[M80] BIT 1  UNUSED
-1680 1680                  | ;[M80] BIT 0  1 MEANS PRINT THE NUMBER IN FLOATING POINT NOTATION I.E. "E NOTATION"
-1680 1680                  | ;[M80]        IF THIS BIT IS ON, THE COMMA SPECIFICATION (BIT 6) IS IGNORED.
-1680 1680                  | ;[M80]        0 MEANS PRINT THE NUMBER IN FIXED POINT NOTATION.  NUMBERS .GE. 1E16
-1680 1680                  | ;[M80]        CANNOT BE PRINTED IN FIXED POINT NOTATION.
-1680 1680                  | ;[M80] 
-1680 1680                  | ;[M80]        B AND C TELL HOW BIG THE FIELD IS:
-1680 1680                  | ;[M80] B   =  THE NUMBER OF PLACES IN THE FIELD TO THE LEFT OF THE DECIMAL POINT
-1680 1680                  | ;[M80]        (B DOES NOT INCLUDE THE DECIMAL POINT)
-1680 1680                  | ;[M80] C   =  THE NUMBER OF PLACES IN THE FIELD TO THE RIGHT OF THE DECIMAL POINT
-1680 1680                  | ;[M80]        (C INCLUDES THE DECIMAL POINT)
-1680 1680                  | ;[M80]        B AND C DO NOT INCLUDE THE 4 POSITIONS FOR THE EXPONENT IF BIT 0 IS ON
-1680 1680                  | ;[M80]        FOUT ASSUMES B+C .LE. 24 (DECIMAL)
-1680 1680                  | ;[M80]        IF THE NUMBER IS TOO BIG TO FIT IN THE FIELD, A PERCENT SIGN ("%") IS
-1680 1680                  | ;[M80]        PRINTED AND THE FIELD IS EXTENDED TO HOLD THE NUMBER.
-1680 1680                  | ;
 1680 1680 : 21 E9 38   [M80] FOUT:   ld      hl,FBUFFR+1       ;[M80] GET A POINTER INTO FBUFFR
 1683 1683 : E5                       push    hl                ;{M80} SAVE IT
 1684 1684 : EF                       rst     FSIGN             
