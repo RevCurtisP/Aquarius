@@ -3100,7 +3100,12 @@
 0E5F 0E5F                  | ;[M80] THE CHARACTER AFTER THE STRING LITERAL IS POINTED TO
 0E5F 0E5F                  | ;[M80] BY [H,L] AND IS IN [A], BUT THE CONDITION CODES ARE
 0E5F 0E5F                  | ;[M80] NOT SET UP.
-0E5F 0E5F                  | ;
+0E5F 0E5F                  | ;; STRLIT accepts two delimiters in addition to a zero. These 
+0E5F 0E5F                  | ;; delimiters are passed in B and D.
+0E5F 0E5F                  | ;; READ calls STRLIT with ',' in B and ':' in D to parse unquoted
+0E5F 0E5F                  | ;; strings in DATA statemts.
+0E5F 0E5F                  | ;; STRLIT and STRLTI execute STRLT2 with '"' in both B and D.SSS
+0E5F 0E5F                  | ;;
 0E5F 0E5F : 2B         [M80] STRLIT: dec     hl                ;;Back up to '"'
 0E60 0E60 : 06 22      [M80] STRLTI: ld      b,'"'             ;[M80] ASSUME STR ENDS ON QUOTE
 0E62 0E62 : 50         {M80} STRLT3: ld      d,b               ;
