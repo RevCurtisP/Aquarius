@@ -29,7 +29,7 @@
 ;;        Pseudo-Op "equ" is used for labels that are only defined once
 ;;        while "=" is used for labels that are redefined
 ;;        Hexadecimal numbers are prefixed with a "$" (Motorola format)
-;;        and Binary numbers are prefixed with a %"
+;;        and Binary numbers are prefixed with a "%"
 ;;  46-   Operand 
 ;;  ---   Comments begin with ";" 
 ;;        If from a source document, it is followed with the source ID in brackets
@@ -112,6 +112,7 @@
 ---- ---- x            [M80] TOPMEM  equ     $384B   ;[M80] TOP LOCATION TO USE FOR THE STACK INITIALLY SET UP BY INIT 
 ---- ----                                            ;[M80] ACCORDING TO MEMORY SIZE TO ALLOW FOR 50 BYTES OF STRING SPACE.
 ---- ----                                            ;[M80] CHANGED BY A CLEAR COMMAND WITH AN ARGUMENT.
+                                                     ;;Set by MEMCHK during COLDST and CLEARS during CLEAR
 ---- ----              [M80] CURLIN  equ     $384D   ;[M80] CURRENT LINE #
 ---- ---- x            [M80] TXTTAB  equ     $384F   ;[M80] POINTER TO BEGINNING OF TEXT
 ---- ----                                            ;[M80] DOESN'T CHANGE AFTER BEING SETUP BY INIT.
@@ -169,12 +170,15 @@
 ~~~~ ~~~~              {M80} FACMO   equ     $38E5   ;[M80] MIDDLE ORDER OF MANTISSA
 ---- ----              [M80] FACHO   equ     $38E6   ;[M80] HIGH ORDER OF MANTISSA
 ---- ---- x            [M80] FAC     equ     $38E7   ;[M80] EXPONENT
----- ----              [M80] FBUFFR  equ     $38E8   ;[M80] BUFFER FOR FOUT
+---- ----              [M80] FBUFFR  equ     $38E8   ;[M80] BUFFER FOR FOUT ;;14 characters
 ---- ----              [M65] RESHO   equ     $38F6   ;[M65] RESULT OF MULTIPLIER AND DIVIDER    
 ---- ----              [M65] RESMO   equ     $38F7   ;;RESMO and RESLO are loaded into and stored from HL 
 ~~~~ ~~~~              {M65} RESLO   equ     $38F8   ;
 ---- ----              [M80] SAVSTK  equ     $38F9   ;[M80] NEWSTT SAVES STACK HERE BEFORE SO THAT ERROR REVERY CAN
                                                      ;[M80] CAN RESTORE THE STACK WHEN AN ERROR OCCURS
+                                                     ;;STKINI sets SP to TOPMEM then puts it in SAVSTK
+                                                     ;;INCNTC (called from NEWSTT) puts current SP in SAVSTK
+                                                      
 ----                         BASTXT  equ     $38FA   ;;???First byte of program gets clobbered by NEWSTT
      ----                    ;;        $38FB-$38FF   ;;??Unused
      ----                    ;;              $3900   ;;This is always 0
@@ -225,11 +229,32 @@
 ---- ---- X                  ;;              $3948   ;;This is always 0
 ---- ---- X                  BASTXT  equ     $3949   ;;Start of Extended Basic Program 
 
-     
                              ;;External Addresses
 ---- ----              [~~~] EXTBAS  equ     $2000   ;;Start of Extended Basic
 ---- ----              [~~~] XSTART  equ     $2010   ;;Extended BASIC Startup Routine
 ---- ----              [~~~] XINIT   equ     $E010   ;;ROM Cartridge Initialization Entry Point
+  
+                           + ;;; BASIC RAM Memory Map
+                           | ;;;
+                           | ;;;             System Variables
+                           | ;;; TXTTAB =============================         
+                           | ;;;              BASIC Program
+                           | ;;; VARTAB -----------------------------
+                           | ;;;            Simple Variables
+                           | ;;; ARYTAB -----------------------------
+                           | ;;;             Array Variables 
+                           | ;;; STREND -----------------------------
+                           | ;;;             Unused BASIC RAM  
+                           | ;;; STKSAV -----------------------------
+                           | ;;;                  Stack                       
+                           | ;;; 
+                           | ;;; TOPMEM =============================         STKINI sets SP to TOPMEM
+                           | ;;;           String Space in use
+                           | ;;; FRETOP -----------------------------
+                           | ;;;            Unused String Space
+                           | ;;; MEMSIZ =============================
+                           | ;;;          RAM Reserved using CLEAR
+
      
 ---- ----                            org     $0000   ;;Starting Address of Standard BASIC
 
@@ -267,7 +292,7 @@
 0010 0010                  | ;[M65] "CHRGET" USES [H,L] AS THE CURRENT TEXT PNTR
 0010 0010                  | ;[M65] FETCHES A NEW CHARACTER INTO ACCA AFTER INCREMENTING [H,L]
 0010 0010                  | ;[M65] AND SETS CONDITION CODES ACCORDING TO WHAT'S IN ACCA.
-0010 0010                  | ;[M65]       NOT C=  NUMERIC   ("0" THRU "9")
+0010 0010                  | ;[M65]       C=  NUMERIC   ("0" THRU "9")
 0010 0010                  | ;[M65]       Z=      ":" OR END-OF-LINE (A NULL)
 0010 0010                  | ;[M65]
 0010 0010                  | ;[M65] [ACCA] = NEW CHAR.
@@ -521,7 +546,7 @@
      0138 : CD F2 1F                 call    PRNTIT            ;;Print copyright message
 0143      : 21 62 01                 ld      hl,HEDING         ;;Print copyright message
 0146      : CD 9D 0E                 call    STROUT
-0149 013B : 31 65 38                 ld      sp,OLDSTK         ;;Top of of stack used to be here 
+0149 013B : 31 65 38                 ld      sp,OLDSTK         ;;Top of of stack used to be here - Useless instruction
 014C 013E : CD E5 0B                 call    STKINI            ;;Set stack pointer to TOPMEM
 014F 0141                    ;;Check for Extended BASIC
 014F 0141 : 21 05 20                 ld      hl,EXTBAS+5       ;;End of signature in Extended BASIC
@@ -1080,8 +1105,8 @@
 03E7 03E7 : 01         {~~~} HOOK1:  byte    1                 ;
 03E8 03E8 : 57                       ld      d,a               ;;Add Error Offset
 03E9 03E9 : 19                       add     hl,de             ;
-03EA 03EA : 3E 3F                    ld      a,'?'             ;[M65] PRINT A QUESTION MARK
-03EC 03EC : DF                       rst     OUTCHR            ;
+03EA 03EA : 3E 3F      {~~~} ERRPRT: ld      a,'?'             ;;Print error and return to Immediate mode
+03EC 03EC : DF                       rst     OUTCHR            ;[M65] PRINT A QUESTION MARK
 03ED 03ED : 7E         (M80) ERRFIN: ld      a,(hl)            ;[M65] GET FIRST CHR OF ERR MSG.
 03EE 03EE : DF                       rst     OUTCHR            ;[M65] OUTPUT IT.
 03EF 03EF : D7                       rst     CHRGET            ;[M65] GET SECOND CHR.
@@ -1357,7 +1382,7 @@
 053D 053D : 12         {M80} KRNSAV: ld      (de),a            ;[M80] SAVE BYTE IN KRUNCH BUFFER
 053E 053E : 13                       inc     de                ;[M80] BUMP POINTER
 053F 053F : 0C                       inc     c                 ;;Increment buffer count
-0540 0540 : D6 3A                    sub     ':'               ;[M65] IS IT A ":"?"
+0540 0540 : D6 3A                    sub     ':'               ;[M65] IS IT A ":"?
 0542 0542 : 28 04                    jr      z,COLIS           ;[M65] YES, ALLOW CRUNCHING AGAIN.
 0544 0544 : FE 49                    cp      DATATK-':'        ;[M65] IS IT A DATATK?
 0546 0546 : 20 03                    jr      nz,NODATT         ;[M65] NO, SEE IF IT IS REM TOKEN.
@@ -1445,7 +1470,7 @@
 05BC 05BC                  | ;[M80] A "FOR" ENTRY ON THE STACK HAS THE FOLLOWING FORMAT:
 05BC 05BC                  | ;[M80]
 05BC 05BC                  | ;[M80] LOW ADDRESS
-05BC 05BC                  | ;[M80]  TOKEN ($FOR IN HIGH BYTE)  1 BYTE
+05BC 05BC                  | ;[M80]  TOKEN (FORTK IN HIGH BYTE)  1 BYTE
 05BC 05BC                  | ;[M80]  A POINTER TO THE LOOP VARIABLE  2 BYTES
 05BC 05BC                  | ;[M80]  A BYTE REFLECTING THE SIGN OF THE INCREMENT 1 BYTE
 05BC 05BC                  | ;[M80]  THE STEP 4 BYTES
@@ -1455,7 +1480,11 @@
 05BC 05BC                  | ;[M80] HIGH ADDRESS
 05BC 05BC                  | ;[M80]
 05BC 05BC                  | ;[M80] TOTAL 16 BYTES
-05BC 05BC                  | ;;;*** On the Aquarius, the entry is only 13 bytes
+05BC 05BC                  | ;;;BUG: When a FOR with the same variable as another active FOR executes
+05BC 05BC                  | ;;;it's supposed to search the stack for the FOR entry with the matching
+05BC 05BC                  | ;;;variable, discard that entry and all the ones above it, then put it's
+05BC 05BC                  | ;;;entry on the stack and continue on. In Aquarius BASIC, executing the
+05BC 05BC                  | ;;;new FOR results in an ?SN error.
 05BC 05BC : 3E 64      [M80] FOR:    ld      a,100
 05BE 05BE : 32 CB 38                 ld      (SUBFLG),a        ;[M80] DONT RECOGNIZE SUBSCRIPTED VARIABLES
 05C1 05C1 : CD 31 07                 call    LET               ;[M65] READ VARIABLE AND ASSIGN INITIAL VALUE
@@ -1483,6 +1512,7 @@
 05E4 05E4 : 20 EA                    jr      nz,LPFORM         ;;[M80] KEEP SEARCHING IF NO MATCH                       
 05E6 05E6 : D1                       pop     de                ;[M80] GET BACK THE TEXT POINTER                         
 05E7 05E7 : F9                       ld      sp,hl             ;[M80] DO THE ELIMINATION                                
+05E8 05E8 : 0C               ;;;Here's the bug! The byte at $05E8 should be $0E forming an LD C, over the POP DE
 05E8 05E8 : 0C                       inc     c                 ;;; SHLD SAVSTK in CP/M BASOC                            
 05E9 05E9 : D1         (M80) NOTOL:  pop     de                ;;;                                                      
 05EA 05EA : EB                       ex      de,hl             ;[M80] [H,L]=TEXT POINTER                                
@@ -1651,7 +1681,7 @@
 06B3 06B3 : 5F                       ld      e,a               ;
 06B4 06B4 : 16 00                    ld      d,0               ;
 06B6 06B6 : 19                       add     hl,de             ;[M80] ADD THE NEW DIGIT
-06B7 06B7 : EB                       ex      de,hl             ;
+06B7 06B7 : EB                       ex      de,hl             ;;DE = Line Number
 06B8 06B8 : E1                       pop     hl                ;[M80] GET BACK TEXT POINTER
 06B9 06B9 : 18 E5                    jr      MORLIN            ;
 06BB 06BB : F1         (M80) POPHSR: pop     af                ;[M80] GET OFF TERMINATING DIGIT
@@ -1755,7 +1785,8 @@
 0731 0731 : CD D1 10   [M80] LET:    call    PTRGET            ;[M80] GET POINTER TO VARIABLE INTO [D,E]
 0734 0734 : CF                       rst     SYNCHK            ;[M80] 
 0735 0735 : B0                       byte    EQUATK            ;[M80] CHECK FOR "="
-0736 0736 : D5                       push    de                ;[M80] SAVE THE VARIABLE POINTER
+0736 0736                    ;;Call this if you already did a PTRGET
+0736 0736 : D5         {~~~} LETDO:  push    de                ;[M80] SAVE THE VARIABLE POINTER
 0737 0737 : 3A AB 38                 ld      a,(VALTYP)        ;{M80} REMEMBER THE VARIABLE TYPE
 073A 073A : F5                       push    af                ;
 073B 073B : CD 85 09                 call    FRMEVL            ;[M80] GET THE VALUE OF THE FORMULA
@@ -1771,7 +1802,7 @@
 074E 074E : E5                       push    hl                ;[M80] SAVE THE POINTER AT THE DESCRIPTOR
 074F 074F : 23                       inc     hl                ;
 0750 0750 : 23                       inc     hl                ;
-0751 0751 : 5E                       ld      e,(hl)            ;
+0751 0751 : 5E                       ld      e,(hl)            ;; [D,E] = Address of String Text
 0752 0752 : 23                       inc     hl                ;
 0753 0753 : 56                       ld      d,(hl)            ;
 0754 0754 : 2A 4F 38                 ld      hl,(TXTTAB)       ;[M80] IF THE DATA IS IN BUF, COPY
@@ -2363,7 +2394,7 @@
 0AA8 0AA8                  | ;[M80] THIS FACT IS USED TO DISTINGUISH BETWEEN "AND" AND "OR".
 0AA8 0AA8                  | ;[M80] THE RIGHT HAND ARGUMENT IS COERCED TO INTEGER, JUST AS
 0AA8 0AA8                  | ;[M80] THE LEFT HAND ONE WAS WHEN IT WAS PUSHED ON THE STACK.
-0AA8 0AA8 : F6         [M65] OROP:   byte    $F6               ;[M80] OR $AF" TO SET THE PRECEDENCE "OR"=70
+0AA8 0AA8 : F6         [M65] OROP:   byte    $F6               ;[M80] OR $AF TO SET THE PRECEDENCE "OR"=70
 0AA9 0AA9 : AF         [M65] ANDOP:  xor     a                 ;;leave 0 in A for AND
 0AAA 0AAA : F5         [M80] DANDOR: push    af                ;[M80] SAVE THE PRECEDENCE or Operator...
 0AAB 0AAB : CD 75 09                 call    CHKNUM            ;[M65] MUST BE NUMBER
@@ -3145,7 +3176,7 @@
 0E93 0E93 : E1                       pop     hl                ;[M80] GET THE TEXT POINTER
 0E94 0E94 : 7E                       ld      a,(hl)            ;[M80] GET CURRENT CHARACTER INTO [A]
 0E95 0E95 : C0                       ret     nz                ;
-0E96 0E96 : 11 1E 00                 ld      de,ERRST          ;[M80] "STRING TEMPORARY" ERROR
+0E96 0E96 : 11 1E 00   {~~~} STERR:  ld      de,ERRST          ;[M80] "STRING TEMPORARY" ERROR
 0E99 0E99 : C3 DB 03                 jp      ERROR             ;[M80] GO TELL HIM
 0E9C 0E9C
 0E9C 0E9C -                + ;;Output String
@@ -4830,7 +4861,7 @@
 15E8 15E8 : 28 05                    jr      z,FIN1            
 15EA 15EA : FE 2B                    cp      '+'               ;[M80] IGNORE MINUS SIGN
 15EC 15EC : 28 01                    jr      z,FIN1            ;[M80] IGNORE A LEADING SIGN
-15EE 15EE : 2B                       dec     hl                ;[M80] SET CHARACTER POINTER BACK ONE
+15EE 15EE : 2B         {~~~} FIN0:   dec     hl                ;[M80] SET CHARACTER POINTER BACK ONE
 15EF 15EF : CD C3 12   (M80) FIN1:   call    ZERO              ;{M80} GO ZERO THE FAC
 15F2 15F2 : 47                       ld      b,a               
 15F3 15F3 : 57                       ld      d,a               ;;[D,E] = $0000
@@ -5512,8 +5543,10 @@
 19FC 19FC : E5                       push    hl                ;[M80] SAVE THE TEXT POINTER
 19FD 19FD : CD 18 1A                 call    CHARCG            ;[M80] GET CHARC AND CLEAR IF SET
 1A00 1A00 : 28 09                    jr      z,NULRT           ;{M80} NO CHAR, RETURN NULL STRING
+1A02 1A02 :                   ;;Jump here from end of function to return A as a string
 1A02 1A02 : F5         {M80} BUFCIN: push    af                ;
-1A03 1A03 : CD 4E 0E                 call    STRIN1            ;[M80] MAKE ONE CHAR STRING
+1A03 1A03 :                   ;;Jump here from end of function to entry on stack as a string
+1A03 1A03 : CD 4E 0E   {~~~} BUFCIP: call    STRIN1            ;[M80] MAKE ONE CHAR STRING
 1A06 1A06 : F1                       pop     af                ;
 1A07 1A07 : 5F                       ld      e,a               ;[M80] CHAR TO [D]
 1A08 1A08 : CD 19 10                 call    SETSTR            ;[M80] STUFF IN DESCRIPTOR AND GOTO PUTNEW
@@ -5524,7 +5557,7 @@
 1A16 1A16 : E1                       pop     hl                ;
 1A17 1A17 : C9                       ret                       ;
 1A18 1A18                                                      
-1A18 1A18 : E5         [M80] CHARCG: push    hl                ;
+1A18 1A18 : E5         [M80] CHARCG: push    hl                ;Get Key Press, Check for Ctrl-C
 1A19 1A19 : 21 0A 38                 ld      hl,CHARC          ;
 1A1C 1A1C : 7E                       ld      a,(hl)            ;[M80] GET SAVED CHAR
 1A1D 1A1D : 36 00                    ld      (hl),0            ;[M80] CLEAR IT
@@ -6244,8 +6277,8 @@
 1DF5 1DF5 : C9                       ret
 1DF6 1DF6
 1DF6 1DF6                    ;;Restore Character Under Cursor
-1DF6 1DF6                    ;;*** Orphan Code?
-1DF6 1DF6 : 2A 01 38                 ld      hl,(CURRAM)       ;;Get position
+1DF6 1DF6                    ;;Orphan Code but still useful
+1DF6 1DF6 : 2A 01 38   {~~~} TTYRES: ld      hl,(CURRAM)       ;;Get position
 1DF9 1DF9 : 3A 0D 38                 ld      a,(CURCHR)        ;;Get character
 1DFC 1DFC : 77                       ld      (hl),a            ;;Put character at position
 1DFD 1DFD : C9                       ret                       ;
