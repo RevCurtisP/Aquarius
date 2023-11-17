@@ -140,7 +140,7 @@
 ---- ----              [M80] TEMPST  equ     $38B1   ;[M80] STORAGE FOR NUMTMP TEMP DESCRIPTORS
 ---- ----              [M80] DSCTMP  equ     $38BD   ;[M80] STRING FUNCTIONS BUILD ANSWER DESCRIPTOR HERE
 ---- ----              [M80] FRETOP  equ     $38C1   ;{M80} TOP OF FREE STRING SPACE 
----- ----              [M80] TENP3   equ     $38C3   ;[M80] USED MOMENTARILY BY FRMEVL. USED IN EXTENDED BY FOUT AND
+---- ----              [M80] TEMP3   equ     $38C3   ;[M80] USED MOMENTARILY BY FRMEVL. USED IN EXTENDED BY FOUT AND
 ---- ----                                            ;[M80] USER DEFINED FUNCTIONS ARRAY VARIABLE HANDLING TEMPORARY
 ---- ----              [M80] TEMP8   equ     $38C5   ;[M80] USED TO STORE THE ADDRESS OF THE END OF STRING ARRAYS IN GARBAGE COLLECTION
 ---- ----              [M80] ENDFOR  equ     $38C7   ;[M80] SAVED TEXT POINTER AT END OF "FOR" STATEMENT
@@ -151,7 +151,7 @@
 ---- ----              [M80] USFLG   equ     $38CC   ;;Direct Mode Flag    
 ---- ----              [M80] FLGINP  equ     $38CD   ;[M80] FLAGS WHETHER WE ARE DOING "INPUT" OR A READ
 ---- ----              [M80] SAVTXT  equ     $38CE   ;[M80] PLACE WHERE NEWSTT SAVES TEXT POINTER
----- ----              [M80] TENP2   equ     $38D0   ;[M80] FORMULA EVALUATOR TEMP MUST BE PRESERVED BY OPERATORS
+---- ----              [M80] TEMP2   equ     $38D0   ;[M80] FORMULA EVALUATOR TEMP MUST BE PRESERVED BY OPERATORS
 ---- ----                                            ;[M80] USED IN EXTENDED BY FOUT AND USER-DEFINED FUNCTIONS
 ---- ----              [M80] OLDLIN  equ     $38D2   ;[M80] OLD LINE NUMBER (SETUP BY ^C,"STOP" OR "END" IN A PROGRAM)
 ---- ----              [M80] OLDTXT  equ     $38D4   ;[M80] OLD TEXT POINTER
@@ -623,10 +623,10 @@
 01CD 01CD : 0E                       byte    $0E               ;;3849 CLMLST
 01CE 01CE : 00                       byte    $00               ;;384A RUBSW 
 01CF      : 5D 39                    byte    $5D,$39           ;;384B TOPMEM
-     01CF : 64 39                    byte    $64,$39           ;;3964 TOPMEM
+     01CF : 64 39                    byte    $64,$39           ;;384B TOPMEM
 01D1 01D1 : FE FF                    byte    $FE,$FF           ;;384D CURLIN
 01D3      : FA 38                    word    BASTXT            ;;384F TXTTAB
-     01D3 : 01 39                    word    BASTXT            ;;3901 TXTTAB
+     01D3 : 01 39                    word    BASTXT            ;;384F TXTTAB
 01D5 01D5
 01D5 01D5                  + ;[M65] STATEMENT DISPATCH ADDRESSES
 01D5 01D5                  | ;[M65] WHEN A STATEMENT IS TO BE EXECUTED, THE FIRST
@@ -870,7 +870,7 @@
 02F4 02F4 :                | ;[M65] IN ANY CASE MAKE SURE THE SMALLER WORD APPEARS
 02F4 02F4 :                | ;[M65] SECOND IN THE RESERVED WORD TABLE ("INP" AND "INPUT")
 02F4 02F4 :                | ;[M65] ANOTHER EXAMPLE: IF T OR Q THEN ... "TO" IS CRUNCHED
-02F4 02F4 :            [M65] ONEFUN  equ     TK                ;;*** This might go after SGN
+02F4 02F4 :            [M65] ONEFUN  equ     TK                ;;
 02F4 02F4 : D3 47 4E                 byte    'S'+$80,"GN"      ;;$B2
 02F7 02F7                    TK      =            TK+1              
 02F7 02F7 : C9 4E 54                 byte    'I'+$80,"NT"      ;;$B3
@@ -1612,9 +1612,11 @@
 066B 066B                  | ;[M80] NEWSTT FALLS INTO CHRGET. THIS FETCHES THE FIRST CHAR AFTER
 066B 066B                  | ;[M80] THE STATEMENT TOKEN AND THE CHRGET'S "RET" DISPATCHES TO STATEMENT
 066B 066B -                  ;;Skip Statement Token and Execute
+066B 066B                    ;;Call CHRGT2 to get and test character at HL
+066B 066B                    ;;Call CHRGT3 to test character in A
 066B 066B = 23         [M80] CHRGTR: inc     hl                ;[M80] DUPLICATION OF CHRGET RST FOR SPEED
 066C 066C = 7E         [M80] CHRGT2: ld      a,(hl)            ;Alternate CHRGOT
-066D 066D : FE 3A                    cp      ':'               ;[M80] SEE CHRGET RST FOR EXPLANATION
+066D 066D : FE 3A      {~~~} CHRGT3: cp      ':'               ;[M80] SEE CHRGET RST FOR EXPLANATION
 066F 066F : D0                       ret     nc                ;
 0670 0670                    ;[M80] CHRCON IS THE CONTINUATION OF THE CHRGET RST                  
 0670 0670 : FE 20      [M80] CHRCON: cp      ' '               ;[M80] MUST SKIP SPACES
@@ -1786,7 +1788,7 @@
 0734 0734 : CF                       rst     SYNCHK            ;[M80] 
 0735 0735 : B0                       byte    EQUATK            ;[M80] CHECK FOR "="
 0736 0736                    ;;Call this if you already did a PTRGET
-0736 0736 : D5         {~~~} LETDO:  push    de                ;[M80] SAVE THE VARIABLE POINTER
+0736 0736 : D5         {~~~} LETDO:  push    de                ;[M80] SAVE THE VARIABLE POINTER                                    
 0737 0737 : 3A AB 38                 ld      a,(VALTYP)        ;{M80} REMEMBER THE VARIABLE TYPE
 073A 073A : F5                       push    af                ;
 073B 073B : CD 85 09                 call    FRMEVL            ;[M80] GET THE VALUE OF THE FORMULA
@@ -1816,6 +1818,8 @@
 0764 0764 : E7                       rst     COMPAR            ;[M80] IS IN THE TEMPORARY STORAGE AREA (BELOW DSCTMP)
 0765 0765 : 30 09                    jr      nc,DNTCPY         ;[M80] DON'T COPY IF ITS NOT A VARIABLE
 0767 0767 : 3E                       byte    $3E               ;[M80] SKIP THE NEXT BYTE WITH A "MVI A,"
+0768 0768                    ; To assign a temporary string to a string variable
+0768 0768                    ; JP here with the Temporary Descriptor, Variable Pointer, and Text Pointer on the Stack
 0768 0768 : D1         [M80] INBUFC: pop     de                ;[M80] GET THE POINTER TO THE DESCRIPTOR IN [D,E]
 0769 0769 : CD E4 0F                 call    FRETMS            ;[M80] FREE UP A TEMORARY POINTING INTO BUF
 076C 076C : EB                       ex      de,hl             ;[M80] STRCPY COPIES [H,L]
@@ -1915,13 +1919,13 @@
 0810 0810 : AF                       xor     a                 ;
 0811 0811 : C4 A0 0E   (M80) STRDON: call    nz,STRPRT         ;[M80] PRINT THE NUMBER
 0814 0814 : E1                       pop     hl                ;
-0815 0815 : 18 A3                    jr      NEWCHR            ;[M80[ PRINT SOME MORE
-0817 0817 : 3A 47 38   (M80) COMPRT: ld      a,(PRTFLG)        ;[M80[ OUTPUT TO THE LINE PRINTER?
-081A 081A : B7                       or      a                 ;[M80[ NON-ZERO MEANS YES
-081B 081B : 28 08                    jr      z,ISCTTY          ;[M80[ NO, DO TELETYPE COMMA
-081D 081D : 3A 46 38                 ld      a,(LPTPOS)        ;[M80[ ARE WE USING INFINITE WIDTH?
-0820 0820 : FE 70                    cp      112               ;[M80[ CHECK IF NO MORE COMMA FIELDS
-0822 0822 : C3 2D 08                 jp      CHKCOM            ;[M80[ USE TELETYPE CHECK
+0815 0815 : 18 A3                    jr      NEWCHR            ;[M80] PRINT SOME MORE
+0817 0817 : 3A 47 38   (M80) COMPRT: ld      a,(PRTFLG)        ;[M80] OUTPUT TO THE LINE PRINTER?
+081A 081A : B7                       or      a                 ;[M80] NON-ZERO MEANS YES
+081B 081B : 28 08                    jr      z,ISCTTY          ;[M80] NO, DO TELETYPE COMMA
+081D 081D : 3A 46 38                 ld      a,(LPTPOS)        ;[M80] ARE WE USING INFINITE WIDTH?
+0820 0820 : FE 70                    cp      112               ;[M80] CHECK IF NO MORE COMMA FIELDS
+0822 0822 : C3 2D 08                 jp      CHKCOM            ;[M80] USE TELETYPE CHECK
 0825 0825 : 3A 49 38   (M80) ISCTTY: ld      a,(CLMLST)        ;[M80] POSITION OF LAST COMMA COLUMN
 0828 0828 : 47                       ld      b,a               ;
 0829 0829 : 3A 00 38                 ld      a,(TTYPOS)        ;[M80] GET TELETYPE POSITION
@@ -2178,7 +2182,7 @@
 0985 0985 -                + ;;Evaluate Formula
 0985 0985                  | ;[M65] THE FORMULA EVALUATOR STARTS WITH
 0985 0985                  | ;[M65] [H,L] POINTING TO THE FIRST CHARACTER OF THE FORMULA.
-0985 0985                  | ;[M65] AT THE END [H,L] POINTS TO THE TERMINATOR.
+0985 0985                  | ;[M65] AT THE END [H,L] POINTS TO THE TERMINATOR.3
 0985 0985                  | ;[M65] THE RESULT IS LEFT IN THE FAC.
 0985 0985                  | ;[M65] ON RETURN [A] DOES NOT REFLECT THE TERMINATOR.
 0985 0985                  | ;
@@ -2196,14 +2200,14 @@
 0989 0989 : 0E 01                    ld      c,1               ;[M80] EXTRA SPACE NEEDED FOR RETURN ADDRESS
 098B 098B : CD A0 0B                 call    GETSTK            ;[M80] MAKE SURE THERE IS ROOM FOR RECURSIVE CALLS
 098E 098E : CD FD 09                 call    EVAL              ;[M80] EVALUATE SOMETHING
-0991 0991 : 22 D0 38   [N80] TSTOP:  ld      (TENP2),hl        ;[M80] SAVE TEXT POINTER
-0994 0994 : 2A D0 38   [M80] RETAOP: ld      hl,(TENP2)        ;[M80] RESTORE TEXT PTR
-0997 0997 : C1                       pop     bc                ;[M80] POP OFF THE PRECEDENCE OF OLDOP
+0991 0991 : 22 D0 38   [N80] TSTOP:  ld      (TEMP2),hl        ;[M80] SAVE TEXT POINTER
+0994 0994 : 2A D0 38   [M80] RETAOP: ld      hl,(TEMP2)        ;[M80] RESTORE TEXT PTR
+0997 0997 : C1                       pop     bc                ;[M80] POP OFF THE PRECEDENCE OF OLDOP   ;;BC = Old Precedence
 0998 0998 : 78                       ld      a,b               ;
 0999 0999 : FE 78                    cp      $78               ;
 099B 099B : D4 75 09                 call    nc,CHKNUM         ;
 099E 099E : 7E         {M80} NOTSTV  ld      a,(hl)            ;[M80] GET NEXT CHARACTER
-099F 099F : 22 C3 38                 ld      (TENP3),hl        ;[M80] SAVE UPDATED CHARACTER POINTER
+099F 099F : 22 C3 38                 ld      (TEMP3),hl        ;[M80] SAVE UPDATED CHARACTER POINTER
 09A2 09A2 : FE A8                    cp      PLUSTK            ;[M80] IS IT AN OPERATOR?
 09A4 09A4 : D8                       ret     c                 ;
 09A5 09A5 : FE B2                    cp      LESSTK+1          ;
@@ -2220,14 +2224,14 @@
 09BA 09BA : 07         (M80) NTPLUS: rlca                      ;[M65] MULTIPLY BY 2
 09BB 09BB : 83                       add     a,e               ;[M65] BY THREE.
 09BC 09BC : 5F                       ld      e,a               ;[M65] SET UP FOR LATER
-09BD 09BD : 21 4C 03   {M65} QPREC1: ld      hl,OPTAB          ;[M80] CREATE INDEX INTO OPTAB
-09C0 09C0 : 16 00                    ld      d,0               ;[M80] MAKE HIGH BYTE OF OFFSET=0
-09C2 09C2 : 19                       add     hl,de             ;[M80] ADD IN CALCULATED OFFSET
-09C3 09C3 : 78                       ld      a,b               ;[M80] [A] GETS OLD PRECEDENCE
-09C4 09C4 : 56                       ld      d,(hl)            ;[M80] REMEMBER NEW PRECEDENCE
+09BD 09BD : 21 4C 03   {M65} QPREC1: ld      hl,OPTAB          ;[M80] CREATE INDEX INTO OPTAB           ;;HL = Index to Precedence
+09C0 09C0 : 16 00                    ld      d,0               ;[M80] MAKE HIGH BYTE OF OFFSET=0        
+09C2 09C2 : 19                       add     hl,de             ;[M80] ADD IN CALCULATED OFFSET          
+09C3 09C3 : 78         {~~~} EVALOP: ld      a,b               ;[M80] [A] GETS OLD PRECEDENCE           ;;A = Old Precedence
+09C4 09C4 : 56                       ld      d,(hl)            ;[M80] REMEMBER NEW PRECEDENCE           ;;D = Precedence
 09C5 09C5 : BA                       cp      d                 ;[M80] OLD-NEW
-09C6 09C6 : D0                       ret     nc                ;[M80] APPLY OLD OP IF >= PRECEDENCE
-09C7 09C7 : 23                       inc     hl                ;
+09C6 09C6 : D0                       ret     nc                ;[M80] APPLY OLD OP IF >= PRECEDENCE     ;;Return to Operator Routine 
+09C7 09C7 : 23                       inc     hl                ;                                        ;;HL = Address of Operator Routine
 09C8 09C8 : CD 75 09                 call    CHKNUM            ;
 09CB 09CB                                                      
 09CB 09CB : C5         [M80] FINTMP: push    bc                ;[M80] SAVE THESE THINGS FOR RETAOP
@@ -2243,7 +2247,7 @@
 09D9 09D9 : 46                       ld      b,(hl)            ;
 09DA 09DA : 23                       inc     hl                ;;Now HL contains FINRE2 address
 09DB 09DB : C5                       push    bc                ;;Push FINRE2 address
-09DC 09DC : 2A C3 38                 ld      hl,(TENP3)        ;REGET THE TEXT POINTER
+09DC 09DC : 2A C3 38                 ld      hl,(TEMP3)        ;REGET THE TEXT POINTER
 09DF 09DF : C3 88 09                 jp      LPOPER            ;PUSH ON THE PRECEDENCE AND READ MORE FORMULA
 09E2 09E2                                                      
 09E2 09E2                    ;;Evaluate Logical Operators      
@@ -2258,7 +2262,7 @@
 09F2 09F2 : BA                       cp      d                 ;[M80] MAKE SURE RESULT IS BIGGER
 09F3 09F3 : 57                       ld      d,a               ;[M80] SAVE THE MASK
 09F4 09F4 : DA C4 03                 jp      c,SNERR           ;[M80] DON'T ALLOW TWO OF THE SAME
-09F7 09F7 : 22 C3 38                 ld      (TENP3),hl        ;[M80] SAVE CHARACTER POINTER
+09F7 09F7 : 22 C3 38                 ld      (TEMP3),hl        ;[M80] SAVE CHARACTER POINTER
 09FA 09FA : D7                       rst     CHRGET            ;[M80] GET THE NEXT CANDIDATE
 09FB 09FB : 18 E7                    jr      LOPREL            ;
 09FD 09FD
@@ -2297,7 +2301,7 @@
 0A3D 0A3D                                                      
 0A3D 0A3D : 16 7D      [M80] DOMIN:  ld      d,125             ;[M80] A PRECEDENCE BELOW ^ BUT ABOVE ALL ELSE
 0A3F 0A3F : CD 88 09                 call    LPOPER            ;[M80] SO ^ GREATER THAN UNARY MINUS
-0A42 0A42 : 2A D0 38                 ld      hl,(TENP2)        ;[M80] GET TEXT POINTER
+0A42 0A42 : 2A D0 38                 ld      hl,(TEMP2)        ;[M80] GET TEXT POINTER
 0A45 0A45 : E5                       push    hl                ;
 0A46 0A46 : CD 0B 15                 call    NEG               ;
 0A49 0A49 : CD 75 09   [M80] LABBCK: call    CHKNUM            ;[M80] FUNCTIONS THAT DON'T RETURN
@@ -2533,7 +2537,7 @@
 0B5A 0B5A : 7A                       ld      a,d               ;[M80] SET THE CONDITION CODES BASED ON THE HIGH ORDER
 0B5B 0B5B : B7                       or      a                 ;
 0B5C 0B5C : C2 97 06                 jp      nz,FCERR          ;[M80] WASN'T ERROR
-0B5F 0B5F : 2B                       dec     hl                ;[M80] fUNCTIONS CAN GET HERE WITH BAD [H,L] BUT NOT SERIOUS
+0B5F 0B5F : 2B                       dec     hl                ;[M80] FUNCTIONS CAN GET HERE WITH BAD [H,L] BUT NOT SERIOUS
 0B60 0B60 : D7                       rst     CHRGET            ;[M80] SET CONDITION CODES ON TERMINATOR
 0B61 0B61 : 7B                       ld      a,e               ;[M80] RETURN THE RESULT IN [A] AND [E]
 0B62 0B62 : C9                       ret                       ;
@@ -3105,14 +3109,16 @@
 0E4E 0E4E
 0E4E 0E4E                    ;[M65] "STRINI" GET STRING SPACE FOR THE CREATION OF A STRING AND 
 0E4E 0E4E                    ;[M65] CREATES A DESCRIPTOR FOR IT IN "DSCTMP".
+0E4E 0E4E                    ;;Argument: String Length in [A]
 0E4E 0E4E                    ;;Returns String Text Address in [DE], Descriptor Address in [HL]
+0E4E 0E4E                    ;;[A] preserved, [BC] destroyed
 0E4E 0E4E : 3E 01      [M80] STRIN1: ld      a,1               ;[M80] MAKE ONE CHAR STRING (CHR$, INKEY$)
 0E50 0E50 : CD B3 0E   [M80] STRINI: call    GETSPA            ;[M80] GET SOME STRING SPACE ([A] CHARS)
 0E53 0E53 : 21 BD 38   [M80] STRAD2: ld      hl,DSCTMP         ;[M80] GET DESC. TEMP
 0E56 0E56 : E5         {M80} STRADI: push    hl                ;[M80] SAVE DESC. POINTER
 0E57 0E57 : 77                       ld      (hl),a            ;[M80] SAVE CHARACTER COUNT
 0E58 0E58 : 23                       inc     hl                ;
-0E59 0E59 = 23               STRADX: inc     hl                ;[M80] STORE [D,E]=POINTER TO FREE SPACE
+0E59 0E59 = 23         {~~~} STRADX: inc     hl                ;[M80] STORE [D,E]=POINTER TO FREE SPACE
 0E5A 0E5A : 73                       ld      (hl),e            ;
 0E5B 0E5B : 23                       inc     hl                ;
 0E5C 0E5C : 72                       ld      (hl),d            ;
@@ -3131,8 +3137,8 @@
 0E5F 0E5F                  | ;[M80] THE CHARACTER AFTER THE STRING LITERAL IS POINTED TO
 0E5F 0E5F                  | ;[M80] BY [H,L] AND IS IN [A], BUT THE CONDITION CODES ARE
 0E5F 0E5F                  | ;[M80] NOT SET UP.
-0E5F 0E5F                  | ;; STRLIT accepts two delimiters in addition to a zero. These 
-0E5F 0E5F                  | ;; delimiters are passed in B and D.
+0E5F 0E5F                  | ;; STRLT2 accepts two delimiters in addition to a zero. These 
+0E5F 0E5F                  | ;; delimiters are passed in B and D. HL must point to character before string.
 0E5F 0E5F                  | ;; READ calls STRLIT with ',' in B and ':' in D to parse unquoted
 0E5F 0E5F                  | ;; strings in DATA statemts.
 0E5F 0E5F                  | ;; STRLIT and STRLTI execute STRLT2 with '"' in both B and D.SSS
@@ -3680,13 +3686,14 @@
 10EB 10EB : 38 FD                    jr      c,EATEM           ;[M65] SKIP NUMERICS
 10ED 10ED : CD C6 0C   {M80} VMORC1: call    ISLETC            ;
 10F0 10F0 : 30 F8                    jr      nc,EATEM          ;[M65] SKIP ALPHABETICS
+10F2 10F2                    ;; Carry is set at this point
 10F2 10F2 : D6 24      (M80) NOSEC:  sub     '$'               ;[M65] IS IT A STRING?
 10F4 10F4 : 20 08                    jr      nz,NOTSTR         ;[M65] IF NOT, [VALTYP]=0.
 10F6 10F6 : 3C                       inc     a                 ;[M65] SET [VALTYP]=1 (STRING !)
 10F7 10F7 : 32 AB 38                 ld      (VALTYP),a        ;
-10FA 10FA : 0F                       rrca                      ;
-10FB 10FB : 80                       add     a,b               ;
-10FC 10FC : 47                       ld      b,a               ;
+10FA 10FA : 0F                       rrca                      ;; Make A = $80
+10FB 10FB : 80                       add     a,b               ;; Add to second character to signify string
+10FC 10FC : 47                       ld      b,a               ;; and put back in B
 10FD 10FD : D7                       rst     CHRGET            ;[M80] READ PAST TYPE MARKER
 10FE 10FE : 3A CB 38   (M65) NOTSTR: ld      a,(SUBFLG)        ;[M80] GET FLAG WHETHER TO ALLOW ARRAYS
 1101 1101 : 3D                       dec     a                 ;[M80] IF SUBFLG=1, "ERASE" HAS CALLED
@@ -3798,7 +3805,7 @@
 1190 1190 : CA 80 11                 jp      z,INDLOP          ;[M80] IF SO, READ MORE
 1193 1193 : CF                       rst     SYNCHK            ;
 1194 1194 : 29                       byte    ')'               ;{M80} MAKE SURE THERE IS A BRACKET
-1195 1195 : 22 D0 38   {M80} SUBSOK: ld      (TENP2),hl        ;[M80 ]SAVE THE TEXT POINTER
+1195 1195 : 22 D0 38   {M80} SUBSOK: ld      (TEMP2),hl        ;[M80 ]SAVE THE TEXT POINTER
 1198 1198 : E1                       pop     hl                ;[M80 ][H,L]= VALTYP & DIMFLG
 1199 1199 : 22 AA 38                 ld      (DIMFLG),hl       ;[M80 ]SAVE VALTYP AND DIMFLG
 119C 119C : 1E 00                    ld      e,0               ;{M80 }WHEN [D,E] IS POPPED INTO PSW, ZERO FLAG WON'T BE SET
@@ -3884,7 +3891,7 @@
 11DF 11DF : CD A0 0B                 call    GETSTK            ;[M80] GET SPACE FOR DIMENSION ENTRIES
 11E2 11E2 : 23                       inc     hl                ;[M80] SKIP OVER THE SIZE LOCATIONS
 11E3 11E3 : 23                       inc     hl                
-11E4 11E4 : 22 C3 38                 ld      (TENP3),hl        ;[M80] SAVE THE LOCATION TO PUT THE SIZE IN
+11E4 11E4 : 22 C3 38                 ld      (TEMP3),hl        ;[M80] SAVE THE LOCATION TO PUT THE SIZE IN
 11E7 11E7 : 71                       ld      (hl),c            ;[M80] STORE THE NUMBER OF DIMENSIONS
 11E8 11E8 : 23                       inc     hl                
 11E9 11E9 : 3A AA 38                 ld      a,(DIMFLG)        ;{M80} CALLED BY DIMENSION?
@@ -3920,7 +3927,7 @@
 1216 1216 : 20 FA                    jr      nz,ZERITA         ;[M80] NO, ZERO MORE
 1218 1218 : 03                       inc     bc                ;(M80) ADD ONE TO INCLUDE BYTE FOR NUMBER OF DIMENSIONS
 1219 1219 : 57                       ld      d,a               ;[M80[ [D]=ZERO
-121A 121A : 2A C3 38                 ld      hl,(TENP3)        ;[M80[ GET A POINTER AT THE NUMBER OF DIMENSIONS
+121A 121A : 2A C3 38                 ld      hl,(TEMP3)        ;[M80[ GET A POINTER AT THE NUMBER OF DIMENSIONS
 121D 121D : 5E                       ld      e,(hl)            ;[M80[ [E]=NUMBER OF DIMENSIONS
 121E 121E : EB                       ex      de,hl             ;[M80[ [H,L]=NUMBER OF DIMENSIONS
 121F 121F : 29                       add     hl,hl             ;[M80[ [H,L]=NUMBER OF DIMENSIONS TIMES TWO
@@ -3976,7 +3983,7 @@
 1249 1249 : C1         {M80} DONMUL: pop     bc                ;[M80] POP OFF THE ADDRESS OF WHERE THE VALUES BEGIN
 124A 124A : 09                       add     hl,bc             ;[M80] ADD IT ONTO CURTOL TO GET PLACE VALUE IS STORED
 124B 124B : EB                       ex      de,hl             ;[M80] RETURN THE POINTER IN [D,E]
-124C 124C : 2A D0 38   (M80) FINNOW: ld      hl,(TENP2)        ;[M80] REGET THE TEXT POINTER
+124C 124C : 2A D0 38   (M80) FINNOW: ld      hl,(TEMP2)        ;[M80] REGET THE TEXT POINTER
 124F 124F : C9                       ret
 1250 1250
 1250 1250                  + ;[M80] MATHPK FOR BASIC MCS 8080  GATES/ALLEN/DAVIDOFF
@@ -6297,7 +6304,7 @@
 1E14 1E14                                                      
 1E14 1E14                    ;;Make a Beep Sound               
 1E14 1E14 : 01 C8 00   (~~~) BEEP:   ld      bc,200            ;
-1E17 1E17 : 11 32 00                 ld      de,50             ;
+1E17 1E17 : 11 32 00                 ld      de,50             ; 7815 Hz (3.579545 MHz / 458 cycle wavelength
 1E1A 1E1A : CD 64 1E                 call    SOUNDS            ;;Play freq 50, delay 300
 1E1D 1E1D : 18 D4                    jr      TTYXPR            ;;Restore Registers and return
 1E1F 1E1F
@@ -6314,7 +6321,7 @@
 1E30 1E30 : E7                       rst     COMPAR            ;;Past End of Screen?
 1E31 1E31 : 3E 00                    ld      a,0               ;;Cursor Column = 0
 1E33 1E33 : 38 09                    jr      c,TTYSAV          ;;No, Save Position and Column
-1E35 1E35 : 21 C1 33                 ld      hl,033C1H         ;;Yes, Position = Row 24, Column 0  
+1E35 1E35 : 21 C1 33                 ld      hl,SCREEN+961     ;;Yes, Position = Row 24, Column 0  
 1E38 1E38 : CD 3E 1E                 call    TTYSAV            ;Save Position and Column
 1E3B 1E3B : C3 FE 1D                 jp      SCROLL            ;Scroll Screen
 1E3E 1E3E
@@ -6344,25 +6351,31 @@
 1E61 1E61 : 20 F9                    jr      nz,FILLIP         ;;No, Loop
 1E63 1E63 : C9                       ret                       ;
 1E64 1E64
-1E64 1E64 : 78         [GWB] SOUNDS: ld      a,b               ;;Play frequency [DE] for duration [BC]
-1E65 1E65 : B1                       or      c                 ;;If BC = 0 return
-1E66 1E66 : C8                       ret     z                 ;
-1E67 1E67 : AF                       xor     a                 ;
-1E68 1E68 : D3 FC                    out     ($FC),a           ;;Write 0 to port $FC
-1E6A 1E6A : CD 76 1E                 call    SDELAY            ;
-1E6D 1E6D : 3C                       inc     a                 ;
-1E6E 1E6E : D3 FC                    out     ($FC),a           ;;Write 1 to port $FC
-1E70 1E70 : CD 76 1E                 call    SDELAY            ;;Delay [DE]*31+44 cycles
-1E73 1E73 : 0B                       dec     bc                ;;Decrememt duration counter and loop
-1E74 1E74 : 18 EE                    jr      SOUNDS            ;
+1E64 1E64
+1E64 1E64                    ;; Duty cycle: High: 90 + DE * 31 cycles, Low: 59 + DE * 31 cycles
+1E64 1E64                    ;; $FC = 1: 17 + 27 + DE * 31 + 6 + 12 + 4 + 4 + 5 + 4 + 11 cycles
+1E64 1E64                    ;; $FC = 0: 17 + 27 + DE * 31 + 4 + 11 cycles
+1E64 1E64                    ;; Total wavelength: 149 + DE * 62 cycles 
+1E64 1E64 : 78         [GWB] SOUNDS: ld      a,b               ;;  4   Play frequency [DE] for duration [BC]
+1E65 1E65 : B1                       or      c                 ;;  4   If BC = 0 return
+1E66 1E66 : C8                       ret     z                 ;;  5   
+1E67 1E67 : AF                       xor     a                 ;;  4	    
+1E68 1E68 : D3 FC                    out     ($FC),a           ;; 11  Write 0 to port $FC
+1E6A 1E6A : CD 76 1E                 call    SDELAY            ;; 17   
+1E6D 1E6D : 3C                       inc     a                 ;;  4	   
+1E6E 1E6E : D3 FC                    out     ($FC),a           ;; 11   Write 1 to port $FC
+1E70 1E70 : CD 76 1E                 call    SDELAY            ;; 17   Delay [DE]*31+44 cycles
+1E73 1E73 : 0B                       dec     bc                ;;  6	   Decrememt duration counter and loop
+1E74 1E74 : 18 EE                    jr      SOUNDS            ;; 12   
 1E76 1E76    
-1E76 1E76 : D5               SDELAY: push    de                ;;Delay [DE]*31+27 cycles
-1E77 1E77 : E1                       pop     hl                ;;Copy freq delay to HL (+10)
-1E78 1E78 : 7C               SDELAL: ld      a,h               ;
-1E79 1E79 : B5                       or      l                 ;
-1E7A 1E7A : C8                       ret     z                 ;;If 0, return
-1E7B 1E7B : 2B                       dec     hl                ;
-1E7C 1E7C : 18 FA                    jr      SDELAL            ;;Decrement and loop
+1E76 1E76                    ;; Delay is 21 + DE * 31 + 6 cycles
+1E76 1E76 : D5               SDELAY: push    de                ;; 11	    Delay [DE]*31+27 cycles
+1E77 1E77 : E1                       pop     hl                ;; 10	    Copy freq delay to HL (+10)
+1E78 1E78 : 7C               SDELAL: ld      a,h               ;;  4	    
+1E79 1E79 : B5                       or      l                 ;;  4	    
+1E7A 1E7A : C8                       ret     z                 ;;5+6    If 0, return
+1E7B 1E7B : 2B                       dec     hl                ;;  6	    
+1E7C 1E7C : 18 FA                    jr      SDELAL            ;; 12	    Decrement and loop
 1E7E 1E7E                    
 1E7E 1E7E                  + ;;INCHRH, INCHRC, and INCHRI - Get Character from Keyboard 
 1E7E 1E7E                  | ;;The Keyboard Matrix is 8 columns by 6 rows. The columns are wired to
