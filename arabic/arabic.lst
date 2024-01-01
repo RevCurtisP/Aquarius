@@ -1,0 +1,3683 @@
+; Aquarius Arabic Editor ROM disassembly
+
+                    CRTSIG  equ     $0082   ; Cartridge signature
+                    STKINI  equ     $0BE5   ; Reset Stack Pointer
+                    WRMCON  equ     
+                    TTYCHR  equ     $1D72   ; Print character to screen
+                    INCHRH  equ     $1E7E   ; Get Character from Keyboard 
+
+                    SCREEN  equ     $3000   ; Screen Character Matrix
+                    LNGDSP  equ     $3027   ; Language display
+                    AFSAVE  equ     $37E8   ; AF save
+                    LNGFLG  equ     $37ED   ; Language flag
+                    CRAMSV  equ     $37F2   ; CURRAM save
+
+E000 : 48 57 4E 14  XCART:  byte    $48,$57,$4E,$14,$48,$A2,$57,$8E
+E004 : 48 A2 57 8E
+E008 : B7 52 78 5A          byte    $B7,$52,$78,$5A,$0C,$96,$0C,$4E
+E00C : 0C 96 0C 4E
+E010 : 21 00 30     XINIT:  ld  `   hl,SCREEN
+E013 : 11 00 E8             ld  `   de,SPLASH
+E016 : 1A           SPLSH:  ld      a,(de)
+E017 : 77                   ld      (hl),a
+E018 : 23                   inc     hl
+E019 : 13                   inc     de
+E01A : FE 28                cp      $28
+E01C : 28 0B                jr      z,SPLSH2
+E01E : 30 F6                jr      nc,SPLSH
+E020 : 2B                   dec hl
+E021        
+E021 : 36 20        SPLSH1: ld      (hl),' '
+E023 : 23                   inc     hl
+E024 : 3D                   dec     a
+E025 : 20 FA                jr      nz,SPLSH1
+E027 : 18 ED                jr      SPLSH
+E029 : CD 80 1E     SPLSH2: call    INCHRC
+E02C : FE 0D                cp      13
+E02E : 28 0F                jr      z,LE03F
+E030 : FE 03                cp      3
+E032 : 20 F5                jr      nz,SPLSH2
+E034 : 3E 0B                ld      a,11
+E036 : CD 72 1D             call    TTYCHR
+E039 : CD E5 0B             call    STKINI
+E03C : CD 40 1A             call    WRMCON
+E03F        LE03F:
+E03F : 21 87 01             ld      hl,DEFALT                 ; @DEFALT
+E042 : 01 51 00             ld      bc,81                     ; !should be 78 (STMDSP - DEFALT)
+E045 : 11 03 38             ld      de,USRPOK                 ; @USRPOK
+E048 : ED B0                ldir                              ; Initialize system variables
+E04A : 21 00 E1             ld      hl,DOHOOK                 ; Install hook routine
+E04D : 22 06 38             ld      (HOOK),hl                 ; @HOOK
+E050 : AF                   xor a
+E051 : 32 A9 38             ld      (ENDBUF),a                ; @ENDBUF Initialize buffer
+E054 : 32 00 39             ld      (BASTXT-1),a              ; @BASTXT 
+E057 : 21 64 39             ld      hl,BASTXT+63              ; Start memory test at $3965
+E05A :              ; Test Memory to Find Top of RAM  
+E05A : 23           MTEST:  inc     hl
+E05B : 4E                   ld      c,(hl)                    
+E05C : 7C                   ld      a,h
+E05D : B5                   or      l                         
+E05E : 28 0B                jr      z,MCHECK                  
+E060 : A9                   xor     c
+E061 : 77                   ld      (hl),a
+E062 : 46                   ld      b,(hl)
+E063 : 2F                   cpl
+E064 : 77                   ld      (hl),a
+E065 : 7E                   ld      a,(hl)
+E066 : 2F                   cpl
+E067 : 71                   ld      (hl),c
+E068 : B8                   cp      b
+E069 : 28 EF                jr      z,MTEST
+E06B                ; Check Memory Size        
+E06B : 2B           MCHECK: dec     hl
+E06C : 11 2C 3A             ld      de,14892
+E06F : E7                   rst     COMPAR                    ; @COMPAR
+E070 : DA B7 0B             jp      c,OMERR                   ; @OMERR
+E073 :              ; Set Top of memory
+E073 : 11 CE FF             ld      de,-50                    ; Set string space
+E076 : 22 AD 38             ld      (MEMSIZ),hl               ; @MEMSIZ
+E079 : 19                   add     hl,de
+E07A : 22 4B 38             ld      (TOPMEM),hl               ; @TOPMEM
+E07D : CD BE 0B             call    SCRTCH                    ; @SCRTCH
+E080 : CD F2 1F             call    PRNTIT                    ; @PRNTIT
+E083 : 31 65 38             ld      sp,OLDSTK                 ; @OLDSTK
+E086 : CD E5 0B             call    STKINI
+E089 :              ; Check for Extended BASIC
+E089 : 21 05 20             ld      hl,EXTBAS+5               ; @EXTBAS
+E08C :              ; BC = $E089
+E08C :              ; DE = $0000 - C3 41 00 C3 E1 1F 82 06 22 0B 00
+E08C :              ; HL = $2005 - 2B 00 00 00 00 00 00 00 00 00 00
+E08C : 0C                   inc     c                         ; This should be LD DE,CRTSIG
+E08D : 82                   add     a,d
+E08E : 00                   nop
+E08F : 1A           XCHECK: ld      a,(de)
+E090 : B7                   or      a
+E091 : CA E8 1F             jp      z,XBASIC                  ; @XBASIC
+E094 : BE                   cp      (hl)
+E095 : 20 04                jr      nz,INITFF
+E097 : 2B                   dec     hl
+E098 : 13                   inc     de
+E099 : 18 F4                jr      XCHECK
+E09B :              ; Initialize I/O Port 255
+E09B : 3E 3E        INITFF: ld      a,$3E
+E09D : D3 FF                out     ($FF),a               
+E09F : 32 09 38             ld      (SCRMBL),a                ; @SCRMBL               
+E0A2 : C3 02 04             jp      READY                     ; @READY
+E0A5 : 21 E8 37             ld      hl,AFSAVE
+E0A8 : 01 14 00             ld      bc,$0014
+E0AB : 1E 00                ld      e,0
+E0AD :              ; Orphan code?
+E0AD : 0B           OLOOP1: dec     bc
+E0AE : 23                   inc     hl
+E0AF : 73                   ld      (hl),e
+E0B0 : 78                   ld      a,b
+E0B1 : B1                   or      c
+E0B2 : 20 F9                jr      nz,OLOOP1
+E0B4 : 21 00 E1             ld      hl,0E100H
+E0B7 : 22 06 38             ld      (HOOK),hl
+E0BA : 21 97 06             ld      hl,FCERR                  ; @FCERR
+E0BD : 22 04 38             ld      (USRADD),hl               ; @USRADD
+E0C0 : 3E 3E                ld      a,$3E
+E0C2 : D3 FF                out     ($FF),a
+E0C4 : C9                   ret
+E0C5 :
+E0C5 : FF FF FF             byte    $FF,$FF,$FF
+E0C8 :
+E0C8 : C1 C1 C1 C1          byte    $C1,$C1,$C1,$C1,$C1,$C1,$C1,$C1
+E0CC : C1 C1 C1 C1
+E0D0 : C1 C1 C1 C1          byte    $C1,$C1,$C1,$C1,$C1,$C1,$C1,$C1
+E0D4 : C1 C1 C1 C1
+E0D8 : C1 C1 C1 C1          byte    $C1,$C1,$C1,$C1,$C1,$C1,$C1,$C1
+E0DC : C1 C1 C1 C1
+E0E0 : C1 C1 C1 C1          byte    $C1,$C1,$C1,$C1,$C1,$C1,$C1,$C1
+E0E4 : C1 C1 C1 C1
+E0E8 : C1 C1 C1 C1          byte    $C1,$C1,$C1,$C1,$C1,$C1,$C1,$C1
+E0EC : C1 C1 C1 C1
+E0F0 : C1 C1 C1 C1          byte    $C1,$C1,$C1,$C1,$C1,$C1,$C1,$C1
+E0F4 : C1 C1 C1 C1
+E0F8 : C1 C1 C1 C1          byte    $C1,$C1,$C1,$C1,$C1,$C1,$C1,$C1
+E0FC : C1 C1 C1 C1
+E100 :
+E100 :              ; Hook Dispatch Routine
+E100 : E5           DOHOOK: push    hl                        ; Stack = OldHL, RtnAdr
+E101 : F5                   push    af                        ; Stack = OldAF, OldHL, RtnAdr
+E102 : E1                   pop     hl                        ; HL = OldAF; Stack = OldHL, RtnAdr
+E103 : 22 E8 37             ld      (AFSAVE),hl               ; Save OldAF
+E106 : E1                   pop     hl                        ; HL = OldHL; Stack = RtnAdr
+E107 : E3                   ex      (sp),hl                   ; HL = RtnAdr; Stack = OldHL
+E108 : 7E                   ld      a,(hl)                    ; A = HookNo
+E109 : E3                   ex      (sp),hl                   ; HL = OldHL; Stack = RtnAdr
+E10A : FE 12                cp      18                        ; 
+E10C : 20 0A                jr      nz,NOT18                  ; If Hook 18 (INCHRH)
+E10E : E3                   ex      (sp),hl                   ;   HL = RtnAdr; Stack = OldHL
+E10F : E5                   push    hl                        ;   Stack = RtnAdr, OldHL
+E110 : 21 27 E1             ld      hl,INCHRX
+E113 : 33                   inc     sp
+E114 : 33                   inc     sp                        ;   Stack = OldHL
+E115 : E3                   ex      (sp),hl                   ;   HL = OldHL; Stack = INCHRX
+E116 : 3B                   dec     sp
+E117 : 3B                   dec     sp                        ;   Stack = RtnAdr, INCHRX
+E118        
+E118 : FE 13        NOT18:  cp      19                        ; If Hook 19 (TTYCHR)
+E11A : CC 11 E2             call    z,TTYCHX                  ;   Execute TTYCHR hook
+E11D : E5                   push    hl                        ; Stack = OldHL, RtnAdr
+E11E : 2A E8 37             ld      hl,(AFSAVE)               ; HL = OldAF
+E121 : E5                   push    hl                        ; Stack = OldAF, OldHL, RtnAdr
+E122 : F1                   pop     af                        ; AF = OldAF; Stack = OldHL, RtnAdr
+E123 : E1                   pop     hl                        ; HL = OldHL; Stack = RtnAdr
+E124 : C3 3B 00             jp      NOHOOK                    ; @NOHOOK
+E127 :
+E127 : 00           INCHRX: nop
+E128 : F5                   push    af                        ; Stack = KeyASC, RtnAdr
+E129 : B7                   or      a                         ; If no key 
+E12A : 28 5E                jr      z,POPART                  ;   Abort
+E12C : FE 15                cp      'U'-64                     
+E12E : 20 5E                jr      nz,NOTCLU                 ; If Ctrl-U
+E130        
+E130 : F1           CHGLNG: pop     af                        ; Stack = RtnAdr
+E131 : AF                   xor     a                         ; with 0
+E132 : F5                   push    af                        ; Stack = NoKey, RtnAdr
+E133        
+E133 : 3A ED 37     ISENTR: ld      a,(LNGFLG)
+E136 : 2F                   cpl
+E137 : 32 ED 37             ld      (LNGFLG),a                ; Toggle Language Flag
+E13A : 1F                   rra
+E13B : 30 19                jr      nc,NOTARB                 ; If Arabic
+E13D : 22 EE 37             ld      (X37EE),hl
+E140 : 22 F0 37             ld      (X37F0),hl
+E143 : 3E 41                ld      a,'A'
+E145 : 32 27 30             ld      (LNGDSP),a
+E148 : E5                   push    hl                        ;   Stack = OldHL, KeyASC, RtnAdr
+E149 : 2A 01 38             ld      hl,(CURRAM)               ; @CURRAM
+E14C : 23                   inc     hl
+E14D : 22 F2 37             ld      (CRAMSV),hl
+E150 : 22 01 38             ld      (CURRAM),hl
+E153 : E1                   pop     hl                        ;   HL = OldHL; Stack = KeyASC, RtnAdr
+E154 : F1                   pop     af                        ;   A = KeyASC; Stack = RtnAdr
+E155 : C9                   ret
+E156        
+E156 : C5           NOTARB: push    bc
+E157 : D5                   push    de
+E158 : E5                   push    hl
+E159 : 06 DB                ld      b,$DB
+E15B : 2A 01 38             ld      hl,(CURRAM)
+E15E : 3A 00 38             ld      a,(TTYPOS)                ; @TTYPOS
+E161 : FE FF                cp      $FF     
+E163 : 20 05                jr      nz,NOTFF                  ; If TTYPOS = 255
+E165 : 3E 25                ld      a,37
+E167 : 32 00 38             ld      (TTYPOS),a                ;   Set TTYPOS to 37
+E16A : CD 66 E3     NOTFF:  call    LE366
+E16D : 22 01 38             ld      (CURRAM),hl
+E170 : ED 5B F2 37          ld      de,(CRAMSV)
+E174 : 1B                   dec     de
+E175 : 1B                   dec     de
+E176        LE176:
+E176 : 4E                   ld      c,(hl)
+E177 : 70                   ld      (hl),b
+E178 : 41                   ld      b,c
+E179 : CD 66 E3             call    LE366
+E17C : E7                   rst     COMPAR
+E17D : 20 F7                jr      nz,LE176
+E17F : E1                   pop     hl
+E180 : D1                   pop     de
+E181 : C1                   pop     bc
+E182 : 2A F0 37             ld      hl,(X37F0)
+E185 : 3E 45                ld      a,'E'
+E187 : 32 27 30             ld      (LNGDSP),a
+E18A : F1           POPART: pop     af
+E18B : C9                   ret
+E18C        
+E18C : 18 A2        CHGLNJ: jr  CHGLNG
+        ;
+E18E        
+E18E : 3A ED 37     NOTCLU: ld      a,(LNGFLG)
+E191 : 1F                   rra                               ; If not Arabic
+E192 : 30 F6                jr      nc,POPART                 ;   Return
+E194 : F1                   pop     af
+E195 : F5                   push    af                        ; A = KeyASC
+E196 : FE 0D                cp      13                        ; If Enter
+E198 : 28 99                jr      z,ISENTR
+E19A : FE 08                cp      8
+E19C : 20 2C                jr      nz,NOTDEL                 ; If Backspace
+E19E : C5                   push    bc
+E19F : 3A EE 37             ld      a,(X37EE)
+E1A2 : 47                   ld      b,a
+E1A3 : 3A F0 37             ld      a,(X37F0)
+E1A6 : B8                   cp      b
+E1A7 : 28 1C                jr      z,LE1C5
+E1A9        LE1A9:
+E1A9 : 46                   ld      b,(hl)
+E1AA : 2B                   dec     hl
+E1AB : 70                   ld      (hl),b
+E1AC : 23                   inc     hl
+E1AD : BD                   cp      l
+E1AE : 28 04                jr      z,LE1B4
+E1B0 : 23                   inc     hl
+E1B1 : BD                   cp      l
+E1B2 : 20 F5                jr      nz,LE1A9
+E1B4        LE1B4:
+E1B4 : 2A EE 37   "* 7"   ld  hl,(X37EE)
+E1B7 : 3D     "="   dec a
+E1B8 : 32 F0 37   "2 7"   ld  (X37F0),a
+E1BB : 23     "#"   inc hl
+E1BC : BD     " "   cp  l
+E1BD : 30 01    "0 "    jr  nc,LE1C0
+E1BF : 2B     "+"   dec hl
+E1C0        LE1C0:
+E1C0 : 3E 08    "> "    ld  a,008H
+E1C2 : CD 5B E3   " [ "   call  LE35B
+E1C5        LE1C5:
+E1C5 : C1     " "   pop bc
+E1C6 : F1     " "   pop af
+E1C7 : 3E 00    "> "    ld  a,000H
+E1C9 : C9     " "   ret
+        ;
+E1CA        NOTDEL:
+E1CA : 3A F0 37   ": 7"   ld  a,(X37F0)
+E1CD : FE A0    "  "    cp  0A0H
+E1CF : 30 BB    "0 "    jr  nc,CHGLNJ
+E1D1 : C5     " "   push  bc
+E1D2 : 2B     "+"   dec hl
+E1D3 : 46     "F"   ld  b,(hl)
+E1D4        LE1D4:
+E1D4 : 23     "#"   inc hl
+E1D5 : 4E     "N"   ld  c,(hl)
+E1D6 : 70     "p"   ld  (hl),b
+E1D7 : 41     "A"   ld  b,c
+E1D8 : BD     " "   cp  l
+E1D9 : 20 F9    "  "    jr  nz,LE1D4
+E1DB : C1     " "   pop bc
+E1DC : 3A F0 37   ": 7"   ld  a,(X37F0)
+E1DF : 3C     "<"   inc a
+E1E0 : 32 F0 37   "2 7"   ld  (X37F0),a
+E1E3 : 2A EE 37   "* 7"   ld  hl,(X37EE)
+E1E6 : F1     " "   pop af
+E1E7 : E5     " "   push  hl
+E1E8 : F5     " "   push  af
+E1E9 : 21 D2 E3   "!  "   ld  hl,0E3D2H
+E1EC        LE1EC:
+E1EC : BE     " "   cp  (hl)
+E1ED : 28 10    "( "    jr  z,LE1FF
+E1EF : 23     "#"   inc hl
+E1F0 : 23     "#"   inc hl
+E1F1 : CB 7E    " ~"    bit 7,(hl)
+E1F3 : 28 F7    "( "    jr  z,LE1EC
+E1F5 : 67     "g"   ld  h,a
+E1F6 : FE 61    " a"    cp  061H
+E1F8 : 38 07    "8 "    jr  c,LE201
+E1FA : C6 1F    "  "    add a,01FH
+E1FC : 67     "g"   ld  h,a
+E1FD : 18 02    "  "    jr  LE201
+        ;
+E1FF        LE1FF:
+E1FF : 23     "#"   inc hl
+E200 : 66     "f"   ld  h,(hl)
+E201        LE201:
+E201 : F1     " "   pop af
+E202 : 7C     "|"   ld  a,h
+E203 : E1     " "   pop hl
+E204 : 77     "w"   ld  (hl),a
+E205 : CD 5B E3   " [ "   call  LE35B
+E208 : 3E 00    "> "    ld  a,000H
+E20A : 23     "#"   inc hl
+E20B : C9     " "   ret
+E20C :
+E20C : 00                   nop
+E20D : 00 00 00 00          byte    $00,$00,$00,$00
+
+E211        
+E211 : 3A ED 37     TTYCHX: ld      a,(LNGFLG)
+E214 : 1F                   rra
+E215 : 38 36                jr      c,ISARB                   ; If English
+E217 : 3A 08 38             ld      a,(CNTOFL)                ; @CNTOFL
+E21A : B7                   or      a
+E21B : C8                   ret     z
+E21C : 2B                   dec     hl
+E21D : 7E                   ld      a,(hl)
+E21E : 23                   inc     hl
+E21F : FE 22                cp      022H
+E221 : 20 07                jr      nz,LE22A
+E223 : 3A EC 37             ld      a,(X37EC)
+E226 : 2F                   cpl   
+E227 : 32 EC 37             ld      (X37EC),a
+E22A        LE22A:
+E22A : FE 0D                cp      $0D
+E22C : 20 04                jr      nz,LE232
+E22E : AF     " "   xor a
+E22F : 32 EC 37   "2 7"   ld  (X37EC),a
+E232        LE232:
+E232 : 3A EC 37   ": 7"   ld  a,(X37EC)
+E235 : 1F     " "   rra
+E236 : D0     " "   ret nc
+E237 : 3A EB 37   ": 7"   ld  a,(X37EB)
+E23A : BC     " "   cp  h
+E23B : 20 06    "  "    jr  nz,LE243
+E23D : 3A EA 37   ": 7"   ld  a,(X37EA)
+E240 : BD     " "   cp  l
+E241 : 28 73    "(s"    jr  z,LE2B6
+E243        LE243:
+E243 : 2B     "+"   dec hl
+E244 : 7E     "~"   ld  a,(hl)
+E245 : 32 E9 37   "2 7"   ld  (X37E9),a
+E248 : 23     "#"   inc hl
+E249 : 22 EA 37   "" 7"   ld  (X37EA),hl
+E24C : C9     " "   ret
+        ;
+E24D        
+E24D : 3A E9 37     ISARB:  ld      a,(X37E9)                 ; Else
+E250 : E5                   push    hl
+E251 : D5                   push    de
+E252 : C5                   push    bc
+E253 : FE 08                cp      8
+E255 : 20 30                jr      nz,NOTBS
+E257 : ED 5B 01 38          ld      de,(CURRAM)
+E25B : 2A F2 37             ld      hl,(CRAMSV)
+E25E : E7                   rst     COMPAR
+E25F : 28 70                jr      z,LE2D1
+E261 : 3A 00 38             ld      a,(TTYPOS)
+E264 : FE FF                cp      0FFH
+E266 : 20 05                jr      nz,LE26D
+E268 : 3E 25                ld      a,025H
+E26A : 32 00 38             ld      (TTYPOS),a
+E26D        LE26D:
+E26D : CD 5D E3             call    LE35D
+E270 : 46                   ld  b,(hl)
+E271 : CD 66 E3             call  LE366
+E274 : 70                   ld  (hl),b
+E275 : CD 5D E3             call  LE35D
+E278 : E7     " "   rst COMPAR
+E279 : 20 F2    "  "    jr  nz,LE26D
+E27B : CD 66 E3   " f "   call  LE366
+E27E : 22 01 38   "" 8"   ld  (CURRAM),hl
+E281 : 21 00 38   "! 8"   ld  hl,TTYPOS
+E284 : 35     "5"   dec (hl)
+E285 : 18 4A    " J"    jr  LE2D1
+        ;
+E287        NOTBS:
+E287 : F5     " "   push  af
+E288 : 2A 01 38   "* 8"   ld  hl,(CURRAM)
+E28B : 3A 00 38   ": 8"   ld  a,(TTYPOS)
+E28E : 23     "#"   inc hl
+E28F : 3C     "<"   inc a
+E290 : FE 25    " %"    cp  025H
+E292 : 38 24    "8$"    jr  c,LE2B8
+E294        LE294:
+E294 : 11 E8 33   "  3"   ld  de,033E8H
+E297 : 3E FE    "> "    ld  a,0FEH
+E299 : 77     "w"   ld  (hl),a
+E29A : 23     "#"   inc hl
+E29B : 77     "w"   ld  (hl),a
+E29C : 23     "#"   inc hl
+E29D : E7     " "   rst COMPAR
+E29E : 3E FF    "> "    ld  a,0FFH
+E2A0 : 38 16    "8 "    jr  c,LE2B8
+E2A2 : CD FE 1D   "   "   call  L1DFE
+E2A5 : A7     " "   and a
+E2A6 : 2A F2 37   "* 7"   ld  hl,(CRAMSV)
+E2A9 : 01 28 00   " ( "   ld  bc,00028H
+E2AC : ED 42    " B"    sbc hl,bc
+E2AE : 22 F2 37   "" 7"   ld  (CRAMSV),hl
+E2B1 : 21 BF 33   "! 3"   ld  hl,033BFH
+E2B4 : 18 DE    "  "    jr  LE294
+E2B6        LE2B6:
+E2B6 : 18 36    " 6"    jr  LE2EE
+        ;
+E2B8        LE2B8:
+E2B8 : 22 01 38   "" 8"   ld  (CURRAM),hl
+E2BB : 32 00 38   "2 8"   ld  (TTYPOS),a
+E2BE : 2A F2 37   "* 7"   ld  hl,(CRAMSV)
+E2C1 : ED 5B 01 38  " [ 8"    ld  de,(CURRAM)
+E2C5 : F1     " "   pop af
+E2C6        LE2C6:
+E2C6 : 46     "F"   ld  b,(hl)
+E2C7 : 77     "w"   ld  (hl),a
+E2C8 : CD 5D E3   " ] "   call  LE35D
+E2CB : 78     "x"   ld  a,b
+E2CC : 4F     "O"   ld  c,a
+E2CD : E7     " "   rst COMPAR
+E2CE : 79     "y"   ld  a,c
+E2CF : 20 F5    "  "    jr  nz,LE2C6
+E2D1        LE2D1:
+E2D1 : ED 5B F2 37  " [ 7"    ld  de,(CRAMSV)
+E2D5 : 2A 01 38   "* 8"   ld  hl,(CURRAM)
+E2D8 : EB     " "   ex  de,hl
+E2D9 : CD 66 E3   " f "   call  LE366
+E2DC : EB     " "   ex  de,hl
+E2DD : CD 00 E3   "   "   call  LE300
+E2E0 : ED 5B EE 37  " [ 7"    ld  de,(X37EE)
+E2E4 : 2A F0 37   "* 7"   ld  hl,(X37F0)
+E2E7 : 1B     " "   dec de
+E2E8 : CD 00 E3   "   "   call  LE300
+E2EB : C1     " "   pop bc
+E2EC : D1     " "   pop de
+E2ED : E1     " "   pop hl
+E2EE        LE2EE:
+E2EE : 33     "3"   inc sp
+E2EF : 33     "3"   inc sp
+E2F0 : 33     "3"   inc sp
+E2F1 : 33     "3"   inc sp
+E2F2 : E3     " "   ex  (sp),hl
+E2F3 : 2B     "+"   dec hl
+E2F4 : E3     " "   ex  (sp),hl
+E2F5 : E5     " "   push  hl
+E2F6 : 21 1D E1   "!  "   ld  hl,0E11DH
+E2F9 : E3     " "   ex  (sp),hl
+E2FA : C9     " "   ret
+        ;
+E2FB : FF     " "   rst L0038
+E2FC : FF     " "   rst L0038
+E2FD : FF     " "   rst L0038
+E2FE : FF     " "   rst L0038
+E2FF        LE2FF:
+E2FF : E1     " "   pop hl
+E300        LE300:
+E300 : 06 20    "  "    ld  b,020H
+E302        LE302:
+E302 : CD 66 E3   " f "   call  LE366
+E305 : E7     " "   rst COMPAR
+E306 : C8     " "   ret z
+E307 : D8     " "   ret c
+E308 : 7E     "~"   ld  a,(hl)
+E309 : FE 13    "  "    cp  013H
+E30B : 28 F5    "( "    jr  z,LE302
+E30D : FE 80    "  "    cp  080H
+E30F : 38 EF    "8 "    jr  c,LE300
+E311 : CD 66 E3   " f "   call  LE366
+E314 : 4F     "O"   ld  c,a
+E315 : 7E     "~"   ld  a,(hl)
+E316 : CD 5D E3   " ] "   call  LE35D
+E319 : 18 54    " T"    jr  LE36F
+        ;
+E31B        LE31B:
+E31B : 7E     "~"   ld  a,(hl)
+E31C : 38 0B    "8 "    jr  c,LE329
+E31E        LE31E:
+E31E : 78     "x"   ld  a,b
+E31F : FE 80    "  "    cp  080H
+E321 : 06 80    "  "    ld  b,080H
+E323 : 38 0D    "8 "    jr  c,LE332
+E325 : 06 A0    "  "    ld  b,0A0H
+E327 : 18 09    "  "    jr  LE332
+        ;
+E329        LE329:
+E329 : 78     "x"   ld  a,b
+E32A : FE 80    "  "    cp  080H
+E32C : 06 E0    "  "    ld  b,0E0H
+E32E : 38 02    "8 "    jr  c,LE332
+E330 : 06 C0    "  "    ld  b,0C0H
+E332        LE332:
+E332 : 79     "y"   ld  a,c
+E333 : E6 1F    "  "    and 01FH
+E335 : B0     " "   or  b
+E336 : E5     " "   push  hl
+E337 : 21 C8 E3   "!  "   ld  hl,0E3C8H
+E33A        LE33A:
+E33A : BE     " "   cp  (hl)
+E33B : 28 08    "( "    jr  z,LE345
+E33D : 23     "#"   inc hl
+E33E : 23     "#"   inc hl
+E33F : CB 7E    " ~"    bit 7,(hl)
+E341 : 20 F7    "  "    jr  nz,LE33A
+E343 : 18 02    "  "    jr  LE347
+        ;
+E345        LE345:
+E345 : 23     "#"   inc hl
+E346 : 7E     "~"   ld  a,(hl)
+E347        LE347:
+E347 : E1     " "   pop hl
+E348 : 77     "w"   ld  (hl),a
+E349 : 47     "G"   ld  b,a
+E34A : E6 9F    "  "    and 09FH
+E34C : E5     " "   push  hl
+E34D : 21 7E E3   "!~ "   ld  hl,0E37EH
+E350        LE350:
+E350 : BE     " "   cp  (hl)
+E351 : 28 AC    "( "    jr  z,LE2FF
+E353 : 23     "#"   inc hl
+E354 : CB 7E    " ~"    bit 7,(hl)
+E356 : 20 F8    "  "    jr  nz,LE350
+E358 : E1     " "   pop hl
+E359 : 18 A7    "  "    jr  LE302
+        ;
+E35B        LE35B:
+E35B : F7     " "   rst L0030
+E35C : 13     " "   inc de
+E35D        LE35D:
+E35D : F5     " "   push  af
+E35E : 3E FE    "> "    ld  a,0FEH
+E360        LE360:
+E360 : 23     "#"   inc hl
+E361 : BE     " "   cp  (hl)
+E362 : 28 FC    "( "    jr  z,LE360
+E364 : F1     " "   pop af
+E365 : C9     " "   ret
+        ;
+E366        LE366:
+E366 : F5     " "           push  af
+E367 : 3E FE    "> "        ld  a,254
+E369        LE369:
+E369 : 2B                   dec hl
+E36A : BE                   cp  (hl)
+E36B : 28 FC                jr  z,LE369
+E36D : F1                   pop af
+E36E : C9                   ret
+        ;
+E36F        LE36F:
+E36F : FE 13    "  "    cp  013H
+E371 : 28 AB    "( "    jr  z,LE31E
+E373 : FE 1D    "  "    cp  01DH
+E375 : 28 A7    "( "    jr  z,LE31E
+E377 : FE 80    "  "    cp  080H
+E379 : 18 A0    "  "    jr  LE31B
+        ;
+E37B : 00     " "   nop
+E37C : 00     " "   nop
+E37D : 00     " "   nop
+E37E : 85     " "   add a,l
+E37F : 9F     " "   sbc a,a
+E380 : 88     " "   adc a,b
+E381 : 8A     " "   adc a,d
+E382 : 8C     " "   adc a,h
+E383 : 9E     " "   sbc a,(hl)
+E384 : 8B     " "   adc a,e
+E385 : 00     " "   nop
+E386 : 00     " "   nop
+E387 : 00     " "   nop
+E388 : 00     " "   nop
+E389 : 00     " "   nop
+E38A : 00     " "   nop
+E38B : 00     " "   nop
+E38C : 00     " "   nop
+E38D : 00     " "   nop
+E38E : 00     " "   nop
+E38F : 00     " "   nop
+E390 : 2A AD 38   "* 8"   ld  hl,(MEMSIZ)
+E393 : E5     " "   push  hl
+E394 : 01 64 03   " d "   ld  bc,00364H
+E397 : A2     " "   and d
+E398 : 37     "7"   scf
+E399 : 5C     "\"   ld  e,h
+E39A : 1C     " "   inc e
+E39B : 1C     " "   inc e
+E39C        LE39C:
+E39C : ED B1    "  "    cpir
+E39E : 2B     "+"   dec hl
+E39F : 73     "s"   ld  (hl),e
+E3A0 : 28 FA    "( "    jr  z,LE39C
+E3A2 : E1     " "   pop hl
+E3A3 : E5     " "   push  hl
+E3A4 : 7C     "|"   ld  a,h
+E3A5 : 01 12 00   "   "   ld  bc,00012H
+E3A8 : 09     " "   add hl,bc
+E3A9 : 77     "w"   ld  (hl),a
+E3AA : 01 0A 00   "   "   ld  bc,0000AH
+E3AD : 09     " "   add hl,bc
+E3AE : 3C     "<"   inc a
+E3AF : 77     "w"   ld  (hl),a
+E3B0 : 01 DC 01   "   "   ld  bc,001DCH
+E3B3 : 09     " "   add hl,bc
+E3B4 : 3D     "="   dec a
+E3B5 : 77     "w"   ld  (hl),a
+E3B6 : E1     " "   pop hl
+E3B7 : E5     " "   push  hl
+E3B8 : 01 25 00   " % "   ld  bc,00025H
+E3BB : 09     " "   add hl,bc
+E3BC : ED 4B 06 38  " K 8"    ld  bc,(HOOK)
+E3C0 : 71     "q"   ld  (hl),c
+E3C1 : 23     "#"   inc hl
+E3C2 : 70     "p"   ld  (hl),b
+E3C3 : E1     " "   pop hl
+E3C4 : 2B     "+"   dec hl
+E3C5 : C3 2B 01   " + "   jp  L012B
+        ;
+E3C8 : DB BB    "  "    in  a,(0BBH)
+E3CA : FE DE    "  "    cp  0DEH
+E3CC : 00     " "   nop
+E3CD : 00     " "   nop
+E3CE : 00     " "   nop
+E3CF : 00     " "   nop
+E3D0 : 00     " "   nop
+E3D1 : 00     " "   nop
+E3D2 : 5C     "\"   ld  e,h
+E3D3 : 9F     " "   sbc a,a
+E3D4 : 2F     "/"   cpl
+E3D5 : 9A     " "   sbc a,d
+E3D6 : 2C     ","   inc l
+E3D7 : 9B     " "   sbc a,e
+E3D8 : 2E 9C    ". "    ld  l,09CH
+E3DA : 3B     ";"   dec sp
+E3DB : 9D     " "   sbc a,l
+E3DC : 3A 9E 54   ": T"   ld  a,(X549E)
+E3DF : 5C     "\"   ld  e,h
+E3E0 : 49     "I"   ld  c,c
+E3E1 : 2F     "/"   cpl
+E3E2 : 4F     "O"   ld  c,a
+E3E3 : 3A 59 10   ":Y "   ld  a,(X1059)
+E3E6 : 55     "U"   ld  d,l
+E3E7 : 11 4D 12   " M "   ld  de,0124DH
+E3EA : 52     "R"   ld  d,d
+E3EB : 13     " "   inc de
+E3EC : 45     "E"   ld  b,l
+E3ED : 0E 50    " P"    ld  c,050H
+E3EF : 15     " "   dec d
+E3F0 : 46     "F"   ld  b,(hl)
+E3F1 : 16 47    " G"    ld  d,047H
+E3F3 : 17     " "   rla
+E3F4 : 48     "H"   ld  c,b
+E3F5 : 18 4A    " J"    jr  LE441
+        ;
+E3F7 : 19     " "   add hl,de
+E3F8 : 4B     "K"   ld  c,e
+E3F9 : 1A     " "   ld  a,(de)
+E3FA : 42     "B"   ld  b,d
+E3FB : 1B     " "   dec de
+E3FC : 4E     "N"   ld  c,(hl)
+E3FD : 1C     " "   inc e
+E3FE : 4C     "L"   ld  c,h
+E3FF : 1D     " "   dec e
+E400 : 53     "S"   ld  d,e
+E401 : 1E 41    " A"    ld  e,041H
+E403 : 1F     " "   rra
+E404 : 44     "D"   ld  b,h
+E405 : 27     "'"   daa
+E406 : 56     "V"   ld  d,(hl)
+E407 : 2E 51    ".Q"    ld  l,051H
+E409 : 0F     " "   rrca
+E40A : 57     "W"   ld  d,a
+E40B : 14     " "   inc d
+E40C : 43     "C"   ld  b,e
+E40D : 2C     ","   inc l
+E40E : 58     "X"   ld  e,b
+E40F : 3B     ";"   dec sp
+E410 : FF     " "   rst L0038
+E411 : D4 D4 D4   "   "   call  nc,LD4D4
+E414 : C1     " "   pop bc
+E415 : C1     " "   pop bc
+E416 : C1     " "   pop bc
+E417 : C1     " "   pop bc
+E418 : C1     " "   pop bc
+E419 : C1     " "   pop bc
+E41A : C1     " "   pop bc
+E41B : C1     " "   pop bc
+E41C : C1     " "   pop bc
+E41D : C1     " "   pop bc
+E41E : C1     " "   pop bc
+E41F : C1     " "   pop bc
+E420 : C1     " "   pop bc
+E421 : C1     " "   pop bc
+E422 : C1     " "   pop bc
+E423 : C1     " "   pop bc
+E424 : C1     " "   pop bc
+E425 : C1     " "   pop bc
+E426 : C1     " "   pop bc
+E427 : C1     " "   pop bc
+E428 : C1     " "   pop bc
+E429 : C1     " "   pop bc
+E42A : C1     " "   pop bc
+E42B : C1     " "   pop bc
+E42C : C1     " "   pop bc
+E42D : C1     " "   pop bc
+E42E : C1     " "   pop bc
+E42F : C1     " "   pop bc
+E430 : C1     " "   pop bc
+E431 : C1     " "   pop bc
+E432 : C1     " "   pop bc
+E433 : C1     " "   pop bc
+E434 : C1     " "   pop bc
+E435 : C1     " "   pop bc
+E436 : C1     " "   pop bc
+E437 : C1     " "   pop bc
+E438 : C1     " "   pop bc
+E439 : C1     " "   pop bc
+E43A : C1     " "   pop bc
+E43B : C1     " "   pop bc
+E43C : C1     " "   pop bc
+E43D : C1     " "   pop bc
+E43E : C1     " "   pop bc
+E43F : C1     " "   pop bc
+E440 : C1     " "   pop bc
+E441        LE441:
+E441 : C1     " "   pop bc
+E442 : C1     " "   pop bc
+E443 : C1     " "   pop bc
+E444 : C1     " "   pop bc
+E445 : C1     " "   pop bc
+E446 : C1     " "   pop bc
+E447 : C1     " "   pop bc
+E448 : C1     " "   pop bc
+E449 : C1     " "   pop bc
+E44A : C1     " "   pop bc
+E44B : C1     " "   pop bc
+E44C : C1     " "   pop bc
+E44D : C1     " "   pop bc
+E44E : C1     " "   pop bc
+E44F : C1     " "   pop bc
+E450 : C1     " "   pop bc
+E451 : C1     " "   pop bc
+E452 : C1     " "   pop bc
+E453 : C1     " "   pop bc
+E454 : C1     " "   pop bc
+E455 : C1     " "   pop bc
+E456 : C1     " "   pop bc
+E457 : C1     " "   pop bc
+E458 : C1     " "   pop bc
+E459 : C1     " "   pop bc
+E45A : C1     " "   pop bc
+E45B : C1     " "   pop bc
+E45C : C1     " "   pop bc
+E45D : C1     " "   pop bc
+E45E : C1     " "   pop bc
+E45F : C1     " "   pop bc
+E460 : C1     " "   pop bc
+E461 : C1     " "   pop bc
+E462 : C1     " "   pop bc
+E463 : C1     " "   pop bc
+E464 : C1     " "   pop bc
+E465 : C1     " "   pop bc
+E466 : C1     " "   pop bc
+E467 : C1     " "   pop bc
+E468 : C1     " "   pop bc
+E469 : C1     " "   pop bc
+E46A : C1     " "   pop bc
+E46B : C1     " "   pop bc
+E46C : C1     " "   pop bc
+E46D : C1     " "   pop bc
+E46E : C1     " "   pop bc
+E46F : C1     " "   pop bc
+E470 : C1     " "   pop bc
+E471 : C1     " "   pop bc
+E472 : C1     " "   pop bc
+E473 : C1     " "   pop bc
+E474 : C1     " "   pop bc
+E475 : C1     " "   pop bc
+E476 : C1     " "   pop bc
+E477 : C1     " "   pop bc
+E478 : C1     " "   pop bc
+E479 : C1     " "   pop bc
+E47A : C1     " "   pop bc
+E47B : C1     " "   pop bc
+E47C : C1     " "   pop bc
+E47D : C1     " "   pop bc
+E47E : C1     " "   pop bc
+E47F : C1     " "   pop bc
+E480 : C1     " "   pop bc
+E481 : C1     " "   pop bc
+E482 : C1     " "   pop bc
+E483 : C1     " "   pop bc
+E484 : C1     " "   pop bc
+E485 : C1     " "   pop bc
+E486 : C1     " "   pop bc
+E487 : C1     " "   pop bc
+E488 : C1     " "   pop bc
+E489 : C1     " "   pop bc
+E48A : C1     " "   pop bc
+E48B : C1     " "   pop bc
+E48C : C1     " "   pop bc
+E48D : C1     " "   pop bc
+E48E : C1     " "   pop bc
+E48F : C1     " "   pop bc
+E490 : C1     " "   pop bc
+E491 : C1     " "   pop bc
+E492 : C1     " "   pop bc
+E493 : C1     " "   pop bc
+E494 : C1     " "   pop bc
+E495 : C1     " "   pop bc
+E496 : C1     " "   pop bc
+E497 : C1     " "   pop bc
+E498 : C1     " "   pop bc
+E499 : C1     " "   pop bc
+E49A : C1     " "   pop bc
+E49B : C1     " "   pop bc
+E49C : C1     " "   pop bc
+E49D : C1     " "   pop bc
+E49E : C1     " "   pop bc
+E49F : C1     " "   pop bc
+E4A0 : C1     " "   pop bc
+E4A1 : C1     " "   pop bc
+E4A2 : C1     " "   pop bc
+E4A3 : C1     " "   pop bc
+E4A4 : C1     " "   pop bc
+E4A5 : C1     " "   pop bc
+E4A6 : C1     " "   pop bc
+E4A7 : C1     " "   pop bc
+E4A8 : C1     " "   pop bc
+E4A9 : C1     " "   pop bc
+E4AA : C1     " "   pop bc
+E4AB : C1     " "   pop bc
+E4AC : C1     " "   pop bc
+E4AD : C1     " "   pop bc
+E4AE : C1     " "   pop bc
+E4AF : C1     " "   pop bc
+E4B0 : C1     " "   pop bc
+E4B1 : C1     " "   pop bc
+E4B2 : C1     " "   pop bc
+E4B3 : C1     " "   pop bc
+E4B4 : C1     " "   pop bc
+E4B5 : C1     " "   pop bc
+E4B6 : C1     " "   pop bc
+E4B7 : C1     " "   pop bc
+E4B8 : C1     " "   pop bc
+E4B9 : C1     " "   pop bc
+E4BA : C1     " "   pop bc
+E4BB : C1     " "   pop bc
+E4BC : C1     " "   pop bc
+E4BD : C1     " "   pop bc
+E4BE : C1     " "   pop bc
+E4BF : C1     " "   pop bc
+E4C0 : C1     " "   pop bc
+E4C1 : C1     " "   pop bc
+E4C2 : C1     " "   pop bc
+E4C3 : C1     " "   pop bc
+E4C4 : C1     " "   pop bc
+E4C5 : C1     " "   pop bc
+E4C6 : C1     " "   pop bc
+E4C7 : C1     " "   pop bc
+E4C8 : C1     " "   pop bc
+E4C9 : C1     " "   pop bc
+E4CA : C1     " "   pop bc
+E4CB : C1     " "   pop bc
+E4CC : C1     " "   pop bc
+E4CD : C1     " "   pop bc
+E4CE : C1     " "   pop bc
+E4CF : C1     " "   pop bc
+E4D0 : C1     " "   pop bc
+E4D1 : C1     " "   pop bc
+E4D2 : C1     " "   pop bc
+E4D3 : C1     " "   pop bc
+E4D4 : C1     " "   pop bc
+E4D5 : C1     " "   pop bc
+E4D6 : C1     " "   pop bc
+E4D7 : C1     " "   pop bc
+E4D8 : C1     " "   pop bc
+E4D9 : C1     " "   pop bc
+E4DA : C1     " "   pop bc
+E4DB : C1     " "   pop bc
+E4DC : C1     " "   pop bc
+E4DD : C1     " "   pop bc
+E4DE : C1     " "   pop bc
+E4DF : C1     " "   pop bc
+E4E0 : C1     " "   pop bc
+E4E1 : C1     " "   pop bc
+E4E2 : C1     " "   pop bc
+E4E3 : C1     " "   pop bc
+E4E4 : C1     " "   pop bc
+E4E5 : C1     " "   pop bc
+E4E6 : C1     " "   pop bc
+E4E7 : C1     " "   pop bc
+E4E8 : C1     " "   pop bc
+E4E9 : C1     " "   pop bc
+E4EA : C1     " "   pop bc
+E4EB : C1     " "   pop bc
+E4EC : C1     " "   pop bc
+E4ED : C1     " "   pop bc
+E4EE : C1     " "   pop bc
+E4EF : C1     " "   pop bc
+E4F0 : C1     " "   pop bc
+E4F1 : C1     " "   pop bc
+E4F2 : C1     " "   pop bc
+E4F3 : C1     " "   pop bc
+E4F4 : C1     " "   pop bc
+E4F5 : C1     " "   pop bc
+E4F6 : C1     " "   pop bc
+E4F7 : C1     " "   pop bc
+E4F8 : C1     " "   pop bc
+E4F9 : C1     " "   pop bc
+E4FA : C1     " "   pop bc
+E4FB : C1     " "   pop bc
+E4FC : C1     " "   pop bc
+E4FD : C1     " "   pop bc
+E4FE : C1     " "   pop bc
+E4FF : C1     " "   pop bc
+E500 : C1     " "   pop bc
+E501 : C1     " "   pop bc
+E502 : C1     " "   pop bc
+E503 : C1     " "   pop bc
+E504 : C1     " "   pop bc
+E505 : C1     " "   pop bc
+E506 : C1     " "   pop bc
+E507 : C1     " "   pop bc
+E508 : C1     " "   pop bc
+E509 : C1     " "   pop bc
+E50A : C1     " "   pop bc
+E50B : C1     " "   pop bc
+E50C : C1     " "   pop bc
+E50D : C1     " "   pop bc
+E50E : C1     " "   pop bc
+E50F : C1     " "   pop bc
+E510 : C1     " "   pop bc
+E511 : C1     " "   pop bc
+E512 : C1     " "   pop bc
+E513 : C1     " "   pop bc
+E514 : C1     " "   pop bc
+E515 : C1     " "   pop bc
+E516 : C1     " "   pop bc
+E517 : C1     " "   pop bc
+E518 : C1     " "   pop bc
+E519 : C1     " "   pop bc
+E51A : C1     " "   pop bc
+E51B : C1     " "   pop bc
+E51C : C1     " "   pop bc
+E51D : C1     " "   pop bc
+E51E : C1     " "   pop bc
+E51F : C1     " "   pop bc
+E520 : C1     " "   pop bc
+E521 : C1     " "   pop bc
+E522 : C1     " "   pop bc
+E523 : C1     " "   pop bc
+E524 : C1     " "   pop bc
+E525 : C1     " "   pop bc
+E526 : C1     " "   pop bc
+E527 : C1     " "   pop bc
+E528 : C1     " "   pop bc
+E529 : C1     " "   pop bc
+E52A : C1     " "   pop bc
+E52B : C1     " "   pop bc
+E52C : C1     " "   pop bc
+E52D : C1     " "   pop bc
+E52E : C1     " "   pop bc
+E52F : C1     " "   pop bc
+E530 : C1     " "   pop bc
+E531 : C1     " "   pop bc
+E532 : C1     " "   pop bc
+E533 : C1     " "   pop bc
+E534 : C1     " "   pop bc
+E535 : C1     " "   pop bc
+E536 : C1     " "   pop bc
+E537 : C1     " "   pop bc
+E538 : C1     " "   pop bc
+E539 : C1     " "   pop bc
+E53A : C1     " "   pop bc
+E53B : C1     " "   pop bc
+E53C : C1     " "   pop bc
+E53D : C1     " "   pop bc
+E53E : C1     " "   pop bc
+E53F : C1     " "   pop bc
+E540 : C1     " "   pop bc
+E541 : C1     " "   pop bc
+E542 : C1     " "   pop bc
+E543 : C1     " "   pop bc
+E544 : C1     " "   pop bc
+E545 : C1     " "   pop bc
+E546 : C1     " "   pop bc
+E547 : C1     " "   pop bc
+E548 : C1     " "   pop bc
+E549 : C1     " "   pop bc
+E54A : C1     " "   pop bc
+E54B : C1     " "   pop bc
+E54C : C1     " "   pop bc
+E54D : C1     " "   pop bc
+E54E : C1     " "   pop bc
+E54F : C1     " "   pop bc
+E550 : C1     " "   pop bc
+E551 : C1     " "   pop bc
+E552 : C1     " "   pop bc
+E553 : C1     " "   pop bc
+E554 : C1     " "   pop bc
+E555 : C1     " "   pop bc
+E556 : C1     " "   pop bc
+E557 : C1     " "   pop bc
+E558 : C1     " "   pop bc
+E559 : C1     " "   pop bc
+E55A : C1     " "   pop bc
+E55B : C1     " "   pop bc
+E55C : C1     " "   pop bc
+E55D : C1     " "   pop bc
+E55E : C1     " "   pop bc
+E55F : C1     " "   pop bc
+E560 : C1     " "   pop bc
+E561 : C1     " "   pop bc
+E562 : C1     " "   pop bc
+E563 : C1     " "   pop bc
+E564 : C1     " "   pop bc
+E565 : C1     " "   pop bc
+E566 : C1     " "   pop bc
+E567 : C1     " "   pop bc
+E568 : C1     " "   pop bc
+E569 : C1     " "   pop bc
+E56A : C1     " "   pop bc
+E56B : C1     " "   pop bc
+E56C : C1     " "   pop bc
+E56D : C1     " "   pop bc
+E56E : C1     " "   pop bc
+E56F : C1     " "   pop bc
+E570 : C1     " "   pop bc
+E571 : C1     " "   pop bc
+E572 : C1     " "   pop bc
+E573 : C1     " "   pop bc
+E574 : C1     " "   pop bc
+E575 : C1     " "   pop bc
+E576 : C1     " "   pop bc
+E577 : C1     " "   pop bc
+E578 : C1     " "   pop bc
+E579 : C1     " "   pop bc
+E57A : C1     " "   pop bc
+E57B : C1     " "   pop bc
+E57C : C1     " "   pop bc
+E57D : C1     " "   pop bc
+E57E : C1     " "   pop bc
+E57F : C1     " "   pop bc
+E580 : C1     " "   pop bc
+E581 : C1     " "   pop bc
+E582 : C1     " "   pop bc
+E583 : C1     " "   pop bc
+E584 : C1     " "   pop bc
+E585 : C1     " "   pop bc
+E586 : C1     " "   pop bc
+E587 : C1     " "   pop bc
+E588 : C1     " "   pop bc
+E589 : C1     " "   pop bc
+E58A : C1     " "   pop bc
+E58B : C1     " "   pop bc
+E58C : C1     " "   pop bc
+E58D : C1     " "   pop bc
+E58E : C1     " "   pop bc
+E58F : C1     " "   pop bc
+E590 : C1     " "   pop bc
+E591 : C1     " "   pop bc
+E592 : C1     " "   pop bc
+E593 : C1     " "   pop bc
+E594 : C1     " "   pop bc
+E595 : C1     " "   pop bc
+E596 : C1     " "   pop bc
+E597 : C1     " "   pop bc
+E598 : C1     " "   pop bc
+E599 : C1     " "   pop bc
+E59A : C1     " "   pop bc
+E59B : C1     " "   pop bc
+E59C : C1     " "   pop bc
+E59D : C1     " "   pop bc
+E59E : C1     " "   pop bc
+E59F : C1     " "   pop bc
+E5A0 : C1     " "   pop bc
+E5A1 : C1     " "   pop bc
+E5A2 : C1     " "   pop bc
+E5A3 : C1     " "   pop bc
+E5A4 : C1     " "   pop bc
+E5A5 : C1     " "   pop bc
+E5A6 : C1     " "   pop bc
+E5A7 : C1     " "   pop bc
+E5A8 : C1     " "   pop bc
+E5A9 : C1     " "   pop bc
+E5AA : C1     " "   pop bc
+E5AB : C1     " "   pop bc
+E5AC : C1     " "   pop bc
+E5AD : C1     " "   pop bc
+E5AE : C1     " "   pop bc
+E5AF : C1     " "   pop bc
+E5B0 : C1     " "   pop bc
+E5B1 : C1     " "   pop bc
+E5B2 : C1     " "   pop bc
+E5B3 : C1     " "   pop bc
+E5B4 : C1     " "   pop bc
+E5B5 : C1     " "   pop bc
+E5B6 : C1     " "   pop bc
+E5B7 : C1     " "   pop bc
+E5B8 : C1     " "   pop bc
+E5B9 : C1     " "   pop bc
+E5BA : C1     " "   pop bc
+E5BB : C1     " "   pop bc
+E5BC : C1     " "   pop bc
+E5BD : C1     " "   pop bc
+E5BE : C1     " "   pop bc
+E5BF : C1     " "   pop bc
+E5C0 : C1     " "   pop bc
+E5C1 : C1     " "   pop bc
+E5C2 : C1     " "   pop bc
+E5C3 : C1     " "   pop bc
+E5C4 : C1     " "   pop bc
+E5C5 : C1     " "   pop bc
+E5C6 : C1     " "   pop bc
+E5C7 : C1     " "   pop bc
+E5C8 : C1     " "   pop bc
+E5C9 : C1     " "   pop bc
+E5CA : C1     " "   pop bc
+E5CB : C1     " "   pop bc
+E5CC : C1     " "   pop bc
+E5CD : C1     " "   pop bc
+E5CE : C1     " "   pop bc
+E5CF : C1     " "   pop bc
+E5D0 : C1     " "   pop bc
+E5D1 : C1     " "   pop bc
+E5D2 : C1     " "   pop bc
+E5D3 : C1     " "   pop bc
+E5D4 : C1     " "   pop bc
+E5D5 : C1     " "   pop bc
+E5D6 : C1     " "   pop bc
+E5D7 : C1     " "   pop bc
+E5D8 : C1     " "   pop bc
+E5D9 : C1     " "   pop bc
+E5DA : C1     " "   pop bc
+E5DB : C1     " "   pop bc
+E5DC : C1     " "   pop bc
+E5DD : C1     " "   pop bc
+E5DE : C1     " "   pop bc
+E5DF : C1     " "   pop bc
+E5E0 : C1     " "   pop bc
+E5E1 : C1     " "   pop bc
+E5E2 : C1     " "   pop bc
+E5E3 : C1     " "   pop bc
+E5E4 : C1     " "   pop bc
+E5E5 : C1     " "   pop bc
+E5E6 : C1     " "   pop bc
+E5E7 : C1     " "   pop bc
+E5E8 : C1     " "   pop bc
+E5E9 : C1     " "   pop bc
+E5EA : C1     " "   pop bc
+E5EB : C1     " "   pop bc
+E5EC : C1     " "   pop bc
+E5ED : C1     " "   pop bc
+E5EE : C1     " "   pop bc
+E5EF : C1     " "   pop bc
+E5F0 : C1     " "   pop bc
+E5F1 : C1     " "   pop bc
+E5F2 : C1     " "   pop bc
+E5F3 : C1     " "   pop bc
+E5F4 : C1     " "   pop bc
+E5F5 : C1     " "   pop bc
+E5F6 : C1     " "   pop bc
+E5F7 : C1     " "   pop bc
+E5F8 : C1     " "   pop bc
+E5F9 : C1     " "   pop bc
+E5FA : C1     " "   pop bc
+E5FB : C1     " "   pop bc
+E5FC : C1     " "   pop bc
+E5FD : C1     " "   pop bc
+E5FE : C1     " "   pop bc
+E5FF : C1     " "   pop bc
+E600 : C1     " "   pop bc
+E601 : C1     " "   pop bc
+E602 : C1     " "   pop bc
+E603 : C1     " "   pop bc
+E604 : C1     " "   pop bc
+E605 : C1     " "   pop bc
+E606 : C1     " "   pop bc
+E607 : C1     " "   pop bc
+E608 : C1     " "   pop bc
+E609 : C1     " "   pop bc
+E60A : C1     " "   pop bc
+E60B : C1     " "   pop bc
+E60C : C1     " "   pop bc
+E60D : C1     " "   pop bc
+E60E : C1     " "   pop bc
+E60F : C1     " "   pop bc
+E610 : C1     " "   pop bc
+E611 : C1     " "   pop bc
+E612 : C1     " "   pop bc
+E613 : C1     " "   pop bc
+E614 : C1     " "   pop bc
+E615 : C1     " "   pop bc
+E616 : C1     " "   pop bc
+E617 : C1     " "   pop bc
+E618 : C1     " "   pop bc
+E619 : C1     " "   pop bc
+E61A : C1     " "   pop bc
+E61B : C1     " "   pop bc
+E61C : C1     " "   pop bc
+E61D : C1     " "   pop bc
+E61E : C1     " "   pop bc
+E61F : C1     " "   pop bc
+E620 : C1     " "   pop bc
+E621 : C1     " "   pop bc
+E622 : C1     " "   pop bc
+E623 : C1     " "   pop bc
+E624 : C1     " "   pop bc
+E625 : C1     " "   pop bc
+E626 : C1     " "   pop bc
+E627 : C1     " "   pop bc
+E628 : C1     " "   pop bc
+E629 : C1     " "   pop bc
+E62A : C1     " "   pop bc
+E62B : C1     " "   pop bc
+E62C : C1     " "   pop bc
+E62D : C1     " "   pop bc
+E62E : C1     " "   pop bc
+E62F : C1     " "   pop bc
+E630 : C1     " "   pop bc
+E631 : C1     " "   pop bc
+E632 : C1     " "   pop bc
+E633 : C1     " "   pop bc
+E634 : C1     " "   pop bc
+E635 : C1     " "   pop bc
+E636 : C1     " "   pop bc
+E637 : C1     " "   pop bc
+E638 : C1     " "   pop bc
+E639 : C1     " "   pop bc
+E63A : C1     " "   pop bc
+E63B : C1     " "   pop bc
+E63C : C1     " "   pop bc
+E63D : C1     " "   pop bc
+E63E : C1     " "   pop bc
+E63F : C1     " "   pop bc
+E640 : C1     " "   pop bc
+E641 : C1     " "   pop bc
+E642 : C1     " "   pop bc
+E643 : C1     " "   pop bc
+E644 : C1     " "   pop bc
+E645 : C1     " "   pop bc
+E646 : C1     " "   pop bc
+E647 : C1     " "   pop bc
+E648 : C1     " "   pop bc
+E649 : C1     " "   pop bc
+E64A : C1     " "   pop bc
+E64B : C1     " "   pop bc
+E64C : C1     " "   pop bc
+E64D : C1     " "   pop bc
+E64E : C1     " "   pop bc
+E64F : C1     " "   pop bc
+E650 : C1     " "   pop bc
+E651 : C1     " "   pop bc
+E652 : C1     " "   pop bc
+E653 : C1     " "   pop bc
+E654 : C1     " "   pop bc
+E655 : C1     " "   pop bc
+E656 : C1     " "   pop bc
+E657 : C1     " "   pop bc
+E658 : C1     " "   pop bc
+E659 : C1     " "   pop bc
+E65A : C1     " "   pop bc
+E65B : C1     " "   pop bc
+E65C : C1     " "   pop bc
+E65D : C1     " "   pop bc
+E65E : C1     " "   pop bc
+E65F : C1     " "   pop bc
+E660 : C1     " "   pop bc
+E661 : C1     " "   pop bc
+E662 : C1     " "   pop bc
+E663 : C1     " "   pop bc
+E664 : C1     " "   pop bc
+E665 : C1     " "   pop bc
+E666 : C1     " "   pop bc
+E667 : C1     " "   pop bc
+E668 : C1     " "   pop bc
+E669 : C1     " "   pop bc
+E66A : C1     " "   pop bc
+E66B : C1     " "   pop bc
+E66C : C1     " "   pop bc
+E66D : C1     " "   pop bc
+E66E : C1     " "   pop bc
+E66F : C1     " "   pop bc
+E670 : C1     " "   pop bc
+E671 : C1     " "   pop bc
+E672 : C1     " "   pop bc
+E673 : C1     " "   pop bc
+E674 : C1     " "   pop bc
+E675 : C1     " "   pop bc
+E676 : C1     " "   pop bc
+E677 : C1     " "   pop bc
+E678 : C1     " "   pop bc
+E679 : C1     " "   pop bc
+E67A : C1     " "   pop bc
+E67B : C1     " "   pop bc
+E67C : C1     " "   pop bc
+E67D : C1     " "   pop bc
+E67E : C1     " "   pop bc
+E67F : C1     " "   pop bc
+E680 : C1     " "   pop bc
+E681 : C1     " "   pop bc
+E682 : C1     " "   pop bc
+E683 : C1     " "   pop bc
+E684 : C1     " "   pop bc
+E685 : C1     " "   pop bc
+E686 : C1     " "   pop bc
+E687 : C1     " "   pop bc
+E688 : C1     " "   pop bc
+E689 : C1     " "   pop bc
+E68A : C1     " "   pop bc
+E68B : C1     " "   pop bc
+E68C : C1     " "   pop bc
+E68D : C1     " "   pop bc
+E68E : C1     " "   pop bc
+E68F : C1     " "   pop bc
+E690 : C1     " "   pop bc
+E691 : C1     " "   pop bc
+E692 : C1     " "   pop bc
+E693 : C1     " "   pop bc
+E694 : C1     " "   pop bc
+E695 : C1     " "   pop bc
+E696 : C1     " "   pop bc
+E697 : C1     " "   pop bc
+E698 : C1     " "   pop bc
+E699 : C1     " "   pop bc
+E69A : C1     " "   pop bc
+E69B : C1     " "   pop bc
+E69C : C1     " "   pop bc
+E69D : C1     " "   pop bc
+E69E : C1     " "   pop bc
+E69F : C1     " "   pop bc
+E6A0 : C1     " "   pop bc
+E6A1 : C1     " "   pop bc
+E6A2 : C1     " "   pop bc
+E6A3 : C1     " "   pop bc
+E6A4 : C1     " "   pop bc
+E6A5 : C1     " "   pop bc
+E6A6 : C1     " "   pop bc
+E6A7 : C1     " "   pop bc
+E6A8 : C1     " "   pop bc
+E6A9 : C1     " "   pop bc
+E6AA : C1     " "   pop bc
+E6AB : C1     " "   pop bc
+E6AC : C1     " "   pop bc
+E6AD : C1     " "   pop bc
+E6AE : C1     " "   pop bc
+E6AF : C1     " "   pop bc
+E6B0 : C1     " "   pop bc
+E6B1 : C1     " "   pop bc
+E6B2 : C1     " "   pop bc
+E6B3 : C1     " "   pop bc
+E6B4 : C1     " "   pop bc
+E6B5 : C1     " "   pop bc
+E6B6 : C1     " "   pop bc
+E6B7 : C1     " "   pop bc
+E6B8 : C1     " "   pop bc
+E6B9 : C1     " "   pop bc
+E6BA : C1     " "   pop bc
+E6BB : C1     " "   pop bc
+E6BC : C1     " "   pop bc
+E6BD : C1     " "   pop bc
+E6BE : C1     " "   pop bc
+E6BF : C1     " "   pop bc
+E6C0 : C1     " "   pop bc
+E6C1 : C1     " "   pop bc
+E6C2 : C1     " "   pop bc
+E6C3 : C1     " "   pop bc
+E6C4 : C1     " "   pop bc
+E6C5 : C1     " "   pop bc
+E6C6 : C1     " "   pop bc
+E6C7 : C1     " "   pop bc
+E6C8 : C1     " "   pop bc
+E6C9 : C1     " "   pop bc
+E6CA : C1     " "   pop bc
+E6CB : C1     " "   pop bc
+E6CC : C1     " "   pop bc
+E6CD : C1     " "   pop bc
+E6CE : C1     " "   pop bc
+E6CF : C1     " "   pop bc
+E6D0 : C1     " "   pop bc
+E6D1 : C1     " "   pop bc
+E6D2 : C1     " "   pop bc
+E6D3 : C1     " "   pop bc
+E6D4 : C1     " "   pop bc
+E6D5 : C1     " "   pop bc
+E6D6 : C1     " "   pop bc
+E6D7 : C1     " "   pop bc
+E6D8 : C1     " "   pop bc
+E6D9 : C1     " "   pop bc
+E6DA : C1     " "   pop bc
+E6DB : C1     " "   pop bc
+E6DC : C1     " "   pop bc
+E6DD : C1     " "   pop bc
+E6DE : C1     " "   pop bc
+E6DF : C1     " "   pop bc
+E6E0 : C1     " "   pop bc
+E6E1 : C1     " "   pop bc
+E6E2 : C1     " "   pop bc
+E6E3 : C1     " "   pop bc
+E6E4 : C1     " "   pop bc
+E6E5 : C1     " "   pop bc
+E6E6 : C1     " "   pop bc
+E6E7 : C1     " "   pop bc
+E6E8 : C1     " "   pop bc
+E6E9 : C1     " "   pop bc
+E6EA : C1     " "   pop bc
+E6EB : C1     " "   pop bc
+E6EC : C1     " "   pop bc
+E6ED : C1     " "   pop bc
+E6EE : C1     " "   pop bc
+E6EF : C1     " "   pop bc
+E6F0 : C1     " "   pop bc
+E6F1 : C1     " "   pop bc
+E6F2 : C1     " "   pop bc
+E6F3 : C1     " "   pop bc
+E6F4 : C1     " "   pop bc
+E6F5 : C1     " "   pop bc
+E6F6 : C1     " "   pop bc
+E6F7 : C1     " "   pop bc
+E6F8 : C1     " "   pop bc
+E6F9 : C1     " "   pop bc
+E6FA : C1     " "   pop bc
+E6FB : C1     " "   pop bc
+E6FC : C1     " "   pop bc
+E6FD : C1     " "   pop bc
+E6FE : C1     " "   pop bc
+E6FF : C1     " "   pop bc
+E700 : C1     " "   pop bc
+E701 : C1     " "   pop bc
+E702 : C1     " "   pop bc
+E703 : C1     " "   pop bc
+E704 : C1     " "   pop bc
+E705 : C1     " "   pop bc
+E706 : C1     " "   pop bc
+E707 : C1     " "   pop bc
+E708 : C1     " "   pop bc
+E709 : C1     " "   pop bc
+E70A : C1     " "   pop bc
+E70B : C1     " "   pop bc
+E70C : C1     " "   pop bc
+E70D : C1     " "   pop bc
+E70E : C1     " "   pop bc
+E70F : C1     " "   pop bc
+E710 : C1     " "   pop bc
+E711 : C1     " "   pop bc
+E712 : C1     " "   pop bc
+E713 : C1     " "   pop bc
+E714 : C1     " "   pop bc
+E715 : C1     " "   pop bc
+E716 : C1     " "   pop bc
+E717 : C1     " "   pop bc
+E718 : C1     " "   pop bc
+E719 : C1     " "   pop bc
+E71A : C1     " "   pop bc
+E71B : C1     " "   pop bc
+E71C : C1     " "   pop bc
+E71D : C1     " "   pop bc
+E71E : C1     " "   pop bc
+E71F : C1     " "   pop bc
+E720 : C1     " "   pop bc
+E721 : C1     " "   pop bc
+E722 : C1     " "   pop bc
+E723 : C1     " "   pop bc
+E724 : C1     " "   pop bc
+E725 : C1     " "   pop bc
+E726 : C1     " "   pop bc
+E727 : C1     " "   pop bc
+E728 : C1     " "   pop bc
+E729 : C1     " "   pop bc
+E72A : C1     " "   pop bc
+E72B : C1     " "   pop bc
+E72C : C1     " "   pop bc
+E72D : C1     " "   pop bc
+E72E : C1     " "   pop bc
+E72F : C1     " "   pop bc
+E730 : C1     " "   pop bc
+E731 : C1     " "   pop bc
+E732 : C1     " "   pop bc
+E733 : C1     " "   pop bc
+E734 : C1     " "   pop bc
+E735 : C1     " "   pop bc
+E736 : C1     " "   pop bc
+E737 : C1     " "   pop bc
+E738 : C1     " "   pop bc
+E739 : C1     " "   pop bc
+E73A : C1     " "   pop bc
+E73B : C1     " "   pop bc
+E73C : C1     " "   pop bc
+E73D : C1     " "   pop bc
+E73E : C1     " "   pop bc
+E73F : C1     " "   pop bc
+E740 : C1     " "   pop bc
+E741 : C1     " "   pop bc
+E742 : C1     " "   pop bc
+E743 : C1     " "   pop bc
+E744 : C1     " "   pop bc
+E745 : C1     " "   pop bc
+E746 : C1     " "   pop bc
+E747 : C1     " "   pop bc
+E748 : C1     " "   pop bc
+E749 : C1     " "   pop bc
+E74A : C1     " "   pop bc
+E74B : C1     " "   pop bc
+E74C : C1     " "   pop bc
+E74D : C1     " "   pop bc
+E74E : C1     " "   pop bc
+E74F : C1     " "   pop bc
+E750 : C1     " "   pop bc
+E751 : C1     " "   pop bc
+E752 : C1     " "   pop bc
+E753 : C1     " "   pop bc
+E754 : C1     " "   pop bc
+E755 : C1     " "   pop bc
+E756 : C1     " "   pop bc
+E757 : C1     " "   pop bc
+E758 : C1     " "   pop bc
+E759 : C1     " "   pop bc
+E75A : C1     " "   pop bc
+E75B : C1     " "   pop bc
+E75C : C1     " "   pop bc
+E75D : C1     " "   pop bc
+E75E : C1     " "   pop bc
+E75F : C1     " "   pop bc
+E760 : C1     " "   pop bc
+E761 : C1     " "   pop bc
+E762 : C1     " "   pop bc
+E763 : C1     " "   pop bc
+E764 : C1     " "   pop bc
+E765 : C1     " "   pop bc
+E766 : C1     " "   pop bc
+E767 : C1     " "   pop bc
+E768 : C1     " "   pop bc
+E769 : C1     " "   pop bc
+E76A : C1     " "   pop bc
+E76B : C1     " "   pop bc
+E76C : C1     " "   pop bc
+E76D : C1     " "   pop bc
+E76E : C1     " "   pop bc
+E76F : C1     " "   pop bc
+E770 : C1     " "   pop bc
+E771 : C1     " "   pop bc
+E772 : C1     " "   pop bc
+E773 : C1     " "   pop bc
+E774 : C1     " "   pop bc
+E775 : C1     " "   pop bc
+E776 : C1     " "   pop bc
+E777 : C1     " "   pop bc
+E778 : C1     " "   pop bc
+E779 : C1     " "   pop bc
+E77A : C1     " "   pop bc
+E77B : C1     " "   pop bc
+E77C : C1     " "   pop bc
+E77D : C1     " "   pop bc
+E77E : C1     " "   pop bc
+E77F : C1     " "   pop bc
+E780 : C1     " "   pop bc
+E781 : C1     " "   pop bc
+E782 : C1     " "   pop bc
+E783 : C1     " "   pop bc
+E784 : C1     " "   pop bc
+E785 : C1     " "   pop bc
+E786 : C1     " "   pop bc
+E787 : C1     " "   pop bc
+E788 : C1     " "   pop bc
+E789 : C1     " "   pop bc
+E78A : C1     " "   pop bc
+E78B : C1     " "   pop bc
+E78C : C1     " "   pop bc
+E78D : C1     " "   pop bc
+E78E : C1     " "   pop bc
+E78F : C1     " "   pop bc
+E790 : C1     " "   pop bc
+E791 : C1     " "   pop bc
+E792 : C1     " "   pop bc
+E793 : C1     " "   pop bc
+E794 : C1     " "   pop bc
+E795 : C1     " "   pop bc
+E796 : C1     " "   pop bc
+E797 : C1     " "   pop bc
+E798 : C1     " "   pop bc
+E799 : C1     " "   pop bc
+E79A : C1     " "   pop bc
+E79B : C1     " "   pop bc
+E79C : C1     " "   pop bc
+E79D : C1     " "   pop bc
+E79E : C1     " "   pop bc
+E79F : C1     " "   pop bc
+E7A0 : C1     " "   pop bc
+E7A1 : C1     " "   pop bc
+E7A2 : C1     " "   pop bc
+E7A3 : C1     " "   pop bc
+E7A4 : C1     " "   pop bc
+E7A5 : C1     " "   pop bc
+E7A6 : C1     " "   pop bc
+E7A7 : C1     " "   pop bc
+E7A8 : C1     " "   pop bc
+E7A9 : C1     " "   pop bc
+E7AA : C1     " "   pop bc
+E7AB : C1     " "   pop bc
+E7AC : C1     " "   pop bc
+E7AD : C1     " "   pop bc
+E7AE : C1     " "   pop bc
+E7AF : C1     " "   pop bc
+E7B0 : C1     " "   pop bc
+E7B1 : C1     " "   pop bc
+E7B2 : C1     " "   pop bc
+E7B3 : C1     " "   pop bc
+E7B4 : C1     " "   pop bc
+E7B5 : C1     " "   pop bc
+E7B6 : C1     " "   pop bc
+E7B7 : C1     " "   pop bc
+E7B8 : C1     " "   pop bc
+E7B9 : C1     " "   pop bc
+E7BA : C1     " "   pop bc
+E7BB : C1     " "   pop bc
+E7BC : C1     " "   pop bc
+E7BD : C1     " "   pop bc
+E7BE : C1     " "   pop bc
+E7BF : C1     " "   pop bc
+E7C0 : C1     " "   pop bc
+E7C1 : C1     " "   pop bc
+E7C2 : C1     " "   pop bc
+E7C3 : C1     " "   pop bc
+E7C4 : C1     " "   pop bc
+E7C5 : C1     " "   pop bc
+E7C6 : C1     " "   pop bc
+E7C7 : C1     " "   pop bc
+E7C8 : C1     " "   pop bc
+E7C9 : C1     " "   pop bc
+E7CA : C1     " "   pop bc
+E7CB : C1     " "   pop bc
+E7CC : C1     " "   pop bc
+E7CD : C1     " "   pop bc
+E7CE : C1     " "   pop bc
+E7CF : C1     " "   pop bc
+E7D0 : C1     " "   pop bc
+E7D1 : C1     " "   pop bc
+E7D2 : C1     " "   pop bc
+E7D3 : C1     " "   pop bc
+E7D4 : C1     " "   pop bc
+E7D5 : C1     " "   pop bc
+E7D6 : C1     " "   pop bc
+E7D7 : C1     " "   pop bc
+E7D8 : C1     " "   pop bc
+E7D9 : C1     " "   pop bc
+E7DA : C1     " "   pop bc
+E7DB : C1     " "   pop bc
+E7DC : C1     " "   pop bc
+E7DD : C1     " "   pop bc
+E7DE : C1     " "   pop bc
+E7DF : C1     " "   pop bc
+E7E0 : C1     " "   pop bc
+E7E1 : C1     " "   pop bc
+E7E2 : C1     " "   pop bc
+E7E3 : C1     " "   pop bc
+E7E4 : C1     " "   pop bc
+E7E5 : C1     " "   pop bc
+E7E6 : C1     " "   pop bc
+E7E7 : C1     " "   pop bc
+E7E8 : C1     " "   pop bc
+E7E9 : C1     " "   pop bc
+E7EA : C1     " "   pop bc
+E7EB : C1     " "   pop bc
+E7EC : C1     " "   pop bc
+E7ED : C1     " "   pop bc
+E7EE : C1     " "   pop bc
+E7EF : C1     " "   pop bc
+E7F0 : C1     " "   pop bc
+E7F1 : C1     " "   pop bc
+E7F2 : C1     " "   pop bc
+E7F3 : C1     " "   pop bc
+E7F4 : C1     " "   pop bc
+E7F5 : C1     " "   pop bc
+E7F6 : C1     " "   pop bc
+E7F7 : C1     " "   pop bc
+E7F8 : C1     " "   pop bc
+E7F9 : C1     " "   pop bc
+E7FA : C1     " "   pop bc
+E7FB : C1     " "   pop bc
+E7FC : C1     " "   pop bc
+E7FD : C1     " "   pop bc
+E7FE : C1     " "   pop bc
+E7FF : C1     " "   pop bc
+
+E800                ; Compressed Splash Screen  
+E800 : 27 0F        SPLASH: byte    $27,$0F
+E802 : F0
+E803 : F0
+E804 : F0
+E805 : F0
+E806 : B0
+E807 : 0B
+E808 : E0
+E809 : AC
+E80A        LE80A:
+E80A : 16 B5    "  "    ld  d,0B5H
+E80C : 03     " "   inc bc
+E80D : A1     " "   and c
+E80E : 0B     " "   dec bc
+E80F : AE     " "   xor (hl)
+E810 : AC     " "   xor h
+E811 : 11 E8 AC   "   "   ld  de,0ACE8H
+E814 : B4     " "   or  h
+E815 : 02     " "   ld  (bc),a
+E816 : B5     " "   or  l
+E817 : 0C     " "   inc c
+E818 : B0     " "   or  b
+E819 : E0     " "   ret po
+E81A : 01 B0 01   "   "   ld  bc,001B0H
+E81D : B5     " "   or  l
+E81E : 10 EA    "  "    djnz  LE80A
+E820 : 01 B5 02   "   "   ld  bc,002B5H
+E823 : B5     " "   or  l
+E824 : 03     " "   inc bc
+E825 : B5     " "   or  l
+E826 : 08     " "   ex  af,af'
+E827 : B5     " "   or  l
+E828 : EA 01 B5   "   "   jp  pe,LB501
+E82B : 01 B5 10   "   "   ld  bc,010B5H
+E82E : A2     " "   and d
+E82F : A3     " "   and e
+E830 : B7     " "   or  a
+E831 : A3     " "   and e
+E832 : A3     " "   and e
+E833 : A2     " "   and d
+E834 : A3     " "   and e
+E835 : B3     " "   or  e
+E836 : B3     " "   or  e
+E837 : A2     " "   and d
+E838 : A3     " "   and e
+E839 : A3     " "   and e
+E83A : A3     " "   and e
+E83B : A3     " "   and e
+E83C : A3     " "   and e
+E83D : A3     " "   and e
+E83E : A3     " "   and e
+E83F : A3     " "   and e
+E840 : A2     " "   and d
+E841 : A1     " "   and c
+E842 : A3     " "   and e
+E843 : 02     " "   ld  (bc),a
+E844 : A1     " "   and c
+E845 : 0F     " "   rrca
+E846 : E0     " "   ret po
+E847 : F0     " "   ret p
+E848 : F0     " "   ret p
+E849 : A5     " "   and l
+E84A : 07     " "   rlca
+E84B : E8     " "   ret pe
+E84C : AC     " "   xor h
+E84D : 1F     " "   rra
+E84E : E0     " "   ret po
+E84F : F0     " "   ret p
+E850 : AC     " "   xor h
+E851 : AC     " "   xor h
+E852 : A3     " "   and e
+E853 : A3     " "   and e
+E854 : A3     " "   and e
+E855 : EA F3 A2   "   "   jp  pe,LA2F3
+E858 : A3     " "   and e
+E859 : A3     " "   and e
+E85A : AC     " "   xor h
+E85B : AC     " "   xor h
+E85C : F0     " "   ret p
+E85D : B0     " "   or  b
+E85E : 16 F8    "  "    ld  d,0F8H
+E860 : A6     " "   and (hl)
+E861 : A3     " "   and e
+E862 : 06 E0    "  "    ld  b,0E0H
+E864 : F0     " "   ret p
+E865 : 06 A3    "  "    ld  b,0A3H
+E867 : A9     " "   xor c
+E868 : F4 12 B8   "   "   call  p,LB812
+E86B : A7     " "   and a
+E86C : 05     " "   dec b
+E86D : E0     " "   ret po
+E86E : F0     " "   ret p
+E86F : BC     " "   cp  h
+E870 : AC     " "   xor h
+E871 : EA A0 A8   "   "   jp  pe,LA8A0
+E874 : EC F0 B0   "   "   call  pe,LB0F0
+E877 : 05     " "   dec b
+E878 : AB     " "   xor e
+E879 : E4 0E E0   "   "   call  po,LE00E
+E87C : A6     " "   and (hl)
+E87D : 04     " "   inc b
+E87E : E0     " "   ret po
+E87F : B8     " "   cp  b
+E880 : A7     " "   and a
+E881 : A1     " "   and c
+E882 : 03     " "   inc bc
+E883 : A2     " "   and d
+E884 : A3     " "   and e
+E885 : 03     " "   inc bc
+E886 : A2     " "   and d
+E887 : AB     " "   xor e
+E888 : E4 B0 04   "   "   call  po,L04B0
+E88B : A9     " "   xor c
+E88C : B0     " "   or  b
+E88D : 0B     " "   dec bc
+E88E : E0     " "   ret po
+E88F : B7     " "   or  a
+E890 : 04     " "   inc b
+E891 : F8     " "   ret m
+E892 : A7     " "   and a
+E893 : 05     " "   dec b
+E894 : E0     " "   ret po
+E895 : F0     " "   ret p
+E896 : F0     " "   ret p
+E897 : B0     " "   or  b
+E898 : 05     " "   dec b
+E899 : AB     " "   xor e
+E89A : F4 04 EB   "   "   call  p,LEB04
+E89D : B0     " "   or  b
+E89E : 0A     " "   ld  a,(bc)
+E89F : BE     " "   cp  (hl)
+E8A0 : 04     " "   inc b
+E8A1 : FA A1 03   "   "   jp  m,L03A1
+E8A4 : E0     " "   ret po
+E8A5 : BC     " "   cp  h
+E8A6 : A7     " "   and a
+E8A7 : A3     " "   and e
+E8A8 : 01 B0 A3   "   "   ld  bc,0A3B0H
+E8AB : AB     " "   xor e
+E8AC : EC B0 03   "   "   call  pe,L03B0
+E8AF : A2     " "   and d
+E8B0 : F5     " "   push  af
+E8B1 : 04     " "   inc b
+        ;
+E8B2 : ED     " "   db  0EDH
+        ;
+E8B3 : 0A     " "   ld  a,(bc)
+E8B4 : B5     " "   or  l
+E8B5 : 04     " "   inc b
+E8B6 : B5     " "   or  l
+E8B7 : 04     " "   inc b
+E8B8 : B7     " "   or  a
+E8B9 : 03     " "   inc bc
+E8BA : A8     " "   xor b
+E8BB : B4     " "   or  h
+E8BC : 03     " "   inc bc
+E8BD : EB     " "   ex  de,hl
+E8BE : 04     " "   inc b
+E8BF : EA 04 EA   "   "   jp  pe,LEA04
+E8C2 : 0A     " "   ld  a,(bc)
+E8C3 : B7     " "   or  a
+E8C4 : A3     " "   and e
+E8C5 : A3     " "   and e
+E8C6 : A3     " "   and e
+E8C7 : A3     " "   and e
+E8C8 : B7     " "   or  a
+E8C9 : A3     " "   and e
+E8CA : A3     " "   and e
+E8CB : A3     " "   and e
+E8CC : A3     " "   and e
+E8CD : B5     " "   or  l
+E8CE : 04     " "   inc b
+E8CF : B5     " "   or  l
+E8D0 : 03     " "   inc bc
+E8D1 : EA A3 A3   "   "   jp  pe,LA3A3
+E8D4 : A3     " "   and e
+E8D5 : A3     " "   and e
+E8D6 : EB     " "   ex  de,hl
+E8D7 : A3     " "   and e
+E8D8 : A3     " "   and e
+E8D9 : A3     " "   and e
+E8DA : A3     " "   and e
+E8DB : EB     " "   ex  de,hl
+E8DC : 0A     " "   ld  a,(bc)
+E8DD : B5     " "   or  l
+E8DE : 04     " "   inc b
+E8DF : F5     " "   push  af
+E8E0 : 04     " "   inc b
+        ;
+E8E1 : ED     " "   db  0EDH
+        ;
+E8E2        LE8E2:
+E8E2 : B0     " "   or  b
+E8E3 : 02     " "   ld  (bc),a
+E8E4 : A2     " "   and d
+E8E5 : A3     " "   and e
+E8E6 : 02     " "   ld  (bc),a
+E8E7 : E0     " "   ret po
+E8E8 : B6     " "   or  (hl)
+E8E9 : 04     " "   inc b
+E8EA : FA 04 EA   "   "   jp  m,LEA04
+E8ED : 0A     " "   ld  a,(bc)
+E8EE : E9     " "   jp  (hl)    ;INFO: index jump
+        ;
+E8EF : 04     " "   inc b
+E8F0 : AA     " "   xor d
+E8F1 : F4 04 A3   "   "   call  p,LA304
+E8F4 : AD     " "   xor l
+E8F5 : EC F0 F0   "   "   call  pe,LF0F0
+E8F8 : BC     " "   cp  h
+E8F9 : AE     " "   xor (hl)
+E8FA : A3     " "   and e
+E8FB : 04     " "   inc b
+E8FC : E8     " "   ret pe
+E8FD : A1     " "   and c
+E8FE : 04     " "   inc b
+E8FF : B5     " "   or  l
+E900 : 0B     " "   dec bc
+        ;
+E901 : ED     " "   db  0EDH
+        ;
+E902 : 04     " "   inc b
+E903 : A2     " "   and d
+        ;
+E904 : EC     " "   db  0ECH
+        ;
+E905 : B0     " "   or  b
+E906        LE906:
+E906 : 0C     " "   inc c
+E907 : E0     " "   ret po
+E908 : BE     " "   cp  (hl)
+E909 : A1     " "   and c
+E90A : 04     " "   inc b
+E90B : B6     " "   or  (hl)
+E90C : 0D     " "   dec c
+E90D : A9     " "   xor c
+E90E : B0     " "   or  b
+E90F : 04     " "   inc b
+E910 : A2     " "   and d
+E911 : A9     " "   xor c
+E912 : E4 F0 B0   "   "   call  po,LB0F0
+E915 : 01 E8 AC   "   "   ld  bc,0ACE8H
+E918 : 01 E0 F0   "   "   ld  bc,0F0E0H
+E91B : BC     " "   cp  h
+E91C : AE     " "   xor (hl)
+E91D : A1     " "   and c
+E91E : 04     " "   inc b
+E91F : E0     " "   ret po
+E920 : AE     " "   xor (hl)
+E921 : 0F     " "   rrca
+E922 : A2     " "   and d
+E923 : EC B0 06   "   "   call  pe,L06B0
+E926 : A2     " "   and d
+E927 : A3     " "   and e
+E928 : EA F0 A2   "   "   jp  pe,LA2F0
+E92B : A1     " "   and c
+E92C : 06 E0    "  "    ld  b,0E0H
+E92E : AC     " "   xor h
+E92F : A1     " "   and c
+E930 : 12     " "   ld  (de),a
+E931 : A2     " "   and d
+E932 : A9     " "   xor c
+E933 : AC     " "   xor h
+E934 : F0     " "   ret p
+E935 : 05     " "   dec b
+E936 : E0     " "   ret po
+E937 : F0     " "   ret p
+E938 : 05     " "   dec b
+E939 : F0     " "   ret p
+E93A : B8     " "   cp  b
+E93B : A6     " "   and (hl)
+E93C : A1     " "   and c
+E93D : 18 A3    "  "    jr  LE8E2
+        ;
+E93F : A3     " "   and e
+E940 : AC     " "   xor h
+E941 : AC     " "   xor h
+E942 : AC     " "   xor h
+E943 : EA EA A8   "   "   jp  pe,LA8EA
+E946 : AC     " "   xor h
+E947 : AC     " "   xor h
+E948 : A3     " "   and e
+E949 : A3     " "   and e
+E94A : 21 A2 A3   "!  "   ld  hl,0A3A2H
+E94D : 20 B7    "  "    jr  nz,LE906
+E94F : F3     " "   di
+E950 : 01 F7 FB   "   "   ld  bc,0FBF7H
+E953 : 01 B7 EB   "   "   ld  bc,0EBB7H
+E956 : 01 B5 EA   "   "   ld  bc,0EAB5H
+E959 : 01 F7 FB   "   "   ld  bc,0FBF7H
+E95C : 1A     " "   ld  a,(de)
+E95D : F5     " "   push  af
+E95E : FA 01 B7   "   "   jp  m,LB701
+E961 : E4 01 F5   "   "   call  po,LF501
+E964 : FA 01 F5   "   "   jp  m,LF501
+E967 : FA 01 B5   "   "   jp  m,LB501
+E96A : 0E 28    " ("    ld  c,028H
+E96C : 28 28    "(("    jr  z,LE996
+E96E : C1     " "   pop bc
+E96F : C1     " "   pop bc
+E970 : C1     " "   pop bc
+E971 : C1     " "   pop bc
+E972 : C1     " "   pop bc
+E973 : C1     " "   pop bc
+E974 : C1     " "   pop bc
+E975 : C1     " "   pop bc
+E976 : C1     " "   pop bc
+E977 : C1     " "   pop bc
+E978 : C1     " "   pop bc
+E979 : C1     " "   pop bc
+E97A : C1     " "   pop bc
+E97B : C1     " "   pop bc
+E97C : C1     " "   pop bc
+E97D : C1     " "   pop bc
+E97E : C1     " "   pop bc
+E97F : C1     " "   pop bc
+E980 : C1     " "   pop bc
+E981 : C1     " "   pop bc
+E982 : C1     " "   pop bc
+E983 : C1     " "   pop bc
+E984 : C1     " "   pop bc
+E985 : C1     " "   pop bc
+E986 : C1     " "   pop bc
+E987 : C1     " "   pop bc
+E988 : C1     " "   pop bc
+E989 : C1     " "   pop bc
+E98A : C1     " "   pop bc
+E98B : C1     " "   pop bc
+E98C : C1     " "   pop bc
+E98D : C1     " "   pop bc
+E98E : C1     " "   pop bc
+E98F : C1     " "   pop bc
+E990 : C1     " "   pop bc
+E991 : C1     " "   pop bc
+E992 : C1     " "   pop bc
+E993 : C1     " "   pop bc
+E994 : C1     " "   pop bc
+E995 : C1     " "   pop bc
+E996        LE996:
+E996 : C1     " "   pop bc
+E997 : C1     " "   pop bc
+E998 : C1     " "   pop bc
+E999 : C1     " "   pop bc
+E99A : C1     " "   pop bc
+E99B : C1     " "   pop bc
+E99C : C1     " "   pop bc
+E99D : C1     " "   pop bc
+E99E : C1     " "   pop bc
+E99F : C1     " "   pop bc
+E9A0 : C1     " "   pop bc
+E9A1 : C1     " "   pop bc
+E9A2 : C1     " "   pop bc
+E9A3 : C1     " "   pop bc
+E9A4 : C1     " "   pop bc
+E9A5 : C1     " "   pop bc
+E9A6 : C1     " "   pop bc
+E9A7 : C1     " "   pop bc
+E9A8 : C1     " "   pop bc
+E9A9 : C1     " "   pop bc
+E9AA : C1     " "   pop bc
+E9AB : C1     " "   pop bc
+E9AC : C1     " "   pop bc
+E9AD : C1     " "   pop bc
+E9AE : C1     " "   pop bc
+E9AF : C1     " "   pop bc
+E9B0 : C1     " "   pop bc
+E9B1 : C1     " "   pop bc
+E9B2 : C1     " "   pop bc
+E9B3 : C1     " "   pop bc
+E9B4 : C1     " "   pop bc
+E9B5 : C1     " "   pop bc
+E9B6 : C1     " "   pop bc
+E9B7 : C1     " "   pop bc
+E9B8 : C1     " "   pop bc
+E9B9 : C1     " "   pop bc
+E9BA : C1     " "   pop bc
+E9BB : C1     " "   pop bc
+E9BC : C1     " "   pop bc
+E9BD : C1     " "   pop bc
+E9BE : C1     " "   pop bc
+E9BF : C1     " "   pop bc
+E9C0 : C1     " "   pop bc
+E9C1 : C1     " "   pop bc
+E9C2 : C1     " "   pop bc
+E9C3 : C1     " "   pop bc
+E9C4 : C1     " "   pop bc
+E9C5 : C1     " "   pop bc
+E9C6 : C1     " "   pop bc
+E9C7 : C1     " "   pop bc
+E9C8 : C1     " "   pop bc
+E9C9 : C1     " "   pop bc
+E9CA : C1     " "   pop bc
+E9CB : C1     " "   pop bc
+E9CC : C1     " "   pop bc
+E9CD : C1     " "   pop bc
+E9CE : C1     " "   pop bc
+E9CF : C1     " "   pop bc
+E9D0 : C1     " "   pop bc
+E9D1 : C1     " "   pop bc
+E9D2 : C1     " "   pop bc
+E9D3 : C1     " "   pop bc
+E9D4 : C1     " "   pop bc
+E9D5 : C1     " "   pop bc
+E9D6 : C1     " "   pop bc
+E9D7 : C1     " "   pop bc
+E9D8 : C1     " "   pop bc
+E9D9 : C1     " "   pop bc
+E9DA : C1     " "   pop bc
+E9DB : C1     " "   pop bc
+E9DC : C1     " "   pop bc
+E9DD : C1     " "   pop bc
+E9DE : C1     " "   pop bc
+E9DF : C1     " "   pop bc
+E9E0 : C1     " "   pop bc
+E9E1 : C1     " "   pop bc
+E9E2 : C1     " "   pop bc
+E9E3 : C1     " "   pop bc
+E9E4 : C1     " "   pop bc
+E9E5 : C1     " "   pop bc
+E9E6 : C1     " "   pop bc
+E9E7 : C1     " "   pop bc
+E9E8 : C1     " "   pop bc
+E9E9 : C1     " "   pop bc
+E9EA : C1     " "   pop bc
+E9EB : C1     " "   pop bc
+E9EC : C1     " "   pop bc
+E9ED : C1     " "   pop bc
+E9EE : C1     " "   pop bc
+E9EF : C1     " "   pop bc
+E9F0 : C1     " "   pop bc
+E9F1 : C1     " "   pop bc
+E9F2 : C1     " "   pop bc
+E9F3 : C1     " "   pop bc
+E9F4 : C1     " "   pop bc
+E9F5 : C1     " "   pop bc
+E9F6 : C1     " "   pop bc
+E9F7 : C1     " "   pop bc
+E9F8 : C1     " "   pop bc
+E9F9 : C1     " "   pop bc
+E9FA : C1     " "   pop bc
+E9FB : C1     " "   pop bc
+E9FC : C1     " "   pop bc
+E9FD : C1     " "   pop bc
+E9FE : C1     " "   pop bc
+E9FF : C1     " "   pop bc
+EA00 : C1     " "   pop bc
+EA01 : C1     " "   pop bc
+EA02 : C1     " "   pop bc
+EA03 : C1     " "   pop bc
+EA04        LEA04:
+EA04 : C1     " "   pop bc
+EA05 : C1     " "   pop bc
+EA06 : C1     " "   pop bc
+EA07 : C1     " "   pop bc
+EA08 : C1     " "   pop bc
+EA09 : C1     " "   pop bc
+EA0A : C1     " "   pop bc
+EA0B : C1     " "   pop bc
+EA0C : C1     " "   pop bc
+EA0D : C1     " "   pop bc
+EA0E : C1     " "   pop bc
+EA0F : C1     " "   pop bc
+EA10 : C1     " "   pop bc
+EA11 : C1     " "   pop bc
+EA12 : C1     " "   pop bc
+EA13 : C1     " "   pop bc
+EA14 : C1     " "   pop bc
+EA15 : C1     " "   pop bc
+EA16 : C1     " "   pop bc
+EA17 : C1     " "   pop bc
+EA18 : C1     " "   pop bc
+EA19 : C1     " "   pop bc
+EA1A : C1     " "   pop bc
+EA1B : C1     " "   pop bc
+EA1C : C1     " "   pop bc
+EA1D : C1     " "   pop bc
+EA1E : C1     " "   pop bc
+EA1F : C1     " "   pop bc
+EA20 : C1     " "   pop bc
+EA21 : C1     " "   pop bc
+EA22 : C1     " "   pop bc
+EA23 : C1     " "   pop bc
+EA24 : C1     " "   pop bc
+EA25 : C1     " "   pop bc
+EA26 : C1     " "   pop bc
+EA27 : C1     " "   pop bc
+EA28 : C1     " "   pop bc
+EA29 : C1     " "   pop bc
+EA2A : C1     " "   pop bc
+EA2B : C1     " "   pop bc
+EA2C : C1     " "   pop bc
+EA2D : C1     " "   pop bc
+EA2E : C1     " "   pop bc
+EA2F : C1     " "   pop bc
+EA30 : C1     " "   pop bc
+EA31 : C1     " "   pop bc
+EA32 : C1     " "   pop bc
+EA33 : C1     " "   pop bc
+EA34 : C1     " "   pop bc
+EA35 : C1     " "   pop bc
+EA36 : C1     " "   pop bc
+EA37 : C1     " "   pop bc
+EA38 : C1     " "   pop bc
+EA39 : C1     " "   pop bc
+EA3A : C1     " "   pop bc
+EA3B : C1     " "   pop bc
+EA3C : C1     " "   pop bc
+EA3D : C1     " "   pop bc
+EA3E : C1     " "   pop bc
+EA3F : C1     " "   pop bc
+EA40 : C1     " "   pop bc
+EA41 : C1     " "   pop bc
+EA42 : C1     " "   pop bc
+EA43 : C1     " "   pop bc
+EA44 : C1     " "   pop bc
+EA45 : C1     " "   pop bc
+EA46 : C1     " "   pop bc
+EA47 : C1     " "   pop bc
+EA48 : C1     " "   pop bc
+EA49 : C1     " "   pop bc
+EA4A : C1     " "   pop bc
+EA4B : C1     " "   pop bc
+EA4C : C1     " "   pop bc
+EA4D : C1     " "   pop bc
+EA4E : C1     " "   pop bc
+EA4F : C1     " "   pop bc
+EA50 : C1     " "   pop bc
+EA51 : C1     " "   pop bc
+EA52 : C1     " "   pop bc
+EA53 : C1     " "   pop bc
+EA54 : C1     " "   pop bc
+EA55 : C1     " "   pop bc
+EA56 : C1     " "   pop bc
+EA57 : C1     " "   pop bc
+EA58 : C1     " "   pop bc
+EA59 : C1     " "   pop bc
+EA5A : C1     " "   pop bc
+EA5B : C1     " "   pop bc
+EA5C : C1     " "   pop bc
+EA5D : C1     " "   pop bc
+EA5E : C1     " "   pop bc
+EA5F : C1     " "   pop bc
+EA60 : C1     " "   pop bc
+EA61 : C1     " "   pop bc
+EA62 : C1     " "   pop bc
+EA63 : C1     " "   pop bc
+EA64 : C1     " "   pop bc
+EA65 : C1     " "   pop bc
+EA66 : C1     " "   pop bc
+EA67 : C1     " "   pop bc
+EA68 : C1     " "   pop bc
+EA69 : C1     " "   pop bc
+EA6A : C1     " "   pop bc
+EA6B : C1     " "   pop bc
+EA6C : C1     " "   pop bc
+EA6D : C1     " "   pop bc
+EA6E : C1     " "   pop bc
+EA6F : C1     " "   pop bc
+EA70 : C1     " "   pop bc
+EA71 : C1     " "   pop bc
+EA72 : C1     " "   pop bc
+EA73 : C1     " "   pop bc
+EA74 : C1     " "   pop bc
+EA75 : C1     " "   pop bc
+EA76 : C1     " "   pop bc
+EA77 : C1     " "   pop bc
+EA78 : C1     " "   pop bc
+EA79 : C1     " "   pop bc
+EA7A : C1     " "   pop bc
+EA7B : C1     " "   pop bc
+EA7C : C1     " "   pop bc
+EA7D : C1     " "   pop bc
+EA7E : C1     " "   pop bc
+EA7F : C1     " "   pop bc
+EA80 : C1     " "   pop bc
+EA81 : C1     " "   pop bc
+EA82 : C1     " "   pop bc
+EA83 : C1     " "   pop bc
+EA84 : C1     " "   pop bc
+EA85 : C1     " "   pop bc
+EA86 : C1     " "   pop bc
+EA87 : C1     " "   pop bc
+EA88 : C1     " "   pop bc
+EA89 : C1     " "   pop bc
+EA8A : C1     " "   pop bc
+EA8B : C1     " "   pop bc
+EA8C : C1     " "   pop bc
+EA8D : C1     " "   pop bc
+EA8E : C1     " "   pop bc
+EA8F : C1     " "   pop bc
+EA90 : C1     " "   pop bc
+EA91 : C1     " "   pop bc
+EA92 : C1     " "   pop bc
+EA93 : C1     " "   pop bc
+EA94 : C1     " "   pop bc
+EA95 : C1     " "   pop bc
+EA96 : C1     " "   pop bc
+EA97 : C1     " "   pop bc
+EA98 : C1     " "   pop bc
+EA99 : C1     " "   pop bc
+EA9A : C1     " "   pop bc
+EA9B : C1     " "   pop bc
+EA9C : C1     " "   pop bc
+EA9D : C1     " "   pop bc
+EA9E : C1     " "   pop bc
+EA9F : C1     " "   pop bc
+EAA0 : C1     " "   pop bc
+EAA1 : C1     " "   pop bc
+EAA2 : C1     " "   pop bc
+EAA3 : C1     " "   pop bc
+EAA4 : C1     " "   pop bc
+EAA5 : C1     " "   pop bc
+EAA6 : C1     " "   pop bc
+EAA7 : C1     " "   pop bc
+EAA8 : C1     " "   pop bc
+EAA9 : C1     " "   pop bc
+EAAA : C1     " "   pop bc
+EAAB : C1     " "   pop bc
+EAAC : C1     " "   pop bc
+EAAD : C1     " "   pop bc
+EAAE : C1     " "   pop bc
+EAAF : C1     " "   pop bc
+EAB0 : C1     " "   pop bc
+EAB1 : C1     " "   pop bc
+EAB2 : C1     " "   pop bc
+EAB3 : C1     " "   pop bc
+EAB4 : C1     " "   pop bc
+EAB5 : C1     " "   pop bc
+EAB6 : C1     " "   pop bc
+EAB7 : C1     " "   pop bc
+EAB8 : C1     " "   pop bc
+EAB9 : C1     " "   pop bc
+EABA : C1     " "   pop bc
+EABB : C1     " "   pop bc
+EABC : C1     " "   pop bc
+EABD : C1     " "   pop bc
+EABE : C1     " "   pop bc
+EABF : C1     " "   pop bc
+EAC0 : C1     " "   pop bc
+EAC1 : C1     " "   pop bc
+EAC2 : C1     " "   pop bc
+EAC3 : C1     " "   pop bc
+EAC4 : C1     " "   pop bc
+EAC5 : C1     " "   pop bc
+EAC6 : C1     " "   pop bc
+EAC7 : C1     " "   pop bc
+EAC8 : C1     " "   pop bc
+EAC9 : C1     " "   pop bc
+EACA : C1     " "   pop bc
+EACB : C1     " "   pop bc
+EACC : C1     " "   pop bc
+EACD : C1     " "   pop bc
+EACE : C1     " "   pop bc
+EACF : C1     " "   pop bc
+EAD0 : C1     " "   pop bc
+EAD1 : C1     " "   pop bc
+EAD2 : C1     " "   pop bc
+EAD3 : C1     " "   pop bc
+EAD4 : C1     " "   pop bc
+EAD5 : C1     " "   pop bc
+EAD6 : C1     " "   pop bc
+EAD7 : C1     " "   pop bc
+EAD8 : C1     " "   pop bc
+EAD9 : C1     " "   pop bc
+EADA : C1     " "   pop bc
+EADB : C1     " "   pop bc
+EADC : C1     " "   pop bc
+EADD : C1     " "   pop bc
+EADE : C1     " "   pop bc
+EADF : C1     " "   pop bc
+EAE0 : C1     " "   pop bc
+EAE1 : C1     " "   pop bc
+EAE2 : C1     " "   pop bc
+EAE3 : C1     " "   pop bc
+EAE4 : C1     " "   pop bc
+EAE5 : C1     " "   pop bc
+EAE6 : C1     " "   pop bc
+EAE7 : C1     " "   pop bc
+EAE8 : C1     " "   pop bc
+EAE9 : C1     " "   pop bc
+EAEA : C1     " "   pop bc
+EAEB : C1     " "   pop bc
+EAEC : C1     " "   pop bc
+EAED : C1     " "   pop bc
+EAEE : C1     " "   pop bc
+EAEF : C1     " "   pop bc
+EAF0 : C1     " "   pop bc
+EAF1 : C1     " "   pop bc
+EAF2 : C1     " "   pop bc
+EAF3 : C1     " "   pop bc
+EAF4 : C1     " "   pop bc
+EAF5 : C1     " "   pop bc
+EAF6 : C1     " "   pop bc
+EAF7 : C1     " "   pop bc
+EAF8 : C1     " "   pop bc
+EAF9 : C1     " "   pop bc
+EAFA : C1     " "   pop bc
+EAFB : C1     " "   pop bc
+EAFC : C1     " "   pop bc
+EAFD : C1     " "   pop bc
+EAFE : C1     " "   pop bc
+EAFF : C1     " "   pop bc
+EB00 : C1     " "   pop bc
+EB01 : C1     " "   pop bc
+EB02 : C1     " "   pop bc
+EB03 : C1     " "   pop bc
+EB04        LEB04:
+EB04 : C1     " "   pop bc
+EB05 : C1     " "   pop bc
+EB06 : C1     " "   pop bc
+EB07 : C1     " "   pop bc
+EB08 : C1     " "   pop bc
+EB09 : C1     " "   pop bc
+EB0A : C1     " "   pop bc
+EB0B : C1     " "   pop bc
+EB0C : C1     " "   pop bc
+EB0D : C1     " "   pop bc
+EB0E : C1     " "   pop bc
+EB0F : C1     " "   pop bc
+EB10 : C1     " "   pop bc
+EB11 : C1     " "   pop bc
+EB12 : C1     " "   pop bc
+EB13 : C1     " "   pop bc
+EB14 : C1     " "   pop bc
+EB15 : C1     " "   pop bc
+EB16 : C1     " "   pop bc
+EB17 : C1     " "   pop bc
+EB18 : C1     " "   pop bc
+EB19 : C1     " "   pop bc
+EB1A : C1     " "   pop bc
+EB1B : C1     " "   pop bc
+EB1C : C1     " "   pop bc
+EB1D : C1     " "   pop bc
+EB1E : C1     " "   pop bc
+EB1F : C1     " "   pop bc
+EB20 : C1     " "   pop bc
+EB21 : C1     " "   pop bc
+EB22 : C1     " "   pop bc
+EB23 : C1     " "   pop bc
+EB24 : C1     " "   pop bc
+EB25 : C1     " "   pop bc
+EB26 : C1     " "   pop bc
+EB27 : C1     " "   pop bc
+EB28 : C1     " "   pop bc
+EB29 : C1     " "   pop bc
+EB2A : C1     " "   pop bc
+EB2B : C1     " "   pop bc
+EB2C : C1     " "   pop bc
+EB2D : C1     " "   pop bc
+EB2E : C1     " "   pop bc
+EB2F : C1     " "   pop bc
+EB30 : C1     " "   pop bc
+EB31 : C1     " "   pop bc
+EB32 : C1     " "   pop bc
+EB33 : C1     " "   pop bc
+EB34 : C1     " "   pop bc
+EB35 : C1     " "   pop bc
+EB36 : C1     " "   pop bc
+EB37 : C1     " "   pop bc
+EB38 : C1     " "   pop bc
+EB39 : C1     " "   pop bc
+EB3A : C1     " "   pop bc
+EB3B : C1     " "   pop bc
+EB3C : C1     " "   pop bc
+EB3D : C1     " "   pop bc
+EB3E : C1     " "   pop bc
+EB3F : C1     " "   pop bc
+EB40 : C1     " "   pop bc
+EB41 : C1     " "   pop bc
+EB42 : C1     " "   pop bc
+EB43 : C1     " "   pop bc
+EB44 : C1     " "   pop bc
+EB45 : C1     " "   pop bc
+EB46 : C1     " "   pop bc
+EB47 : C1     " "   pop bc
+EB48 : C1     " "   pop bc
+EB49 : C1     " "   pop bc
+EB4A : C1     " "   pop bc
+EB4B : C1     " "   pop bc
+EB4C : C1     " "   pop bc
+EB4D : C1     " "   pop bc
+EB4E : C1     " "   pop bc
+EB4F : C1     " "   pop bc
+EB50 : C1     " "   pop bc
+EB51 : C1     " "   pop bc
+EB52 : C1     " "   pop bc
+EB53 : C1     " "   pop bc
+EB54 : C1     " "   pop bc
+EB55 : C1     " "   pop bc
+EB56 : C1     " "   pop bc
+EB57 : C1     " "   pop bc
+EB58 : C1     " "   pop bc
+EB59 : C1     " "   pop bc
+EB5A : C1     " "   pop bc
+EB5B : C1     " "   pop bc
+EB5C : C1     " "   pop bc
+EB5D : C1     " "   pop bc
+EB5E : C1     " "   pop bc
+EB5F : C1     " "   pop bc
+EB60 : C1     " "   pop bc
+EB61 : C1     " "   pop bc
+EB62 : C1     " "   pop bc
+EB63 : C1     " "   pop bc
+EB64 : C1     " "   pop bc
+EB65 : C1     " "   pop bc
+EB66 : C1     " "   pop bc
+EB67 : C1     " "   pop bc
+EB68 : C1     " "   pop bc
+EB69 : C1     " "   pop bc
+EB6A : C1     " "   pop bc
+EB6B : C1     " "   pop bc
+EB6C : C1     " "   pop bc
+EB6D : C1     " "   pop bc
+EB6E : C1     " "   pop bc
+EB6F : C1     " "   pop bc
+EB70 : C1     " "   pop bc
+EB71 : C1     " "   pop bc
+EB72 : C1     " "   pop bc
+EB73 : C1     " "   pop bc
+EB74 : C1     " "   pop bc
+EB75 : C1     " "   pop bc
+EB76 : C1     " "   pop bc
+EB77 : C1     " "   pop bc
+EB78 : C1     " "   pop bc
+EB79 : C1     " "   pop bc
+EB7A : C1     " "   pop bc
+EB7B : C1     " "   pop bc
+EB7C : C1     " "   pop bc
+EB7D : C1     " "   pop bc
+EB7E : C1     " "   pop bc
+EB7F : C1     " "   pop bc
+EB80 : C1     " "   pop bc
+EB81 : C1     " "   pop bc
+EB82 : C1     " "   pop bc
+EB83 : C1     " "   pop bc
+EB84 : C1     " "   pop bc
+EB85 : C1     " "   pop bc
+EB86 : C1     " "   pop bc
+EB87 : C1     " "   pop bc
+EB88 : C1     " "   pop bc
+EB89 : C1     " "   pop bc
+EB8A : C1     " "   pop bc
+EB8B : C1     " "   pop bc
+EB8C : C1     " "   pop bc
+EB8D : C1     " "   pop bc
+EB8E : C1     " "   pop bc
+EB8F : C1     " "   pop bc
+EB90 : C1     " "   pop bc
+EB91 : C1     " "   pop bc
+EB92 : C1     " "   pop bc
+EB93 : C1     " "   pop bc
+EB94 : C1     " "   pop bc
+EB95 : C1     " "   pop bc
+EB96 : C1     " "   pop bc
+EB97 : C1     " "   pop bc
+EB98 : C1     " "   pop bc
+EB99 : C1     " "   pop bc
+EB9A : C1     " "   pop bc
+EB9B : C1     " "   pop bc
+EB9C : C1     " "   pop bc
+EB9D : C1     " "   pop bc
+EB9E : C1     " "   pop bc
+EB9F : C1     " "   pop bc
+EBA0 : C1     " "   pop bc
+EBA1 : C1     " "   pop bc
+EBA2 : C1     " "   pop bc
+EBA3 : C1     " "   pop bc
+EBA4 : C1     " "   pop bc
+EBA5 : C1     " "   pop bc
+EBA6 : C1     " "   pop bc
+EBA7 : C1     " "   pop bc
+EBA8 : C1     " "   pop bc
+EBA9 : C1     " "   pop bc
+EBAA : C1     " "   pop bc
+EBAB : C1     " "   pop bc
+EBAC : C1     " "   pop bc
+EBAD : C1     " "   pop bc
+EBAE : C1     " "   pop bc
+EBAF : C1     " "   pop bc
+EBB0 : C1     " "   pop bc
+EBB1 : C1     " "   pop bc
+EBB2 : C1     " "   pop bc
+EBB3 : C1     " "   pop bc
+EBB4 : C1     " "   pop bc
+EBB5 : C1     " "   pop bc
+EBB6 : C1     " "   pop bc
+EBB7 : C1     " "   pop bc
+EBB8 : C1     " "   pop bc
+EBB9 : C1     " "   pop bc
+EBBA : C1     " "   pop bc
+EBBB : C1     " "   pop bc
+EBBC : C1     " "   pop bc
+EBBD : C1     " "   pop bc
+EBBE : C1     " "   pop bc
+EBBF : C1     " "   pop bc
+EBC0 : C1     " "   pop bc
+EBC1 : C1     " "   pop bc
+EBC2 : C1     " "   pop bc
+EBC3 : C1     " "   pop bc
+EBC4 : C1     " "   pop bc
+EBC5 : C1     " "   pop bc
+EBC6 : C1     " "   pop bc
+EBC7 : C1     " "   pop bc
+EBC8 : C1     " "   pop bc
+EBC9 : C1     " "   pop bc
+EBCA : C1     " "   pop bc
+EBCB : C1     " "   pop bc
+EBCC : C1     " "   pop bc
+EBCD : C1     " "   pop bc
+EBCE : C1     " "   pop bc
+EBCF : C1     " "   pop bc
+EBD0 : C1     " "   pop bc
+EBD1 : C1     " "   pop bc
+EBD2 : C1     " "   pop bc
+EBD3 : C1     " "   pop bc
+EBD4 : C1     " "   pop bc
+EBD5 : C1     " "   pop bc
+EBD6 : C1     " "   pop bc
+EBD7 : C1     " "   pop bc
+EBD8 : C1     " "   pop bc
+EBD9 : C1     " "   pop bc
+EBDA : C1     " "   pop bc
+EBDB : C1     " "   pop bc
+EBDC : C1     " "   pop bc
+EBDD : C1     " "   pop bc
+EBDE : C1     " "   pop bc
+EBDF : C1     " "   pop bc
+EBE0 : C1     " "   pop bc
+EBE1 : C1     " "   pop bc
+EBE2 : C1     " "   pop bc
+EBE3 : C1     " "   pop bc
+EBE4 : C1     " "   pop bc
+EBE5 : C1     " "   pop bc
+EBE6 : C1     " "   pop bc
+EBE7 : C1     " "   pop bc
+EBE8 : C1     " "   pop bc
+EBE9 : C1     " "   pop bc
+EBEA : C1     " "   pop bc
+EBEB : C1     " "   pop bc
+EBEC : C1     " "   pop bc
+EBED : C1     " "   pop bc
+EBEE : C1     " "   pop bc
+EBEF : C1     " "   pop bc
+EBF0 : C1     " "   pop bc
+EBF1 : C1     " "   pop bc
+EBF2 : C1     " "   pop bc
+EBF3 : C1     " "   pop bc
+EBF4 : C1     " "   pop bc
+EBF5 : C1     " "   pop bc
+EBF6 : C1     " "   pop bc
+EBF7 : C1     " "   pop bc
+EBF8 : C1     " "   pop bc
+EBF9 : C1     " "   pop bc
+EBFA : C1     " "   pop bc
+EBFB : C1     " "   pop bc
+EBFC : C1     " "   pop bc
+EBFD : C1     " "   pop bc
+EBFE : C1     " "   pop bc
+EBFF : C1     " "   pop bc
+EC00 : C1     " "   pop bc
+EC01 : C1     " "   pop bc
+EC02 : C1     " "   pop bc
+EC03 : C1     " "   pop bc
+EC04 : C1     " "   pop bc
+EC05 : C1     " "   pop bc
+EC06 : C1     " "   pop bc
+EC07 : C1     " "   pop bc
+EC08 : C1     " "   pop bc
+EC09 : C1     " "   pop bc
+EC0A : C1     " "   pop bc
+EC0B : C1     " "   pop bc
+EC0C : C1     " "   pop bc
+EC0D : C1     " "   pop bc
+EC0E : C1     " "   pop bc
+EC0F : C1     " "   pop bc
+EC10 : C1     " "   pop bc
+EC11 : C1     " "   pop bc
+EC12 : C1     " "   pop bc
+EC13 : C1     " "   pop bc
+EC14 : C1     " "   pop bc
+EC15 : C1     " "   pop bc
+EC16 : C1     " "   pop bc
+EC17 : C1     " "   pop bc
+EC18 : C1     " "   pop bc
+EC19 : C1     " "   pop bc
+EC1A : C1     " "   pop bc
+EC1B : C1     " "   pop bc
+EC1C : C1     " "   pop bc
+EC1D : C1     " "   pop bc
+EC1E : C1     " "   pop bc
+EC1F : C1     " "   pop bc
+EC20 : C1     " "   pop bc
+EC21 : C1     " "   pop bc
+EC22 : C1     " "   pop bc
+EC23 : C1     " "   pop bc
+EC24 : C1     " "   pop bc
+EC25 : C1     " "   pop bc
+EC26 : C1     " "   pop bc
+EC27 : C1     " "   pop bc
+EC28 : C1     " "   pop bc
+EC29 : C1     " "   pop bc
+EC2A : C1     " "   pop bc
+EC2B : C1     " "   pop bc
+EC2C : C1     " "   pop bc
+EC2D : C1     " "   pop bc
+EC2E : C1     " "   pop bc
+EC2F : C1     " "   pop bc
+EC30 : C1     " "   pop bc
+EC31 : C1     " "   pop bc
+EC32 : C1     " "   pop bc
+EC33 : C1     " "   pop bc
+EC34 : C1     " "   pop bc
+EC35 : C1     " "   pop bc
+EC36 : C1     " "   pop bc
+EC37 : C1     " "   pop bc
+EC38 : C1     " "   pop bc
+EC39 : C1     " "   pop bc
+EC3A : C1     " "   pop bc
+EC3B : C1     " "   pop bc
+EC3C : C1     " "   pop bc
+EC3D : C1     " "   pop bc
+EC3E : C1     " "   pop bc
+EC3F : C1     " "   pop bc
+EC40 : C1     " "   pop bc
+EC41 : C1     " "   pop bc
+EC42 : C1     " "   pop bc
+EC43 : C1     " "   pop bc
+EC44 : C1     " "   pop bc
+EC45 : C1     " "   pop bc
+EC46 : C1     " "   pop bc
+EC47 : C1     " "   pop bc
+EC48 : C1     " "   pop bc
+EC49 : C1     " "   pop bc
+EC4A : C1     " "   pop bc
+EC4B : C1     " "   pop bc
+EC4C : C1     " "   pop bc
+EC4D : C1     " "   pop bc
+EC4E : C1     " "   pop bc
+EC4F : C1     " "   pop bc
+EC50 : C1     " "   pop bc
+EC51 : C1     " "   pop bc
+EC52 : C1     " "   pop bc
+EC53 : C1     " "   pop bc
+EC54 : C1     " "   pop bc
+EC55 : C1     " "   pop bc
+EC56 : C1     " "   pop bc
+EC57 : C1     " "   pop bc
+EC58 : C1     " "   pop bc
+EC59 : C1     " "   pop bc
+EC5A : C1     " "   pop bc
+EC5B : C1     " "   pop bc
+EC5C : C1     " "   pop bc
+EC5D : C1     " "   pop bc
+EC5E : C1     " "   pop bc
+EC5F : C1     " "   pop bc
+EC60 : C1     " "   pop bc
+EC61 : C1     " "   pop bc
+EC62 : C1     " "   pop bc
+EC63 : C1     " "   pop bc
+EC64 : C1     " "   pop bc
+EC65 : C1     " "   pop bc
+EC66 : C1     " "   pop bc
+EC67 : C1     " "   pop bc
+EC68 : C1     " "   pop bc
+EC69 : C1     " "   pop bc
+EC6A : C1     " "   pop bc
+EC6B : C1     " "   pop bc
+EC6C : C1     " "   pop bc
+EC6D : C1     " "   pop bc
+EC6E : C1     " "   pop bc
+EC6F : C1     " "   pop bc
+EC70 : C1     " "   pop bc
+EC71 : C1     " "   pop bc
+EC72 : C1     " "   pop bc
+EC73 : C1     " "   pop bc
+EC74 : C1     " "   pop bc
+EC75 : C1     " "   pop bc
+EC76 : C1     " "   pop bc
+EC77 : C1     " "   pop bc
+EC78 : C1     " "   pop bc
+EC79 : C1     " "   pop bc
+EC7A : C1     " "   pop bc
+EC7B : C1     " "   pop bc
+EC7C : C1     " "   pop bc
+EC7D : C1     " "   pop bc
+EC7E : C1     " "   pop bc
+EC7F : C1     " "   pop bc
+EC80 : C1     " "   pop bc
+EC81 : C1     " "   pop bc
+EC82 : C1     " "   pop bc
+EC83 : C1     " "   pop bc
+EC84 : C1     " "   pop bc
+EC85 : C1     " "   pop bc
+EC86 : C1     " "   pop bc
+EC87 : C1     " "   pop bc
+EC88 : C1     " "   pop bc
+EC89 : C1     " "   pop bc
+EC8A : C1     " "   pop bc
+EC8B : C1     " "   pop bc
+EC8C : C1     " "   pop bc
+EC8D : C1     " "   pop bc
+EC8E : C1     " "   pop bc
+EC8F : C1     " "   pop bc
+EC90 : C1     " "   pop bc
+EC91 : C1     " "   pop bc
+EC92 : C1     " "   pop bc
+EC93 : C1     " "   pop bc
+EC94 : C1     " "   pop bc
+EC95 : C1     " "   pop bc
+EC96 : C1     " "   pop bc
+EC97 : C1     " "   pop bc
+EC98 : C1     " "   pop bc
+EC99 : C1     " "   pop bc
+EC9A : C1     " "   pop bc
+EC9B : C1     " "   pop bc
+EC9C : C1     " "   pop bc
+EC9D : C1     " "   pop bc
+EC9E : C1     " "   pop bc
+EC9F : C1     " "   pop bc
+ECA0 : C1     " "   pop bc
+ECA1 : C1     " "   pop bc
+ECA2 : C1     " "   pop bc
+ECA3 : C1     " "   pop bc
+ECA4 : C1     " "   pop bc
+ECA5 : C1     " "   pop bc
+ECA6 : C1     " "   pop bc
+ECA7 : C1     " "   pop bc
+ECA8 : C1     " "   pop bc
+ECA9 : C1     " "   pop bc
+ECAA : C1     " "   pop bc
+ECAB : C1     " "   pop bc
+ECAC : C1     " "   pop bc
+ECAD : C1     " "   pop bc
+ECAE : C1     " "   pop bc
+ECAF : C1     " "   pop bc
+ECB0 : C1     " "   pop bc
+ECB1 : C1     " "   pop bc
+ECB2 : C1     " "   pop bc
+ECB3 : C1     " "   pop bc
+ECB4 : C1     " "   pop bc
+ECB5 : C1     " "   pop bc
+ECB6 : C1     " "   pop bc
+ECB7 : C1     " "   pop bc
+ECB8 : C1     " "   pop bc
+ECB9 : C1     " "   pop bc
+ECBA : C1     " "   pop bc
+ECBB : C1     " "   pop bc
+ECBC : C1     " "   pop bc
+ECBD : C1     " "   pop bc
+ECBE : C1     " "   pop bc
+ECBF : C1     " "   pop bc
+ECC0 : C1     " "   pop bc
+ECC1 : C1     " "   pop bc
+ECC2 : C1     " "   pop bc
+ECC3 : C1     " "   pop bc
+ECC4 : C1     " "   pop bc
+ECC5 : C1     " "   pop bc
+ECC6 : C1     " "   pop bc
+ECC7 : C1     " "   pop bc
+ECC8 : C1     " "   pop bc
+ECC9 : C1     " "   pop bc
+ECCA : C1     " "   pop bc
+ECCB : C1     " "   pop bc
+ECCC : C1     " "   pop bc
+ECCD : C1     " "   pop bc
+ECCE : C1     " "   pop bc
+ECCF : C1     " "   pop bc
+ECD0 : C1     " "   pop bc
+ECD1 : C1     " "   pop bc
+ECD2 : C1     " "   pop bc
+ECD3 : C1     " "   pop bc
+ECD4 : C1     " "   pop bc
+ECD5 : C1     " "   pop bc
+ECD6 : C1     " "   pop bc
+ECD7 : C1     " "   pop bc
+ECD8 : C1     " "   pop bc
+ECD9 : C1     " "   pop bc
+ECDA : C1     " "   pop bc
+ECDB : C1     " "   pop bc
+ECDC : C1     " "   pop bc
+ECDD : C1     " "   pop bc
+ECDE : C1     " "   pop bc
+ECDF : C1     " "   pop bc
+ECE0 : C1     " "   pop bc
+ECE1 : C1     " "   pop bc
+ECE2 : C1     " "   pop bc
+ECE3 : C1     " "   pop bc
+ECE4 : C1     " "   pop bc
+ECE5 : C1     " "   pop bc
+ECE6 : C1     " "   pop bc
+ECE7 : C1     " "   pop bc
+ECE8 : C1     " "   pop bc
+ECE9 : C1     " "   pop bc
+ECEA : C1     " "   pop bc
+ECEB : C1     " "   pop bc
+ECEC : C1     " "   pop bc
+ECED : C1     " "   pop bc
+ECEE : C1     " "   pop bc
+ECEF : C1     " "   pop bc
+ECF0 : C1     " "   pop bc
+ECF1 : C1     " "   pop bc
+ECF2 : C1     " "   pop bc
+ECF3 : C1     " "   pop bc
+ECF4 : C1     " "   pop bc
+ECF5 : C1     " "   pop bc
+ECF6 : C1     " "   pop bc
+ECF7 : C1     " "   pop bc
+ECF8 : C1     " "   pop bc
+ECF9 : C1     " "   pop bc
+ECFA : C1     " "   pop bc
+ECFB : C1     " "   pop bc
+ECFC : C1     " "   pop bc
+ECFD : C1     " "   pop bc
+ECFE : C1     " "   pop bc
+ECFF : C1     " "   pop bc
+ED00 : C1     " "   pop bc
+ED01 : C1     " "   pop bc
+ED02 : C1     " "   pop bc
+ED03 : C1     " "   pop bc
+ED04 : C1     " "   pop bc
+ED05 : C1     " "   pop bc
+ED06 : C1     " "   pop bc
+ED07 : C1     " "   pop bc
+ED08 : C1     " "   pop bc
+ED09 : C1     " "   pop bc
+ED0A : C1     " "   pop bc
+ED0B : C1     " "   pop bc
+ED0C : C1     " "   pop bc
+ED0D : C1     " "   pop bc
+ED0E : C1     " "   pop bc
+ED0F : C1     " "   pop bc
+ED10 : C1     " "   pop bc
+ED11 : C1     " "   pop bc
+ED12 : C1     " "   pop bc
+ED13 : C1     " "   pop bc
+ED14 : C1     " "   pop bc
+ED15 : C1     " "   pop bc
+ED16 : C1     " "   pop bc
+ED17 : C1     " "   pop bc
+ED18 : C1     " "   pop bc
+ED19 : C1     " "   pop bc
+ED1A : C1     " "   pop bc
+ED1B : C1     " "   pop bc
+ED1C : C1     " "   pop bc
+ED1D : C1     " "   pop bc
+ED1E : C1     " "   pop bc
+ED1F : C1     " "   pop bc
+ED20 : C1     " "   pop bc
+ED21 : C1     " "   pop bc
+ED22 : C1     " "   pop bc
+ED23 : C1     " "   pop bc
+ED24 : C1     " "   pop bc
+ED25 : C1     " "   pop bc
+ED26 : C1     " "   pop bc
+ED27 : C1     " "   pop bc
+ED28 : C1     " "   pop bc
+ED29 : C1     " "   pop bc
+ED2A : C1     " "   pop bc
+ED2B : C1     " "   pop bc
+ED2C : C1     " "   pop bc
+ED2D : C1     " "   pop bc
+ED2E : C1     " "   pop bc
+ED2F : C1     " "   pop bc
+ED30 : C1     " "   pop bc
+ED31 : C1     " "   pop bc
+ED32 : C1     " "   pop bc
+ED33 : C1     " "   pop bc
+ED34 : C1     " "   pop bc
+ED35 : C1     " "   pop bc
+ED36 : C1     " "   pop bc
+ED37 : C1     " "   pop bc
+ED38 : C1     " "   pop bc
+ED39 : C1     " "   pop bc
+ED3A : C1     " "   pop bc
+ED3B : C1     " "   pop bc
+ED3C : C1     " "   pop bc
+ED3D : C1     " "   pop bc
+ED3E : C1     " "   pop bc
+ED3F : C1     " "   pop bc
+ED40 : C1     " "   pop bc
+ED41 : C1     " "   pop bc
+ED42 : C1     " "   pop bc
+ED43 : C1     " "   pop bc
+ED44 : C1     " "   pop bc
+ED45 : C1     " "   pop bc
+ED46 : C1     " "   pop bc
+ED47 : C1     " "   pop bc
+ED48 : C1     " "   pop bc
+ED49 : C1     " "   pop bc
+ED4A : C1     " "   pop bc
+ED4B : C1     " "   pop bc
+ED4C : C1     " "   pop bc
+ED4D : C1     " "   pop bc
+ED4E : C1     " "   pop bc
+ED4F : C1     " "   pop bc
+ED50 : C1     " "   pop bc
+ED51 : C1     " "   pop bc
+ED52 : C1     " "   pop bc
+ED53 : C1     " "   pop bc
+ED54 : C1     " "   pop bc
+ED55 : C1     " "   pop bc
+ED56 : C1     " "   pop bc
+ED57 : C1     " "   pop bc
+ED58 : C1     " "   pop bc
+ED59 : C1     " "   pop bc
+ED5A : C1     " "   pop bc
+ED5B : C1     " "   pop bc
+ED5C : C1     " "   pop bc
+ED5D : C1     " "   pop bc
+ED5E : C1     " "   pop bc
+ED5F : C1     " "   pop bc
+ED60 : C1     " "   pop bc
+ED61 : C1     " "   pop bc
+ED62 : C1     " "   pop bc
+ED63 : C1     " "   pop bc
+ED64 : C1     " "   pop bc
+ED65 : C1     " "   pop bc
+ED66 : C1     " "   pop bc
+ED67 : C1     " "   pop bc
+ED68 : C1     " "   pop bc
+ED69 : C1     " "   pop bc
+ED6A : C1     " "   pop bc
+ED6B : C1     " "   pop bc
+ED6C : C1     " "   pop bc
+ED6D : C1     " "   pop bc
+ED6E : C1     " "   pop bc
+ED6F : C1     " "   pop bc
+ED70 : C1     " "   pop bc
+ED71 : C1     " "   pop bc
+ED72 : C1     " "   pop bc
+ED73 : C1     " "   pop bc
+ED74 : C1     " "   pop bc
+ED75 : C1     " "   pop bc
+ED76 : C1     " "   pop bc
+ED77 : C1     " "   pop bc
+ED78 : C1     " "   pop bc
+ED79 : C1     " "   pop bc
+ED7A : C1     " "   pop bc
+ED7B : C1     " "   pop bc
+ED7C : C1     " "   pop bc
+ED7D : C1     " "   pop bc
+ED7E : C1     " "   pop bc
+ED7F : C1     " "   pop bc
+ED80 : C1     " "   pop bc
+ED81 : C1     " "   pop bc
+ED82 : C1     " "   pop bc
+ED83 : C1     " "   pop bc
+ED84 : C1     " "   pop bc
+ED85 : C1     " "   pop bc
+ED86 : C1     " "   pop bc
+ED87 : C1     " "   pop bc
+ED88 : C1     " "   pop bc
+ED89 : C1     " "   pop bc
+ED8A : C1     " "   pop bc
+ED8B : C1     " "   pop bc
+ED8C : C1     " "   pop bc
+ED8D : C1     " "   pop bc
+ED8E : C1     " "   pop bc
+ED8F : C1     " "   pop bc
+ED90 : C1     " "   pop bc
+ED91 : C1     " "   pop bc
+ED92 : C1     " "   pop bc
+ED93 : C1     " "   pop bc
+ED94 : C1     " "   pop bc
+ED95 : C1     " "   pop bc
+ED96 : C1     " "   pop bc
+ED97 : C1     " "   pop bc
+ED98 : C1     " "   pop bc
+ED99 : C1     " "   pop bc
+ED9A : C1     " "   pop bc
+ED9B : C1     " "   pop bc
+ED9C : C1     " "   pop bc
+ED9D : C1     " "   pop bc
+ED9E : C1     " "   pop bc
+ED9F : C1     " "   pop bc
+EDA0 : C1     " "   pop bc
+EDA1 : C1     " "   pop bc
+EDA2 : C1     " "   pop bc
+EDA3 : C1     " "   pop bc
+EDA4 : C1     " "   pop bc
+EDA5 : C1     " "   pop bc
+EDA6 : C1     " "   pop bc
+EDA7 : C1     " "   pop bc
+EDA8 : C1     " "   pop bc
+EDA9 : C1     " "   pop bc
+EDAA : C1     " "   pop bc
+EDAB : C1     " "   pop bc
+EDAC : C1     " "   pop bc
+EDAD : C1     " "   pop bc
+EDAE : C1     " "   pop bc
+EDAF : C1     " "   pop bc
+EDB0 : C1     " "   pop bc
+EDB1 : C1     " "   pop bc
+EDB2 : C1     " "   pop bc
+EDB3 : C1     " "   pop bc
+EDB4 : C1     " "   pop bc
+EDB5 : C1     " "   pop bc
+EDB6 : C1     " "   pop bc
+EDB7 : C1     " "   pop bc
+EDB8 : C1     " "   pop bc
+EDB9 : C1     " "   pop bc
+EDBA : C1     " "   pop bc
+EDBB : C1     " "   pop bc
+EDBC : C1     " "   pop bc
+EDBD : C1     " "   pop bc
+EDBE : C1     " "   pop bc
+EDBF : C1     " "   pop bc
+EDC0 : C1     " "   pop bc
+EDC1 : C1     " "   pop bc
+EDC2 : C1     " "   pop bc
+EDC3 : C1     " "   pop bc
+EDC4 : C1     " "   pop bc
+EDC5 : C1     " "   pop bc
+EDC6 : C1     " "   pop bc
+EDC7 : C1     " "   pop bc
+EDC8 : C1     " "   pop bc
+EDC9 : C1     " "   pop bc
+EDCA : C1     " "   pop bc
+EDCB : C1     " "   pop bc
+EDCC : C1     " "   pop bc
+EDCD : C1     " "   pop bc
+EDCE : C1     " "   pop bc
+EDCF : C1     " "   pop bc
+EDD0 : C1     " "   pop bc
+EDD1 : C1     " "   pop bc
+EDD2 : C1     " "   pop bc
+EDD3 : C1     " "   pop bc
+EDD4 : C1     " "   pop bc
+EDD5 : C1     " "   pop bc
+EDD6 : C1     " "   pop bc
+EDD7 : C1     " "   pop bc
+EDD8 : C1     " "   pop bc
+EDD9 : C1     " "   pop bc
+EDDA : C1     " "   pop bc
+EDDB : C1     " "   pop bc
+EDDC : C1     " "   pop bc
+EDDD : C1     " "   pop bc
+EDDE : C1     " "   pop bc
+EDDF : C1     " "   pop bc
+EDE0 : C1     " "   pop bc
+EDE1 : C1     " "   pop bc
+EDE2 : C1     " "   pop bc
+EDE3 : C1     " "   pop bc
+EDE4 : C1     " "   pop bc
+EDE5 : C1     " "   pop bc
+EDE6 : C1     " "   pop bc
+EDE7 : C1     " "   pop bc
+EDE8 : C1     " "   pop bc
+EDE9 : C1     " "   pop bc
+EDEA : C1     " "   pop bc
+EDEB : C1     " "   pop bc
+EDEC : C1     " "   pop bc
+EDED : C1     " "   pop bc
+EDEE : C1     " "   pop bc
+EDEF : C1     " "   pop bc
+EDF0 : C1     " "   pop bc
+EDF1 : C1     " "   pop bc
+EDF2 : C1     " "   pop bc
+EDF3 : C1     " "   pop bc
+EDF4 : C1     " "   pop bc
+EDF5 : C1     " "   pop bc
+EDF6 : C1     " "   pop bc
+EDF7 : C1     " "   pop bc
+EDF8 : C1     " "   pop bc
+EDF9 : C1     " "   pop bc
+EDFA : C1     " "   pop bc
+EDFB : C1     " "   pop bc
+EDFC : C1     " "   pop bc
+EDFD : C1     " "   pop bc
+EDFE : C1     " "   pop bc
+EDFF : C1     " "   pop bc
+EE00 : C1     " "   pop bc
+EE01 : C1     " "   pop bc
+EE02 : C1     " "   pop bc
+EE03 : C1     " "   pop bc
+EE04 : C1     " "   pop bc
+EE05 : C1     " "   pop bc
+EE06 : C1     " "   pop bc
+EE07 : C1     " "   pop bc
+EE08 : C1     " "   pop bc
+EE09 : C1     " "   pop bc
+EE0A : C1     " "   pop bc
+EE0B : C1     " "   pop bc
+EE0C : C1     " "   pop bc
+EE0D : C1     " "   pop bc
+EE0E : C1     " "   pop bc
+EE0F : C1     " "   pop bc
+EE10 : C1     " "   pop bc
+EE11 : C1     " "   pop bc
+EE12 : C1     " "   pop bc
+EE13 : C1     " "   pop bc
+EE14 : C1     " "   pop bc
+EE15 : C1     " "   pop bc
+EE16 : C1     " "   pop bc
+EE17 : C1     " "   pop bc
+EE18 : C1     " "   pop bc
+EE19 : C1     " "   pop bc
+EE1A : C1     " "   pop bc
+EE1B : C1     " "   pop bc
+EE1C : C1     " "   pop bc
+EE1D : C1     " "   pop bc
+EE1E : C1     " "   pop bc
+EE1F : C1     " "   pop bc
+EE20 : C1     " "   pop bc
+EE21 : C1     " "   pop bc
+EE22 : C1     " "   pop bc
+EE23 : C1     " "   pop bc
+EE24 : C1     " "   pop bc
+EE25 : C1     " "   pop bc
+EE26 : C1     " "   pop bc
+EE27 : C1     " "   pop bc
+EE28 : C1     " "   pop bc
+EE29 : C1     " "   pop bc
+EE2A : C1     " "   pop bc
+EE2B : C1     " "   pop bc
+EE2C : C1     " "   pop bc
+EE2D : C1     " "   pop bc
+EE2E : C1     " "   pop bc
+EE2F : C1     " "   pop bc
+EE30 : C1     " "   pop bc
+EE31 : C1     " "   pop bc
+EE32 : C1     " "   pop bc
+EE33 : C1     " "   pop bc
+EE34 : C1     " "   pop bc
+EE35 : C1     " "   pop bc
+EE36 : C1     " "   pop bc
+EE37 : C1     " "   pop bc
+EE38 : C1     " "   pop bc
+EE39 : C1     " "   pop bc
+EE3A : C1     " "   pop bc
+EE3B : C1     " "   pop bc
+EE3C : C1     " "   pop bc
+EE3D : C1     " "   pop bc
+EE3E : C1     " "   pop bc
+EE3F : C1     " "   pop bc
+EE40 : C1     " "   pop bc
+EE41 : C1     " "   pop bc
+EE42 : C1     " "   pop bc
+EE43 : C1     " "   pop bc
+EE44 : C1     " "   pop bc
+EE45 : C1     " "   pop bc
+EE46 : C1     " "   pop bc
+EE47 : C1     " "   pop bc
+EE48 : C1     " "   pop bc
+EE49 : C1     " "   pop bc
+EE4A : C1     " "   pop bc
+EE4B : C1     " "   pop bc
+EE4C : C1     " "   pop bc
+EE4D : C1     " "   pop bc
+EE4E : C1     " "   pop bc
+EE4F : C1     " "   pop bc
+EE50 : C1     " "   pop bc
+EE51 : C1     " "   pop bc
+EE52 : C1     " "   pop bc
+EE53 : C1     " "   pop bc
+EE54 : C1     " "   pop bc
+EE55 : C1     " "   pop bc
+EE56 : C1     " "   pop bc
+EE57 : C1     " "   pop bc
+EE58 : C1     " "   pop bc
+EE59 : C1     " "   pop bc
+EE5A : C1     " "   pop bc
+EE5B : C1     " "   pop bc
+EE5C : C1     " "   pop bc
+EE5D : C1     " "   pop bc
+EE5E : C1     " "   pop bc
+EE5F : C1     " "   pop bc
+EE60 : C1     " "   pop bc
+EE61 : C1     " "   pop bc
+EE62 : C1     " "   pop bc
+EE63 : C1     " "   pop bc
+EE64 : C1     " "   pop bc
+EE65 : C1     " "   pop bc
+EE66 : C1     " "   pop bc
+EE67 : C1     " "   pop bc
+EE68 : C1     " "   pop bc
+EE69 : C1     " "   pop bc
+EE6A : C1     " "   pop bc
+EE6B : C1     " "   pop bc
+EE6C : C1     " "   pop bc
+EE6D : C1     " "   pop bc
+EE6E : C1     " "   pop bc
+EE6F : C1     " "   pop bc
+EE70 : C1     " "   pop bc
+EE71 : C1     " "   pop bc
+EE72 : C1     " "   pop bc
+EE73 : C1     " "   pop bc
+EE74 : C1     " "   pop bc
+EE75 : C1     " "   pop bc
+EE76 : C1     " "   pop bc
+EE77 : C1     " "   pop bc
+EE78 : C1     " "   pop bc
+EE79 : C1     " "   pop bc
+EE7A : C1     " "   pop bc
+EE7B : C1     " "   pop bc
+EE7C : C1     " "   pop bc
+EE7D : C1     " "   pop bc
+EE7E : C1     " "   pop bc
+EE7F : C1     " "   pop bc
+EE80 : C1     " "   pop bc
+EE81 : C1     " "   pop bc
+EE82 : C1     " "   pop bc
+EE83 : C1     " "   pop bc
+EE84 : C1     " "   pop bc
+EE85 : C1     " "   pop bc
+EE86 : C1     " "   pop bc
+EE87 : C1     " "   pop bc
+EE88 : C1     " "   pop bc
+EE89 : C1     " "   pop bc
+EE8A : C1     " "   pop bc
+EE8B : C1     " "   pop bc
+EE8C : C1     " "   pop bc
+EE8D : C1     " "   pop bc
+EE8E : C1     " "   pop bc
+EE8F : C1     " "   pop bc
+EE90 : C1     " "   pop bc
+EE91 : C1     " "   pop bc
+EE92 : C1     " "   pop bc
+EE93 : C1     " "   pop bc
+EE94 : C1     " "   pop bc
+EE95 : C1     " "   pop bc
+EE96 : C1     " "   pop bc
+EE97 : C1     " "   pop bc
+EE98 : C1     " "   pop bc
+EE99 : C1     " "   pop bc
+EE9A : C1     " "   pop bc
+EE9B : C1     " "   pop bc
+EE9C : C1     " "   pop bc
+EE9D : C1     " "   pop bc
+EE9E : C1     " "   pop bc
+EE9F : C1     " "   pop bc
+EEA0 : C1     " "   pop bc
+EEA1 : C1     " "   pop bc
+EEA2 : C1     " "   pop bc
+EEA3 : C1     " "   pop bc
+EEA4 : C1     " "   pop bc
+EEA5 : C1     " "   pop bc
+EEA6 : C1     " "   pop bc
+EEA7 : C1     " "   pop bc
+EEA8 : C1     " "   pop bc
+EEA9 : C1     " "   pop bc
+EEAA : C1     " "   pop bc
+EEAB : C1     " "   pop bc
+EEAC : C1     " "   pop bc
+EEAD : C1     " "   pop bc
+EEAE : C1     " "   pop bc
+EEAF : C1     " "   pop bc
+EEB0 : C1     " "   pop bc
+EEB1 : C1     " "   pop bc
+EEB2 : C1     " "   pop bc
+EEB3 : C1     " "   pop bc
+EEB4 : C1     " "   pop bc
+EEB5 : C1     " "   pop bc
+EEB6 : C1     " "   pop bc
+EEB7 : C1     " "   pop bc
+EEB8 : C1     " "   pop bc
+EEB9 : C1     " "   pop bc
+EEBA : C1     " "   pop bc
+EEBB : C1     " "   pop bc
+EEBC : C1     " "   pop bc
+EEBD : C1     " "   pop bc
+EEBE : C1     " "   pop bc
+EEBF : C1     " "   pop bc
+EEC0 : C1     " "   pop bc
+EEC1 : C1     " "   pop bc
+EEC2 : C1     " "   pop bc
+EEC3 : C1     " "   pop bc
+EEC4 : C1     " "   pop bc
+EEC5 : C1     " "   pop bc
+EEC6 : C1     " "   pop bc
+EEC7 : C1     " "   pop bc
+EEC8 : C1     " "   pop bc
+EEC9 : C1     " "   pop bc
+EECA : C1     " "   pop bc
+EECB : C1     " "   pop bc
+EECC : C1     " "   pop bc
+EECD : C1     " "   pop bc
+EECE : C1     " "   pop bc
+EECF : C1     " "   pop bc
+EED0 : C1     " "   pop bc
+EED1 : C1     " "   pop bc
+EED2 : C1     " "   pop bc
+EED3 : C1     " "   pop bc
+EED4 : C1     " "   pop bc
+EED5 : C1     " "   pop bc
+EED6 : C1     " "   pop bc
+EED7 : C1     " "   pop bc
+EED8 : C1     " "   pop bc
+EED9 : C1     " "   pop bc
+EEDA : C1     " "   pop bc
+EEDB : C1     " "   pop bc
+EEDC : C1     " "   pop bc
+EEDD : C1     " "   pop bc
+EEDE : C1     " "   pop bc
+EEDF : C1     " "   pop bc
+EEE0 : C1     " "   pop bc
+EEE1 : C1     " "   pop bc
+EEE2 : C1     " "   pop bc
+EEE3 : C1     " "   pop bc
+EEE4 : C1     " "   pop bc
+EEE5 : C1     " "   pop bc
+EEE6 : C1     " "   pop bc
+EEE7 : C1     " "   pop bc
+EEE8 : C1     " "   pop bc
+EEE9 : C1     " "   pop bc
+EEEA : C1     " "   pop bc
+EEEB : C1     " "   pop bc
+EEEC : C1     " "   pop bc
+EEED : C1     " "   pop bc
+EEEE : C1     " "   pop bc
+EEEF : C1     " "   pop bc
+EEF0 : C1     " "   pop bc
+EEF1 : C1     " "   pop bc
+EEF2 : C1     " "   pop bc
+EEF3 : C1     " "   pop bc
+EEF4 : C1     " "   pop bc
+EEF5 : C1     " "   pop bc
+EEF6 : C1     " "   pop bc
+EEF7 : C1     " "   pop bc
+EEF8 : C1     " "   pop bc
+EEF9 : C1     " "   pop bc
+EEFA : C1     " "   pop bc
+EEFB : C1     " "   pop bc
+EEFC : C1     " "   pop bc
+EEFD : C1     " "   pop bc
+EEFE : C1     " "   pop bc
+EEFF : C1     " "   pop bc
+EF00 : C1     " "   pop bc
+EF01 : C1     " "   pop bc
+EF02 : C1     " "   pop bc
+EF03 : C1     " "   pop bc
+EF04 : C1     " "   pop bc
+EF05 : C1     " "   pop bc
+EF06 : C1     " "   pop bc
+EF07 : C1     " "   pop bc
+EF08 : C1     " "   pop bc
+EF09 : C1     " "   pop bc
+EF0A : C1     " "   pop bc
+EF0B : C1     " "   pop bc
+EF0C : C1     " "   pop bc
+EF0D : C1     " "   pop bc
+EF0E : C1     " "   pop bc
+EF0F : C1     " "   pop bc
+EF10 : C1     " "   pop bc
+EF11 : C1     " "   pop bc
+EF12 : C1     " "   pop bc
+EF13 : C1     " "   pop bc
+EF14 : C1     " "   pop bc
+EF15 : C1     " "   pop bc
+EF16 : C1     " "   pop bc
+EF17 : C1     " "   pop bc
+EF18 : C1     " "   pop bc
+EF19 : C1     " "   pop bc
+EF1A : C1     " "   pop bc
+EF1B : C1     " "   pop bc
+EF1C : C1     " "   pop bc
+EF1D : C1     " "   pop bc
+EF1E : C1     " "   pop bc
+EF1F : C1     " "   pop bc
+EF20 : C1     " "   pop bc
+EF21 : C1     " "   pop bc
+EF22 : C1     " "   pop bc
+EF23 : C1     " "   pop bc
+EF24 : C1     " "   pop bc
+EF25 : C1     " "   pop bc
+EF26 : C1     " "   pop bc
+EF27 : C1     " "   pop bc
+EF28 : C1     " "   pop bc
+EF29 : C1     " "   pop bc
+EF2A : C1     " "   pop bc
+EF2B : C1     " "   pop bc
+EF2C : C1     " "   pop bc
+EF2D : C1     " "   pop bc
+EF2E : C1     " "   pop bc
+EF2F : C1     " "   pop bc
+EF30 : C1     " "   pop bc
+EF31 : C1     " "   pop bc
+EF32 : C1     " "   pop bc
+EF33 : C1     " "   pop bc
+EF34 : C1     " "   pop bc
+EF35 : C1     " "   pop bc
+EF36 : C1     " "   pop bc
+EF37 : C1     " "   pop bc
+EF38 : C1     " "   pop bc
+EF39 : C1     " "   pop bc
+EF3A : C1     " "   pop bc
+EF3B : C1     " "   pop bc
+EF3C : C1     " "   pop bc
+EF3D : C1     " "   pop bc
+EF3E : C1     " "   pop bc
+EF3F : C1     " "   pop bc
+EF40 : C1     " "   pop bc
+EF41 : C1     " "   pop bc
+EF42 : C1     " "   pop bc
+EF43 : C1     " "   pop bc
+EF44 : C1     " "   pop bc
+EF45 : C1     " "   pop bc
+EF46 : C1     " "   pop bc
+EF47 : C1     " "   pop bc
+EF48 : C1     " "   pop bc
+EF49 : C1     " "   pop bc
+EF4A : C1     " "   pop bc
+EF4B : C1     " "   pop bc
+EF4C : C1     " "   pop bc
+EF4D : C1     " "   pop bc
+EF4E : C1     " "   pop bc
+EF4F : C1     " "   pop bc
+EF50 : C1     " "   pop bc
+EF51 : C1     " "   pop bc
+EF52 : C1     " "   pop bc
+EF53 : C1     " "   pop bc
+EF54 : C1     " "   pop bc
+EF55 : C1     " "   pop bc
+EF56 : C1     " "   pop bc
+EF57 : C1     " "   pop bc
+EF58 : C1     " "   pop bc
+EF59 : C1     " "   pop bc
+EF5A : C1     " "   pop bc
+EF5B : C1     " "   pop bc
+EF5C : C1     " "   pop bc
+EF5D : C1     " "   pop bc
+EF5E : C1     " "   pop bc
+EF5F : C1     " "   pop bc
+EF60 : C1     " "   pop bc
+EF61 : C1     " "   pop bc
+EF62 : C1     " "   pop bc
+EF63 : C1     " "   pop bc
+EF64 : C1     " "   pop bc
+EF65 : C1     " "   pop bc
+EF66 : C1     " "   pop bc
+EF67 : C1     " "   pop bc
+EF68 : C1     " "   pop bc
+EF69 : C1     " "   pop bc
+EF6A : C1     " "   pop bc
+EF6B : C1     " "   pop bc
+EF6C : C1     " "   pop bc
+EF6D : C1     " "   pop bc
+EF6E : C1     " "   pop bc
+EF6F : C1     " "   pop bc
+EF70 : C1     " "   pop bc
+EF71 : C1     " "   pop bc
+EF72 : C1     " "   pop bc
+EF73 : C1     " "   pop bc
+EF74 : C1     " "   pop bc
+EF75 : C1     " "   pop bc
+EF76 : C1     " "   pop bc
+EF77 : C1     " "   pop bc
+EF78 : C1     " "   pop bc
+EF79 : C1     " "   pop bc
+EF7A : C1     " "   pop bc
+EF7B : C1     " "   pop bc
+EF7C : C1     " "   pop bc
+EF7D : C1     " "   pop bc
+EF7E : C1     " "   pop bc
+EF7F : C1     " "   pop bc
+EF80 : C1     " "   pop bc
+EF81 : C1     " "   pop bc
+EF82 : C1     " "   pop bc
+EF83 : C1     " "   pop bc
+EF84 : C1     " "   pop bc
+EF85 : C1     " "   pop bc
+EF86 : C1     " "   pop bc
+EF87 : C1     " "   pop bc
+EF88 : C1     " "   pop bc
+EF89 : C1     " "   pop bc
+EF8A : C1     " "   pop bc
+EF8B : C1     " "   pop bc
+EF8C : C1     " "   pop bc
+EF8D : C1     " "   pop bc
+EF8E : C1     " "   pop bc
+EF8F : C1     " "   pop bc
+EF90 : C1     " "   pop bc
+EF91 : C1     " "   pop bc
+EF92 : C1     " "   pop bc
+EF93 : C1     " "   pop bc
+EF94 : C1     " "   pop bc
+EF95 : C1     " "   pop bc
+EF96 : C1     " "   pop bc
+EF97 : C1     " "   pop bc
+EF98 : C1     " "   pop bc
+EF99 : C1     " "   pop bc
+EF9A : C1     " "   pop bc
+EF9B : C1     " "   pop bc
+EF9C : C1     " "   pop bc
+EF9D : C1     " "   pop bc
+EF9E : C1     " "   pop bc
+EF9F : C1     " "   pop bc
+EFA0 : C1     " "   pop bc
+EFA1 : C1     " "   pop bc
+EFA2 : C1     " "   pop bc
+EFA3 : C1     " "   pop bc
+EFA4 : C1     " "   pop bc
+EFA5 : C1     " "   pop bc
+EFA6 : C1     " "   pop bc
+EFA7 : C1     " "   pop bc
+EFA8 : C1     " "   pop bc
+EFA9 : C1     " "   pop bc
+EFAA : C1     " "   pop bc
+EFAB : C1     " "   pop bc
+EFAC : C1     " "   pop bc
+EFAD : C1     " "   pop bc
+EFAE : C1     " "   pop bc
+EFAF : C1     " "   pop bc
+EFB0 : C1     " "   pop bc
+EFB1 : C1     " "   pop bc
+EFB2 : C1     " "   pop bc
+EFB3 : C1     " "   pop bc
+EFB4 : C1     " "   pop bc
+EFB5 : C1     " "   pop bc
+EFB6 : C1     " "   pop bc
+EFB7 : C1     " "   pop bc
+EFB8 : C1     " "   pop bc
+EFB9 : C1     " "   pop bc
+EFBA : C1     " "   pop bc
+EFBB : C1     " "   pop bc
+EFBC : C1     " "   pop bc
+EFBD : C1     " "   pop bc
+EFBE : C1     " "   pop bc
+EFBF : C1     " "   pop bc
+EFC0 : C1     " "   pop bc
+EFC1 : C1     " "   pop bc
+EFC2 : C1     " "   pop bc
+EFC3 : C1     " "   pop bc
+EFC4 : C1     " "   pop bc
+EFC5 : C1     " "   pop bc
+EFC6 : C1     " "   pop bc
+EFC7 : C1     " "   pop bc
+EFC8 : C1     " "   pop bc
+EFC9 : C1     " "   pop bc
+EFCA : C1     " "   pop bc
+EFCB : C1     " "   pop bc
+EFCC : C1     " "   pop bc
+EFCD : C1     " "   pop bc
+EFCE : C1     " "   pop bc
+EFCF : C1     " "   pop bc
+EFD0 : C1     " "   pop bc
+EFD1 : C1     " "   pop bc
+EFD2 : C1     " "   pop bc
+EFD3 : C1     " "   pop bc
+EFD4 : C1     " "   pop bc
+EFD5 : C1     " "   pop bc
+EFD6 : C1     " "   pop bc
+EFD7 : C1     " "   pop bc
+EFD8 : C1     " "   pop bc
+EFD9 : C1     " "   pop bc
+EFDA : C1     " "   pop bc
+EFDB : C1     " "   pop bc
+EFDC : C1     " "   pop bc
+EFDD : C1     " "   pop bc
+EFDE : C1     " "   pop bc
+EFDF : C1     " "   pop bc
+EFE0 : C1     " "   pop bc
+EFE1 : C1     " "   pop bc
+EFE2 : C1     " "   pop bc
+EFE3 : C1     " "   pop bc
+EFE4 : C1     " "   pop bc
+EFE5 : C1     " "   pop bc
+EFE6 : C1     " "   pop bc
+EFE7 : C1     " "   pop bc
+EFE8 : C1     " "   pop bc
+EFE9 : C1     " "   pop bc
+EFEA : C1     " "   pop bc
+EFEB : C1     " "   pop bc
+EFEC : C1     " "   pop bc
+EFED : C1     " "   pop bc
+EFEE : C1     " "   pop bc
+EFEF : C1     " "   pop bc
+EFF0 : C1     " "   pop bc
+EFF1 : C1     " "   pop bc
+EFF2 : C1     " "   pop bc
+EFF3 : C1     " "   pop bc
+EFF4 : C1     " "   pop bc
+EFF5 : C1     " "   pop bc
+EFF6 : C1     " "   pop bc
+EFF7 : C1     " "   pop bc
+EFF8 : C1     " "   pop bc
+EFF9 : C1     " "   pop bc
+EFFA : C1     " "   pop bc
+EFFB : C1     " "   pop bc
+EFFC : C1     " "   pop bc
+EFFD : C1     " "   pop bc
+EFFE : C1     " "   pop bc
+EFFF : C1     " "   pop bc
