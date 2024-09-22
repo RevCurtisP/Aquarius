@@ -679,7 +679,6 @@ have plenty of bytes free.
 
 TYPE: Statement - Flow Control
 FORMAT :GOTO <line number>
- or GO TO <line number>
 
 Action: This statement allows the BASIC program to execute lines out
 of numerical order. The word GOTO followed by a number will make the
