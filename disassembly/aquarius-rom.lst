@@ -3106,7 +3106,7 @@
 0E29 0E29                  | ;[M80] THE STR$ FUNCTION TAKES A NUMBER AND GIVES A STRING WITH
 0E29 0E29                  | ;[M80] THE CHARACTERS THE OUTPUT OF THE NUMBER WOULD HAVE GIVEN
 0E29 0E29                  | ;; TIMSTR can be used to return the string at [HL] from a function
-0E29 0E29                  | ;; TIMSTR returns the string parsed with STRLT2, STRLT3, or STRLTI
+0E29 0E29                  | ;; TIMSTF returns the string parsed with STRLT2, STRLT3, or STRLTI
 0E29 0E29 : CD 75 09   [M65] STR:    call    CHKNUM            ;[M80] IS A NUMERIC
 0E2C 0E2C : CD 80 16                 call    FOUT              ;[M80] DO ITS OUTPUT
 0E2F 0E2F : CD 5F 0E   {M65} TIMSTR: call    STRLIT            ;[M80] SCAN IT AND TURN IT INTO A STRING
@@ -3722,7 +3722,7 @@
 10D9 10D9 : DA C4 03                 jp      c,SNERR           ;[M80] MUST HAVE A LETTER
 10DC 10DC : AF                       xor     a                 ;
 10DD 10DD : 47                       ld      b,a               ;[M80] ASSUME NO SECOND CHARACTER
-10DE 10DE : 32 AB 38                 ld      (VALTYP),a        ;[M80] ZERO NAMCNT
+10DE 10DE : 32 AB 38                 ld      (VALTYP),a        ;{M80} ZERO VALTYP
 10E1 10E1 : D7                       rst     CHRGET            ;[M80] GET CHAR
 10E2 10E2 : 38 05                    jr      c,ISSEC           ;[M80] YES, WAS NUMERIC
 10E4 10E4 : CD C6 0C                 call    ISLETC            ;[M80] SET CARRY IF NOT ALPHABETIC
@@ -4866,7 +4866,7 @@
 15AE 15AE : C0                       ret     nz                ;[M80] THEY WERE NOT, WE ARE DONE
 15AF 15AF : 0B                       dec     bc                ;[M80] THIS IS FOR BILL.  C WILL NEVER BE ZERO
 15B0 15B0 : C9                       ret                       ;[M80]  (THE MSB WILL ALWAYS BE ONE) SO "DCX    B"
-15B1 15B1                                                      ;[M80] z AND "DCR       C" ARE FUNCTIONALLY EQUIVALENT
+15B1 15B1                                                      ;[M80]  AND "DCR       C" ARE FUNCTIONALLY EQUIVALENT
 15B1 15B1                    ;[M80] GREATEST INTEGER FUNCTION
 15B1 15B1 : 21 E7 38   [M80] INT:    ld      hl,FAC            ;[M80] GET EXPONENT
 15B4 15B4 : 7E                       ld      a,(hl)
@@ -6241,15 +6241,15 @@
 1D47 1D47 : C9                       ret                       ;
 1D48 1D48
 1D48 1D48                    ;;;Orphan code?
-1D48 1D48 : 01 00 00         SLEEPS: ld      bc,0              ;Sleep maximum amount
+1D48 1D48 : 01 00 00         SLEEPS: ld      bc,0              ;  Sleep maximum amount
 1D4B 1D4B
 1D4B 1D4B                    ;;Pause program execution
 1D4B 1D4B                    ;;Delays BC*25-5 cycles
-1D4B 1D4B : 0B               SLEEP:  dec     bc                ;;Decrement Counter
-1D4C 1D4C : 78                       ld      a,b               ;
-1D4D 1D4D : B1                       or      c                 ;;Is it 0?
-1D4E 1D4E : 20 FB                    jr      nz,SLEEP          ;;If not, loop
-1D50 1D50 : C9                       ret                       ;
+1D4B 1D4B : 0B               SLEEP:  dec     bc                ;;   Decrement Counter
+1D4C 1D4C : 78                       ld      a,b               ;    
+1D4D 1D4D : B1                       or      c                 ;;   Is it 0?
+1D4E 1D4E : 20 FB                    jr      nz,SLEEP          ;;   If not, loop
+1D50 1D50 : C9                       ret                       ;    
 1D51 1D51
 1D51 1D51                    ;;Load Program Text from tape
 1D51 1D51 : CD CE 1B   [~~~] CLOADP: call    RDSYNC            ;;Wait for SYNC
@@ -6422,7 +6422,7 @@
 1E64 1E64                    ;;$FC = 1: 17 + 27 + DE * 31 + 6 + 12 + 4 + 4 + 5 + 4 + 11 cycles
 1E64 1E64                    ;;$FC = 0: 17 + 27 + DE * 31 + 4 + 11 cycles
 1E64 1E64                    ;; Total wavelength: 149 + DE * 62 cycles
-1E64 1E64 : 78         [GWB] SOUNDS: ld      a,b               ;;  4   Play frequency [DE] for duration [BC]
+1E64 1E64 : 78         [GWB] SOUNDS: ld      a,b               ;;  4   Play [BC} waves with wavelength [DE]
 1E65 1E65 : B1                       or      c                 ;;  4   If BC = 0 return
 1E66 1E66 : C8                       ret     z                 ;;  5
 1E67 1E67 : AF                       xor     a                 ;;  4
@@ -6450,13 +6450,15 @@
 1E7E 1E7E                  | ;;on the address bus. So to read the keyboard, B is loaded with a column
 1E7E 1E7E                  | ;;mask, C is loaded with $FF, and IN (C) reads the rows.
 1E7E 1E7E                  | ;;
-1E7E 1E7E                  | ;;        A8  A9  A10 A11 A12 A13 A14 A15
-1E7E 1E7E                  | ;;    D0   =   -   9   8   6   5   3   2
-1E7E 1E7E                  | ;;    D1  <--  /   O   I   Y   T   E   W
-1E7E 1E7E                  | ;;    D2   :   0   K   7   G   4   S   L
-1E7E 1E7E                  | ;;    D3  RTN  P   M   U   V   R   Z   Q
-1E7E 1E7E                  | ;;    D4   ;   L   N   H   C   D  SPC SHF
-1E7E 1E7E                  | ;;    D5   .   ,   J   B   F   X   A  CTL
+1E7E 1E7E                  | ;;      B  $EF $FD  $FB $F7 $EF $DF $BF $7F    column masks
+1E7E 1E7E                  | ;;          0    1   2   3   4   5   6   7     keyboard columns
+1E7E 1E7E                  | ;;  A       A8  A9  A10 A11 A12 A13 A14 A15    address lines 
+1E7E 1E7E                  | ;; $FE  D0   =   -   9   8   6   5   3   2
+1E7E 1E7E                  | ;; $FD  D1  <--  /   O   I   Y   T   E   W
+1E7E 1E7E                  | ;; $FB  D2   :   0   K   7   G   4   S   1
+1E7E 1E7E                  | ;; $F7  D3  RTN  P   M   U   V   R   Z   Q
+1E7E 1E7E                  | ;; $EF  D4   ;   L   N   H   C   D  SPC SHF
+1E7E 1E7E                  | ;; $DF  D5   .   ,   J   B   F   X   A  CTL
 1E7E 1E7E                  | ;;
 1E7E 1E7E                  | ;; Note: The RESET key is wired directly to the Z80 reset line.
 1E7E 1E7E : F7               INCHRH: rst     HOOKDO
